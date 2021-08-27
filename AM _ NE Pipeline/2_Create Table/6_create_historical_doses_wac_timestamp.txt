@@ -1,0 +1,6 @@
+-- part of NE and AM report pipeline
+-- shows historical doses and wac value for each manufacturer and site prior to Jan 2019
+-- creating timestamp data type for ship date
+
+create table historical_doses_wac_timestamp as
+select site_id, salesforce_id, health_system, site_name, cast(try(date_format(date_parse(ship_date,'%m/%d/%Y'),'%Y-%m-%d %T'))as timestamp) ship_date, total_doses, total_wac, drug_class from historical_doses_wac_shipped

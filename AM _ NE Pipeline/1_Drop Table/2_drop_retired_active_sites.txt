@@ -1,0 +1,2 @@
+-- part of NE and AM report pipeline
+drop table retired_and_active_sites

@@ -1,0 +1,20 @@
+-- part of NE and AM report pipeline
+-- report labels Mylan products as planned and everything else as excess
+-- filtered down to only specific sites of interest
+-- purpose it to show how much these sites are ordering of our planned inventory
+
+CREATE OR REPLACE VIEW view_planned_usage_tracking_usage_tracking AS 
+SELECT
+  dispensary_name
+, productnamelong drug_name
+, product_id
+, lot_id
+, "split_part"(lot_id, ' ', 3) donor_lot
+-- use lot_id to get donor_lot
+, ship_date
+, qty units_total
+, (CASE WHEN (donor_id = '2192') THEN 'Planned' ELSE 'Excess' END) source_type
+FROM
+  donor_report_1
+WHERE ((ship_date IS NOT NULL) AND (site_id IN ('214', '10233', '10276')))
+

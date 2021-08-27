@@ -1,0 +1,7 @@
+-- part of all orders 2017 to present pipeline
+-- casting dates to timestamps in this table
+-- shows distribution/receiving on or after Jan 2017
+
+CREATE TABLE orders_historical_finale_timestamp AS 
+SELECT order_id, type, status, try_cast(ship_date as timestamp) as ship_date, try_cast(receive_date as timestamp) as receive_date, product_id, lot_id, total_units, site_id, donor_id, salesforceid, insulin, drug_id, donor_code, dispensary_name, drug_name, strength, unit_measure_pkg, donor_lot, try_cast(expire_dt as timestamp) as expire_dt
+from orders_historical_finale_date

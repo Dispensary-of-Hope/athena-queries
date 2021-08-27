@@ -1,0 +1,8 @@
+-- part of all orders 2017 to present pipeline
+-- formatting dates in this table
+-- shows distribution/receiving on or after Jan 2017
+
+CREATE TABLE orders_historical_finale_date AS 
+SELECT order_id, type, status, try_cast(try(date_format(date_parse(ship_date,'%m/%d/%Y'),'%Y-%m-%d %T'))as timestamp) as ship_date, try(date_format(date_parse(receive_date,'%m/%d/%Y'),'%Y-%m-%d %T')) as receive_date, product_id, lot_id, total_units, site_id, donor_id, salesforceid, insulin, drug_id, donor_code, dispensary_name, drug_name, strength, unit_measure_pkg, donor_lot, try(date_format(date_parse(expire_dt,'%m/%d/%Y'),'%Y-%m-%d %T')) as expire_dt
+from orders_historical_finale
+

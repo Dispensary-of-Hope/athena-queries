@@ -1,0 +1,80 @@
+-- part of NE and AM report pipeline
+-- Used to recreate reports that were specific to the old eHope system
+-- shows site specific info, quarterly numbers, and distribution
+
+CREATE OR REPLACE VIEW view_ehope_reports AS 
+SELECT
+-- pulling in site info and product utilization
+  si.site_id
+, si.site_name
+, (CASE WHEN (inv.productnamelong IS NULL) THEN dcc.productnamelong ELSE inv.productnamelong END) productnamelong
+-- case statement used to switch to elsevier product name when not in inventory master table
+, "sum"(dr1.qty) total_units
+, 0 DoH_price
+, "sum"((dcc.packageprice * dr1.qty)) wac_total
+, (CASE WHEN (inv.unit_of_measure IS NULL) THEN CAST(dcc.unit_of_measure AS varchar) ELSE inv.unit_of_measure END) unit_of_measure
+-- case statement used to switch to elsevier unit of measure when not in inventory master table
+, dcc.statusname
+, dr1.ship_date
+, si.ascension_owned__c
+, si.ehope_type__c
+, si.shippingcity
+, si.shippingstate
+, dr1.product_id
+, rd.name manufacturer
+, rd.donor_code__c
+, "split_part"(dr1.lot_id, ' ', 3) donor_lot
+, dt.day
+, "quarter"(dt.day) quarter
+, "year"(dt.day) year
+, 0 fills
+, 0 encounters
+, 0 uniquepatients
+, si.ascension_ministry__c
+, si.purchased_medicine__c
+, si.new_dispensing_entity__c
+, null quarter_end_date
+FROM
+  (((((donor_report_1 dr1
+LEFT JOIN site_info si ON (dr1.site_id = si.site_id))
+LEFT JOIN view_elsevier_drugclass_convert dcc ON (dr1.product_id = dcc.ndc11))
+LEFT JOIN view_inventory_master inv ON (dr1.product_id = inv.product_id))
+LEFT JOIN regular_donors rd ON (dr1.donor_id = rd.donor_id__c))
+LEFT JOIN date_table dt ON (dt.day = dr1.ship_date))
+WHERE (dr1.ship_date IS NOT NULL)
+GROUP BY 1, 2, 3, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26
+UNION ALL SELECT
+-- selecting all quarterly number data and using a union query to get QNs in the same table as distribution
+-- union query to be able to use the same date filter in Quicksight 
+  si.site_id
+, si.site_name
+, null productnamelong
+, 0 total_units
+, 0 DoH_price
+, 0 wac_total
+, null unit_of_measure
+, null statusname
+, null ship_date
+, si.ascension_owned__c
+, si.ehope_type__c
+, si.shippingcity
+, si.shippingstate
+, null product_id
+, null manufacturer
+, null donor_code__c
+, null donor_lot
+, dt.day
+, "quarter"(dt.day) quarter
+, "year"(dt.day) year
+, qn.fills fills
+, qn.encounters encounters
+, qn.uniquepatients uniquepatients
+, si.ascension_ministry__c
+, si.purchased_medicine__c
+, si.new_dispensing_entity__c
+, qn.quarter_end_date
+FROM
+  ((quarterly_new qn
+LEFT JOIN site_info si ON (qn.siteid = si.site_id))
+LEFT JOIN date_table dt ON (dt.day = qn.quarter_end_date))
+WHERE (si.site_name <> '')

@@ -1,0 +1,26 @@
+-- part of all orders 2017 to present pipeline
+-- creating a view to reference and casting total_units as int
+
+CREATE OR REPLACE VIEW view_orders_finale_historical AS 
+SELECT
+  ohft.order_id
+, ohft.type
+, ohft.ship_date shipdate
+, ohft.receive_date
+, ohft.Product_id
+, ohft.lot_id
+, TRY_CAST(ohft.total_units AS bigint) total_units
+, ohft.site_id
+, ohft.donor_id
+, ohft.salesforceid
+, ohft.insulin
+, ohft.drug_id
+, ohft.donor_code
+, ohft.dispensary_name
+, ohft.drug_name
+, ohft.strength
+, ohft.unit_measure_pkg
+, ohft.donor_lot
+, ohft.expire_dt
+FROM
+  orders_historical_finale_timestamp ohft

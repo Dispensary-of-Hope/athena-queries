@@ -1,0 +1,16 @@
+-- part of NE and AM report pipeline
+-- report labels Mylan products as planned and everything else as excess
+-- purpose it to show what we have in stock that is planned
+
+CREATE OR REPLACE VIEW view_planned_usage_tracking_currently_in_stock AS 
+SELECT DISTINCT
+  vim.productnamelong
+, vim.packagesize
+, vim.product_id ndc
+, dif.donor_id
+, vim.min_exp_date
+, (CASE WHEN (dif.donor_id = '2192') THEN 'Planned' ELSE 'Excess' END) source_type
+FROM
+  (view_inventory_master vim
+LEFT JOIN donor_id_finale dif ON (vim.product_id = dif.product_id))
+WHERE ((vim.total_in_stock > 0) AND (vim.total_in_stock IS NOT NULL))

@@ -1,0 +1,40 @@
+-- part of NE and AM report pipeline
+-- shows health system and account info for all sites including ones that are retired
+-- The site_info table only shows active accounts but some reports will want to show retired sites as well
+
+create table retired_and_active_sites as 
+
+select distinct                
+     sfa.name site_name
+   , sfa2.name health_system
+   , sfa.shippingstate
+   , sfa.shippingcity
+   , sfa.salesforce_id__c
+   , split_part(sfa.site_id_formatted__c, ' ', 2) as site_id
+   , sfa.company_id__c
+   , sfa.ehope_type__c
+   , sfa.account_record_type_text__c
+   , try(date_parse(sfa.renewal_date__c, '%m/%d/%Y')) as renewal_date
+   , try(date_parse(sfa.joined_network__c, '%m/%d/%Y')) as joined_date
+   , sfu.firstname || ' ' || sfu.lastname as account_manager
+   , sfa.lilly_approved__c
+   , sfa.licensed_pharmacy_licensed_distributor__c
+   , sfa.primary_contact__c
+   , sfa.order_pick_day__c
+   , sfa.new_dispensing_entity__c
+   , sfa.dispensing_entity__c
+   , sfa.shippingpostalcode
+   , sfa.shippingstatecode
+   
+      
+   from sf_account sfa
+   
+   left join sf_account sfa2
+   on sfa2.id = sfa.health_system__c
+   
+   left join sf_user sfu
+   on sfu.id = sfa.ownerid   
+
+
+  where sfa.ehope_type__c IN ('Active Clinic', 'Active Pharmacy', 'Central Access Program', 'Retired Site', 'Mission', 'Transfer')
+  and lower(sfa.name) not like 'wwt'

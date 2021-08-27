@@ -1,0 +1,25 @@
+-- part of NE and AM report pipeline
+-- historical doses and wac per health system and account are stored in s3
+-- shows all doses and wac through 12/31/2018
+-- calculating values prior to 2019 will sometimes produce incorrect values due to missing NDCs
+
+CREATE EXTERNAL TABLE historical_doses_wac_shipped (
+site_id string,
+salesforce_id string,
+health_system string,
+site_name string,
+ship_date string,
+total_doses double,
+total_wac double, 
+drug_class string
+
+)
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe'
+WITH SERDEPROPERTIES (
+  'serialization.format' = ',',
+  'field.delim' = ','
+)
+LOCATION 's3://historical-data-powerbi/historical_doses_wac_shipped/'
+TBLPROPERTIES (
+  'skip.header.line.count' = '1'
+)

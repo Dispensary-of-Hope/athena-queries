@@ -1,0 +1,38 @@
+-- part of NE and AM report pipeline
+-- shows sites that have not reported quarterly numbers for the most recent quarter
+
+CREATE OR REPLACE VIEW view_missing_quarterly_numbers AS 
+SELECT
+  si2.site_name
+, si2.site_id
+, qn2.fills
+, qn2.encounters
+, qn2.uniquepatients
+, qn2.quarter_end_date
+, si2.account_manager
+, si2.joined_date
+FROM
+  (site_info si2
+LEFT JOIN (
+   SELECT DISTINCT
+     si.site_name
+   , si.site_id
+   , qn.fills
+   , qn.encounters
+   , qn.uniquepatients
+   , qn.quarter_end_date
+   , si.account_manager
+   , si.joined_date
+   FROM
+     (site_info si
+   LEFT JOIN quarterly_new qn ON (si.site_id = qn.siteid))
+   WHERE ((account_record_type_text__c = 'Active Access Site') AND (quarter_end_date >= "date_add"('day', -90, current_date)))
+)  qn2 ON (si2.site_id = qn2.site_id))
+-- joining on qn2 to show only reported values from the previous quarter
+-- ex: quarterly numbers for Q3 would be reported in Q4
+
+WHERE (si2.joined_date < "date_add"('day', 9, "date_trunc"('quarter', current_date)))
+-- where statement to only include sites that have a join date within the reporting period
+-- ex: if the current date is 8/27 the beginning of the quarter would be 7/1
+-- adding 9 days to 7/1 would be 7/10 which is the day that quarterly numbers are due
+-- this excludes any sites that joined after the reporting period

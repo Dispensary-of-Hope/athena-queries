@@ -1,0 +1,89 @@
+-- part of NE and AM report pipeline
+-- merges health system/site utilization with quarterly numbers 
+
+CREATE OR REPLACE VIEW view_am_dashboard AS 
+(  -- selecting health system and site utilization
+   SELECT DISTINCT
+     sf.health_system
+   , sf.site_name
+   , sf.ehope_type__c
+   , sf.joined_date
+   , sf.shippingstate
+   , sf.company_id__c
+   , dt.day
+   , ocid.order_id
+   , ocid.product_id
+   , "sum"(ocid.total_units_distributed) total_units_distributed
+   , ocid.drug_class
+   , ocid.drug_name
+   , pkg.packagesize
+   , ocid.unit_wac
+   , "sum"((ocid.unit_wac * ocid.total_units_distributed)) total_wac
+   , (pkg.packagesize * ocid.total_units_distributed) total_doses
+   , null fills
+   , null encounters
+   , null uniquepatients
+   , (CASE WHEN (sf.renewal_date < current_date) THEN "date_add"('day', 365, sf.renewal_date) ELSE sf.renewal_date END) renewal_date
+-- case statement to get next renewal date
+-- current field shows sometimes last renewal and sometimes next renewal
+-- case statement changes to only show next renewal
+   , null quarter_end_date
+   , sf.licensed_pharmacy_licensed_distributor__c licensed_pharmacy
+   , sf.lilly_approved__c
+   , sf.order_pick_day__c
+   , sf.shippingcity
+   , sf.primary_contact__c
+   , sf.account_manager
+   FROM
+     (((orders_with_companyid ocid
+   LEFT JOIN (
+      SELECT DISTINCT --needs to be distinct to get correct values
+        product_id ndc11
+      , packagesize
+      FROM
+        view_inventory_master
+   )  pkg ON (ocid.product_id = pkg.ndc11))
+   INNER JOIN date_table dt ON (ocid.ship_date = dt.day))
+   LEFT JOIN site_info sf ON (ocid.company_id__c = sf.company_id__c))
+   WHERE (sf.company_id__c <> '') -- make sure company id is populated to show only active accounts
+   GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27
+) UNION ALL (
+-- selecting all quarterly number data and using a union query to get QNs in the same table as distribution
+-- union query to be able to use the same date filter in Quicksight 
+   SELECT DISTINCT
+     sf.health_system
+   , sf.site_name
+   , sf.ehope_type__c
+   , sf.joined_date
+   , sf.shippingstate
+   , sf.company_id__c
+   , dt.day
+   , null order_id
+   , null product_id
+   , null total_units_distributed
+   , null drug_name
+   , null drug_class
+   , null packagesize
+   , null unit_wac
+   , null total_wac
+   , null total_doses
+   , qn.fills
+   , qn.encounters
+   , qn.uniquepatients
+   , (CASE WHEN (sf.renewal_date < current_date) THEN "date_add"('day', 365, sf.renewal_date) ELSE sf.renewal_date END) renewal_date
+-- case statement to get next renewal date
+-- current field shows sometimes last renewal and sometimes next renewal
+-- case statement changes to only show next renewal
+   , qn.quarter_end_date
+   , sf.licensed_pharmacy_licensed_distributor__c licensed_pharmacy
+   , sf.lilly_approved__c
+   , sf.order_pick_day__c
+   , sf.shippingcity
+   , sf.primary_contact__c
+   , sf.account_manager
+   FROM
+     ((quarterly_new qn
+   INNER JOIN date_table dt ON (qn.quarter_end_date = dt.day))
+   LEFT JOIN site_info sf ON (qn.siteid = sf.site_id))
+   WHERE (sf.company_id__c <> '')
+) 

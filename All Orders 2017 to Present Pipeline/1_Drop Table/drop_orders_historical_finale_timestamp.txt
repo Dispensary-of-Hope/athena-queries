@@ -1,0 +1,2 @@
+-- part of all orders 2017 to present pipeline
+drop table orders_historical_finale_timestamp

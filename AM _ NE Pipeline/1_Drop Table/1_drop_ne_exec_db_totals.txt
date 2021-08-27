@@ -1,0 +1,2 @@
+-- part of NE and AM report pipeline
+drop table ne_exec_db_totals

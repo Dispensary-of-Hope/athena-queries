@@ -1,0 +1,38 @@
+-- part of all orders 2017 to present pipeline
+-- creates table that merges distribution/receiving finale export with historical distribution/receiving
+-- historical data excludes everything prior to Jan 2017
+-- all fields after insulin are from historical data only and should only be used for reference
+-- fields after insulin are not found in the finale export, these may be removed eventually
+
+CREATE EXTERNAL TABLE orders_historical_finale (
+  order_id string,
+  type string,
+  status string,
+  ship_date string,
+  receive_date string,
+  product_id string,
+  lot_id string,
+  total_units string,
+  site_id string,
+  donor_id string,
+salesforceid string,
+insulin string,
+  drug_id string,
+  donor_code string,
+  dispensary_name string,
+  drug_name string,
+  strength string,
+  unit_measure_pkg string,
+  donor_lot string,
+  expire_dt string
+)
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+WITH SERDEPROPERTIES (
+  'separatorChar' = ',',
+  'quoteChar' = '"',
+  'escapeChar' = '\n'
+)
+LOCATION 's3://finale-reports-bucket-prod/Finale Overwrite/'
+TBLPROPERTIES (
+  'skip.header.line.count' = '1'
+)
