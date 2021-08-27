@@ -1,0 +1,25 @@
+-- part of Elsevier GSD pipeline
+-- pulls product, package, drug class, and pricing info from elsevier_2_aggregate_drugclass
+-- uses the drug class convert table to map drug class array back to one drug class per NDC
+-- excludes NDCs that are off the market
+
+CREATE OR REPLACE VIEW view_elsevier_drugclass_convert AS 
+SELECT DISTINCT
+  epro.ndc11
+, epro.productnamelong
+, epro.packageprice
+, dcc.main_drug_class
+, epro.drug_class
+, epro.therapeutic_class
+, epro.pharm_category
+, epro.packagesize
+, epro.unitname
+, epro.packageid
+, epro.companyname
+, epro.companynameshort
+, epro.statusname
+, epro.unit_of_measure
+FROM
+  (elsevier_2_aggregate_drugclass epro
+LEFT JOIN drug_class_convert dcc ON (epro.drug_class = dcc.aggregated_drug_class))
+

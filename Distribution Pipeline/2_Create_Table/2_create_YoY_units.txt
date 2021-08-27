@@ -1,0 +1,49 @@
+-- part of distribution pipeline
+-- table used for DoH dashboard
+-- shows total units distributed and received each day in the current year vs. previous year
+
+create table YoY_units as
+select day, total_daily_units_received, total_daily_units_distributed, lag(total_daily_units_received,365) over (order by day) total_units_received_previous_year, 
+-- lag function to show total units received over the last year
+lag(total_daily_units_distributed,365) over (order by day) total_units_distributed_previous_year, 
+-- lag function to show total units distributed over past year
+date_add('day',-365,day) as day_previous_year from
+(select distinct day, sum(total_daily_units_received) total_daily_units_received, sum(total_daily_units_distributed) total_daily_units_distributed from
+ (( SELECT DISTINCT
+      dt.day
+  , case when ship_date is null then it.total_daily_units end as total_daily_units_received
+ -- case statement to show what was received
+  , case when receive_date is null then it.total_daily_units end as total_daily_units_distributed
+-- case statement to show what was distributed
+   FROM
+    ( -- selecting aggregate quantities for receive and ship dates on or after Jan 2018
+ SELECT DISTINCT
+      receive_date
+      , ship_date
+      , "sum"(TRY_CAST(total_units AS bigint)) total_daily_units
+      FROM
+        orders_historical_finale_timestamp fpro
+               WHERE fpro.site_id <> '194' and fpro.product_id <> '99999999999' and fpro.product_id <> '00000000000' and fpro.product_id <> '' and (ship_date >= timestamp '2018-01-01 00:00:00.000' or receive_date >= timestamp '2018-01-01 00:00:00.000')
+-- filtering out destruction and NDCs that are not relevant
+-- filtering out dates prior to Jan 2018
+
+      GROUP BY 1,2)  it
+  LEFT JOIN date_table dt ON (it.receive_date = dt.day) or (it.ship_date = dt.day)
+-- joining date table on both receive and ship days to use day as date filter in quicksight
+
+ 
+) UNION ALL
+
+-- union on below query to fill in all null date values with 0 
+ ( SELECT DISTINCT
+ dt.day
+  , 0 total_daily_units_received
+  , 0 total_daily_units_distributed
+  FROM orders_historical_finale_timestamp
+   CROSS JOIN date_table dt
+  where dt.day >= timestamp '2018-01-01 00:00:00.000' and dt.day <= current_date
+ group by 1
+ ))
+group by 1
+order by 1)
+ 

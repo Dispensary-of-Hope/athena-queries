@@ -1,0 +1,8 @@
+-- part of Elsevier GSD pipeline
+-- table that shows manufacturer information from the Elsevier database
+-- generally we will use manufacturer information and naming from the regular_donors table created from Salesforce
+
+CREATE EXTERNAL TABLE company ( companyid string, companyname string, companynameshort string, labelercode string, parentcompanyid string, mvx string)
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe'
+WITH SERDEPROPERTIES ( 'serialization.format' = '|', 'field.delim' = '|', 'collection.delim' = 'undefined', 'mapkey.delim' = 'undefined') LOCATION 's3://elsevier-exports/exports-folder/company/‘
+TBLPROPERTIES ('has_encrypted_data'='false', 'skip.header.line.count'='1')

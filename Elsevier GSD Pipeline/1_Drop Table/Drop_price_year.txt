@@ -1,0 +1,2 @@
+-- part of Elsevier GSD pipeline
+DROP TABLE price_year;

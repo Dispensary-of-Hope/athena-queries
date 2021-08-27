@@ -1,0 +1,2 @@
+-- part of distribution pipeline
+Drop table YoY_units

@@ -1,0 +1,26 @@
+-- part of Elsevier GSD pipeline
+-- pulls product, package, drug class, and pricing info from elsevier_1
+-- uses an array to account for NDCs that fall under multiple drug class categories
+-- the array combines multiple drug classes and maps back to one NDC
+-- excludes NDCs that are off the market
+
+CREATE TABLE elsevier_2_aggregate_drugclass AS
+SELECT DISTINCT
+  epro.ndc11
+, epro.productnamelong
+, epro.packageprice
+, "array_join"("array_distinct"("array_agg"(epro.organsystem)), ', ') drug_class
+, "array_join"("array_distinct"("array_agg"(epro.therapeuticclass)), ', ') therapeutic_class
+, "array_join"("array_distinct"("array_agg"(epro.pharmacologicalcategory)), ', ') pharm_category
+, epro.packagesize
+, epro.unitname
+, epro.packageid
+, epro.companyname
+, epro.companynameshort
+, epro.statusname
+, epro.offmarketdate
+, epro.unit_of_measure
+FROM
+  elsevier_1 epro
+WHERE ((epro.offmarketdate IS NULL) OR (epro.offmarketdate >= current_timestamp))
+GROUP BY 1,2,3,7,8,9,10,11,12,13,14

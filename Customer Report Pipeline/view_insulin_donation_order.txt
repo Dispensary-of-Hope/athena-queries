@@ -1,0 +1,23 @@
+-- part of customer reports pipeline
+-- pulls in site info and utilization of insulin products
+
+CREATE OR REPLACE VIEW view_insulin_donation_order AS 
+SELECT DISTINCT
+  ohft.order_id
+, ohft.product_id
+, ohft.unit_of_measure
+, ohft.drug_name
+, ohft.total_units_distributed
+, ohft.company_id__c company_id
+, (CASE WHEN (ohft.manufacturer = 'LIL') THEN 'ELI Lilly and Company' ELSE ohft.manufacturer END) manufacturer
+, sfa.name
+, sfa.id__c site_id
+, "concat"(sfa.shippingcity, ', ', sfa.shippingstate, ' ', sfa.shippingpostalcode) site_address
+, ohft.ship_date
+, "round"(ohft.unit_wac, 2) "wac"
+, "round"((ohft.unit_wac * ohft.total_units_distributed), 2) "total_wac"
+, CAST('' AS varchar) dispensary_note
+FROM
+  (orders_with_companyid ohft
+LEFT JOIN sf_account sfa ON (sfa.id__c = ohft.site_id))
+WHERE ((ohft.insulin IN ('True', 'TRUE')) AND (NOT (ohft.company_id__c LIKE '')))

@@ -1,0 +1,2 @@
+-- part of Elsevier GSD pipeline
+Drop Table therapeutic_concept_tree_specific_product

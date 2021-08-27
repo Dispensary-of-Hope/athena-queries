@@ -1,0 +1,103 @@
+-- part of Elsevier GSD pipeline
+-- First table in pipeline that pulls in product, package, drug class, and pricing information per NDC
+
+CREATE TABLE elsevier_1 AS
+-- selecting product, package, drug class, and pricing information per NDC
+SELECT
+  y.productnamelong
+, x.organsystem
+, x.therapeuticclass
+, x.pharmacologicalcategory
+, x.chemicalsubgroup
+, y.ndc11
+, y.packagesize
+, y.unitname
+, y.pricetypename
+, y.packageid
+, y.packageprice
+, y.pricetypeid
+, y.companyname
+, y.companynameshort
+, y.offmarketdate
+, y.statusname
+, y.inner_package
+, y.outer_package
+, y.innerpackagecount
+, (CASE WHEN (y.inner_package <> '') THEN "concat"(y.outer_package, ',', ' ', "replace"(CAST((y.packagesize / y.innerpackagecount) AS varchar), '.0', ''), ' ', y.unitname, ' ', "replace"(CAST(y.innerpackagecount AS varchar), '.0', ''), ' ', y.inner_package) ELSE "concat"(y.outer_package, ',', ' ', "replace"(CAST(y.packagesize AS varchar), '.0', ''), ' ', y.unitname) END) unit_of_measure
+-- case statement to pull in multiple fields into one for ease of use
+-- when an NDC doesn't have an inner package value, it will have an outer package value
+
+FROM
+  (( -- selecting product, package, and pricing information per NDC
+   SELECT
+     p.productnamelong
+   , p.offmarketdate
+   , pck.ndc11
+   , p.productid
+   , prs.specificproductid
+   , pck.packagesize
+   , s.pricetypename
+   , s.packageid
+   , s.packageprice
+   , s.pricetypeid
+   , pck.offmarket
+   , co.companyname
+   , co.companynameshort
+   , ncp.unitname
+   , ebgs.statusname
+   ,ipu.unitname inner_package
+   , opu.unitname outer_package
+   , pck.innerpackagecount
+   
+   FROM
+     (((((((product p -- pulling in product info
+   INNER JOIN package pck ON (p.productid = pck.productid)) -- pulling in packaging info
+   LEFT JOIN inner_package_unit ipu ON (pck.innerpackageunitid = ipu.innerpackageunitid) 
+-- pulling in packaging in
+   LEFT JOIN outer_package_unit opu ON (pck.outerpackageunitid = opu.outerpackageunitid) 
+-- pulling in packaging info
+   LEFT JOIN brand_generic_status ebgs ON (p.brandgenericstatusid = ebgs.brandgenericstatusid))
+-- pulling in brand generic status
+   LEFT JOIN package_ssms pcks ON (pck.packageid = pcks.packageid))
+-- pulling in packaging info needed to get to drug class
+   LEFT JOIN product_ssms prs ON (p.productid = prs.productid))
+-- pulling in product info needed to get to drug class
+   INNER JOIN ncpdp_unit ncp ON (pck.ncpdpbillingunitid = ncp.ncpdpunitid))
+-- pulling in package unit info
+   INNER JOIN company co ON (p.marketerid = co.companyid)) -- pulling in manufacturer info
+   LEFT JOIN ( -- selecting pricing info for wholesale acquisition cost only
+      SELECT
+        pt.pricetypename
+      , py.packageid
+      , py.packageprice
+      , pt.pricetypeid
+      , py.begindate
+      , py.enddate
+      FROM
+        (price_year_wac_only py
+      INNER JOIN price_type pt ON (py.pricetypeid = pt.pricetypeid))
+      WHERE (pt.pricetypeid = '2')
+   )  s ON (pck.packageid = s.packageid))
+)  y
+LEFT JOIN (
+   SELECT
+     tc2.conceptname OrganSystem -- one of multiple tiers in the therapeutic_concept table
+   , tc3.conceptname TherapeuticClass -- one of multiple tiers in the therapeutic_concept table
+   , tc4.conceptname PharmacologicalCategory -- one of multiple tiers in the therapeutic_concept table
+   , tc5.conceptname ChemicalSubgroup -- one of multiple tiers in the therapeutic_concept table
+   , tct.therapeuticconcepttreeid
+   , tctsp.specificproductid
+   FROM
+     (((((((((
+-- pulling in drug classification information
+therapeutic_concept_tree_denorm tctd
+   LEFT JOIN therapeutic_concept tc ON (tctd.therapeuticconceptid = tc.therapeuticconceptid))
+   LEFT JOIN therapeutic_concept tc1 ON (tctd.parent1 = tc1.therapeuticconceptid))
+   LEFT JOIN therapeutic_concept tc2 ON (tctd.parent2 = tc2.therapeuticconceptid))
+   LEFT JOIN therapeutic_concept tc3 ON (tctd.parent3 = tc3.therapeuticconceptid))
+   LEFT JOIN therapeutic_concept tc4 ON (tctd.parent4 = tc4.therapeuticconceptid))
+   LEFT JOIN therapeutic_concept tc5 ON (tctd.parent5 = tc5.therapeuticconceptid))
+   LEFT JOIN therapeutic_concept tc6 ON (tctd.parent6 = tc6.therapeuticconceptid))
+   LEFT JOIN therapeutic_concept_tree tct ON (tctd.therapeuticconcepttreeid = tct.therapeuticconcepttreeid))
+   LEFT JOIN therapeutic_concept_tree_specific_product tctsp ON (tct.therapeuticconcepttreeid = tctsp.therapeuticconcepttreeid))
+)  x ON (y.specificproductid = x.specificproductid))

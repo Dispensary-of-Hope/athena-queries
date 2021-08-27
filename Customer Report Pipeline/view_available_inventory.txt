@@ -1,0 +1,17 @@
+-- part of Customer Reports pipeline
+-- purpose of report is to show everything that we currently have available to order
+
+CREATE OR REPLACE VIEW view_available_inventory AS 
+SELECT
+  inv.productnamelong
+, inv.min_exp_date
+, inv.product_id
+, inv.packagesize
+, inv.unit_of_measure
+, inv.drug_class
+, inv.therapeutic_class
+, inv.current_date_in_stock
+, ' ' quantity
+FROM
+  view_inventory_master inv
+WHERE ((NOT (inv.product_id IN ('', '00000000000', '99999999999'))) AND (inv.available_qty > 0))

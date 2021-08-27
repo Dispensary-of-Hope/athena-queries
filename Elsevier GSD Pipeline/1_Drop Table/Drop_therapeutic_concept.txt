@@ -1,0 +1,2 @@
+-- part of Elsevier GSD pipeline
+Drop TABLE therapeutic_concept;

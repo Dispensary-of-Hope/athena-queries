@@ -1,0 +1,17 @@
+-- part of customer reports pipeline
+-- pulls in site info and sales orders to date
+
+CREATE OR REPLACE VIEW view_orders_by_date AS 
+SELECT DISTINCT
+  ohft.order_id
+, ohft.ship_date
+, "count"(DISTINCT ohft.product_id) "#_drugs_IDs"
+, "round"("sum"((ohft.total_units_distributed * ohft.unit_wac)), 2) "total_wac"
+, ohft.company_id__c company_id
+, sfa.name
+, sfa.id__c site_id
+FROM
+  (orders_with_companyid ohft
+LEFT JOIN sf_account sfa ON (sfa.id__c = ohft.site_id))
+WHERE (NOT (ohft.company_id__c IN ('')))
+GROUP BY 1, 2, 5, 6, 7

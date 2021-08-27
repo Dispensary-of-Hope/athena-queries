@@ -1,0 +1,20 @@
+-- part of Elsevier GSD pipeline
+-- shows packageprice based on price type and year NDC available
+
+CREATE EXTERNAL TABLE price_year
+(packageid string,
+pricetypeid string, 
+packageprice double, 
+begindate timestamp,
+enddate timestamp,
+casecount bigint, 
+caseprice double,
+unitprice double, 
+pricechangereasonid string,
+packagepriceerrataid string, 
+packagesize double
+)
+
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe'
+WITH SERDEPROPERTIES ( 'serialization.format' = '|', 'field.delim' = '|', 'collection.delim' = 'undefined', 'mapkey.delim' = 'undefined') LOCATION 's3://elsevier-exports/exports-folder/price-year/‘
+TBLPROPERTIES ('has_encrypted_data'='false', 'skip.header.line.count'='1')

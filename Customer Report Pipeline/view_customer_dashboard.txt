@@ -1,0 +1,35 @@
+-- part of customer reports pipeline
+-- pulling in site utilization information from orders_with_companyid
+
+CREATE OR REPLACE VIEW view_customer_dashboard AS 
+SELECT
+  dt.day
+, ocid.product_id
+, ocid.drug_name
+, "trim"(ocid.drug_class) drug_class
+-- some historical drug classes have spaces that need to be removed
+, ocid.status
+, ocid.ship_date
+, ocid.type
+, ocid.order_id
+, ocid.site_id
+, ocid.salesforceid
+, ocid.unit_of_measure
+, ocid.packagesize
+, ocid.unit_wac
+, ocid.total_units_distributed
+, ocid.lot_id
+, ocid.manufacturer
+, ocid.strength
+, ocid.generic product_type
+, ocid.order_qty
+, ocid.total_units_distributed shipped_qty
+, "round"((ocid.unit_wac * ocid.total_units_distributed), 2) wac_total
+, ocid.order_date
+, ocid.company_id__c company_id
+, sf.name
+FROM
+  ((orders_with_companyid ocid
+LEFT JOIN sf_account sf ON (sf.id__c = ocid.site_id))
+LEFT JOIN date_table dt ON (dt.day = ocid.ship_date))
+WHERE (NOT (sf.company_id__c LIKE ''))
