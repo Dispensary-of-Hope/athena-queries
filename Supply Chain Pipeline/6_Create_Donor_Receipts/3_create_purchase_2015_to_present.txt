@@ -1,0 +1,26 @@
+-- Part of supply chain pipeline
+-- table created from purchase order finale export and historical data stored in s3
+
+CREATE EXTERNAL TABLE purchase_2015_to_present (
+  order_id string,
+  type string,
+  status string,
+  lot_id string,
+  receive_date string,
+  product_id string,
+  total_units string,
+  donor_id string,
+  drug_name string,
+  unit_measure_pkg string,
+  strength string
+)
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+WITH SERDEPROPERTIES (
+  'separatorChar' = ',',
+  'quoteChar' = '"',
+  'escapeChar' = '\n'
+)
+LOCATION 's3://finale-reports-bucket-prod/Finale Purchase Orders Export/'
+TBLPROPERTIES (
+  'skip.header.line.count' = '1'
+)

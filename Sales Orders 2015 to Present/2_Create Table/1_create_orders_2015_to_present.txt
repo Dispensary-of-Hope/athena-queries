@@ -1,0 +1,49 @@
+-- part of sales orders 2015 to present pipeline
+-- creates table that merges historical files with a finale export
+-- shows distribution/sales only from 2015 to present, no receiving/purchasing data
+-- one of two orders tables, the other table has purchasing data but this one does not
+-- all fields listed after insulin are from the historical data only, the finale export does not include these fields
+-- the fields after insulin are for reference but may evenatually be removed
+
+CREATE EXTERNAL TABLE orders_2015_to_present (
+  
+  order_id string,
+  type string,
+  status string,
+  order_date string,
+  ship_date string,
+  product_id string,
+  site_id string,
+  donor_id string,
+  salesforceid string,
+  drug_name string,
+  unit_of_measure string,
+  inner_package string,
+  unit_WAC string, 
+  total_units_distributed string,
+  Manufacturer string,
+  lot_id string,
+  drug_class string,
+  insulin string, 
+  lot_number string, 
+  donor_code string,
+  order_qty string,
+  drug_id string,
+  dispensary_name string,
+  strength string,
+  donor_lot string,
+  expire_dt string,
+  generic string, 
+  unit_AWP string,
+  packagesize string
+)
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+WITH SERDEPROPERTIES (
+  'separatorChar' = ',',
+  'quoteChar' = '"',
+  'escapeChar' = '\n'
+)
+LOCATION 's3://finale-reports-bucket-prod/Finale Orders Export/'
+TBLPROPERTIES (
+  'skip.header.line.count' = '1'
+)

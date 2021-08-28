@@ -1,0 +1,69 @@
+-- Part of supply chain pipeline and used mainly for the ordering tool
+-- Pulls distribution, receiving, and destruction data and compares to what we currently have in stock
+
+CREATE OR REPLACE VIEW view_ordering_tool AS 
+(
+-- references distribution_receiving_destruction
+
+   SELECT DISTINCT
+     drd.day
+   , (CASE WHEN (inv.productnamelong IS NULL) THEN dcc.productnamelong ELSE inv.productnamelong END) productnamelong
+-- case statement to pull product name from elsevier table when not included in the inventory table
+-- the inventory table generally accounts for products we have received before 
+-- the inventory table also pulls info from elsevier and switches to iqvia when not in elsevier
+   , drd.product_id
+   ,  replace(drd.lot_id, 'Mfg: 0', 'Mfg: ') lot_id
+  -- this is needed because to make up for differences in lot_id formatting 
+ -- between the historical data and data from finale
+   , (CASE WHEN (inv.unit_of_measure IS NULL) THEN CAST(dcc.unit_of_measure AS varchar) ELSE inv.unit_of_measure END) unit_of_measure
+-- case statement to pull unit of measure info from elsevier table when not in the inventory table
+
+   , inv.unitname
+   , inv.priority
+   , inv.primary
+   , 0 total_in_stock
+   , 0 available_qty
+   , 0 purchase_order_qty
+   , inv.min_exp_date
+   , inv.drug_class
+   , drd.total_units_received
+   , drd.total_units_distributed
+   , drd.total_units_destroyed
+   FROM
+     ((distribution_receiving_destruction drd
+   LEFT JOIN view_inventory_master inv ON ((drd.product_id = inv.product_id) AND ( replace(drd.lot_id, 'Mfg: 0', 'Mfg: ') = inv.lot_id)))
+-- necessary to join on both product id and lot id to get the correct values
+-- lot id needs to be formatted to account for differences in old and new data
+   LEFT JOIN view_elsevier_drugclass_convert dcc ON (drd.product_id = dcc.ndc11))
+--pulling in elsevier info with one drug class per ndc
+   WHERE (drd.product_id <> '')
+   GROUP BY  DISTINCT 3, 2, 1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+) UNION ALL 
+
+-- union on inventory table to include what is in stock and being purchased
+(
+   SELECT
+     dt.day
+   , inv.productnamelong
+   , inv.product_id
+   , inv.lot_id
+   , inv.unit_of_measure
+   , inv.unitname
+   , inv.priority
+   , inv.primary
+   , inv.total_in_stock
+   , inv.available_qty
+   , inv.purchase_order_qty
+   , inv.min_exp_date
+   , inv.drug_class
+   , 0 total_units_received
+   , 0 total_units_distributed
+   , 0 total_units_destroyed
+   FROM
+     (view_inventory_master inv
+   LEFT JOIN date_table dt ON (dt.day = inv.current_date_in_stock))
+-- current date in stock is always todays date
+-- this value is joined to the date table so that it can be filtered in quicksight
+-- quicksight filter needs to include up to the current date to see inventory
+   GROUP BY 3, 2, 1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+) 

@@ -1,0 +1,2 @@
+-- part of sales orders 2015 to present pipeline
+Drop table orders_with_companyid

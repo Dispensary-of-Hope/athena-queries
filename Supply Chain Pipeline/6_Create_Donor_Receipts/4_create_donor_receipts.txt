@@ -1,0 +1,39 @@
+-- part of supply chain pipeline
+-- used to create the donor receipts in the internal portal
+-- shows what we have received/purchased from each donor with donor information pulled in
+
+create table donor_receipts as select 
+p.order_id, 
+p.type, 
+p.status, 
+p.lot_id,
+date_parse(split_part(p.lot_id,' ', 2), '%m/%d/%Y') as expiration_date,
+-- expiration date needs to be pulled from lot_id
+split_part(p.lot_id,' ', 3) as donor_lot,
+-- donor_lot needs to be pulled from lot_id
+try_cast(try(date_format(date_parse(p.receive_date,'%m/%d/%Y'),'%Y-%m-%d %T'))as timestamp) as receive_date,
+-- casting date from finale export and historical data as timestamp
+p.product_id, 
+try_cast(p.total_units as bigint) as total_units, 
+p.donor_id, 
+p.drug_name, 
+p.unit_measure_pkg,
+p.strength, 
+a.name as manufacturer,
+c.full_name__c,
+a.primary_contact__c, 
+a.primary_contact_email__c, 
+a.shippingcity, 
+a.shippingstatecode, 
+a.shippingpostalcode, 
+c.phone, 
+c.email,
+a.donor_id__c
+from purchase_2015_to_present p
+left join sf_account a
+ON p.donor_id = a.donor_id__c
+left join sf_contact c
+ON a.id = c.accountid and a.primary_contact__c = c.name
+
+where a.type = 'Active' AND (a.account_record_type_text__c = 'Manufacturers' Or a.account_record_type_text__c = 'Distributor')
+-- pulling in only active donors from sf_account, active manufacturers and distributors

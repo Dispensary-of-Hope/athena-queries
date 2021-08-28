@@ -1,0 +1,28 @@
+-- Part of supply chain pipeline
+-- Used mainly in scotts dashboard and pams dashboard
+-- adds target list products in stock and target list products not in stock to scotts_db_1
+
+Create or Replace view view_scotts_db AS
+
+select * from scotts_db_1
+UNION ALL
+(
+-- selecting target list products not in stock
+select 'TL not in stock' as category, sum(TL_Not_in_stock.unique_products) as unique_products, (TL_Not_in_stock.priority) from
+(( -- selects total target list products minus flex and primary to get all target list products not in stock
+  
+  ( -- selecting total number of target list products
+SELECT sum(unique_products) as unique_products, priority FROM scotts_db_1 where category = 'TL Product Total' group by priority)
+UNION ALL
+( -- subtracting flex and primary
+SELECT ((-1)*sum(unique_products)) as unique_products, priority FROM scotts_db_1 where category in ('Flex Products', 'Primary Products') group by priority))) TL_Not_in_Stock
+
+
+group by tl_not_in_stock.priority)
+UNION ALL
+( -- sums the number of flex and primary products to get the total in stock amount
+select 'TL in stock' as category, sum(TL_in_stock.unique_products) as unique_products, (TL_in_stock.priority) from
+((
+(SELECT (sum(unique_products)) as unique_products, priority FROM scotts_db_1 where category in ('Flex Products', 'Primary Products') group by priority))) TL_in_Stock
+
+group by tl_in_stock.priority)

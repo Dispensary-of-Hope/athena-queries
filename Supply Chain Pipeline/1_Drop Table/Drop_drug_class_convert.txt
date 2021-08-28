@@ -1,0 +1,2 @@
+-- part of supply chain pipeline
+Drop Table drug_class_convert

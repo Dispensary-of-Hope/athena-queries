@@ -1,0 +1,2 @@
+-- part of sales orders 2015 to present pipeline
+Drop Table orders_2015_to_present

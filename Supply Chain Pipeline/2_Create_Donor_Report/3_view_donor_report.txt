@@ -1,0 +1,88 @@
+--Supply chain pipeline
+--Used for donor report but central to other reports needing info for both receiving and distribution
+--References donor report 1 which filters out drugs for destruction and dates prior to 2018
+-- Shows shipping and receiving order information linked to manufacturer and site
+-- Union is to show all possible states for each active donor so that the map values are zero instead of null
+
+
+CREATE OR REPLACE VIEW view_donor_report AS 
+(
+   SELECT
+     y.order_id
+   , y.type
+   , y.ship_date
+   , y.receive_date
+   , y.product_id
+   , y.productnamelong
+   , (CASE WHEN (y.drug_class <> '') THEN dcc2.main_drug_class ELSE y.iqvia_drugclass END) drug_class
+--dcc2 takes the drug class array from donor_report_1 and maps back to one drug class per NDC to avoid duplicates
+--case statement to switch from Elsevier to iqvia drug class if product is not found in Elsevier
+   , y.qty
+   , y.packagesize
+   , (CASE WHEN (y.iqvia_packagesize IS NOT NULL) THEN "round"((y.iqvia_packagesize * y.qty), 2) WHEN (y.iqvia_packagesize IS NULL) THEN "round"((y.packagesize * y.qty), 2) ELSE 0 END) total_doses
+--case statement to switch from Elsevier to iqvia drug class if product is not found in Elsevier
+--iqvia table only has package size manually populated for products not found in Elsevier
+   , y.shippingstatecode
+   , y.account_type
+   , rd.donor_code__c donor_code
+   , y.donor_id
+   , rd.name manufacturer
+   , rd.first_donation_date
+   , y.dispensary_name
+   , y.shippingpostalcode
+   , dt.day
+   , y.iqvia_drugclass
+   , y.iqvia_productnamelong
+   , CAST(y.iqvia_packagesize AS varchar) iqvia_packagesize
+   , y.total_wac
+   , y.site_id
+   , y.order_pick_day__c
+   , y.status
+   FROM
+     (((donor_report_1 y
+   INNER JOIN date_table dt ON ((dt.day = y.ship_date) OR (dt.day = y.receive_date))) 
+--join to date table to use one date filter in quicksight
+   LEFT JOIN drug_class_convert dcc2 ON (y.drug_class = dcc2.aggregated_drug_class))
+--join to drug_class_convert to map one drug class to each NDC
+   LEFT JOIN regular_donors rd ON ((y.donor_code = rd.donor_code__c) OR (y.donor_id = rd.donor_id__c)))
+--joining on table of active donors to pull in donor info
+) UNION ALL
+
+-- to show all possible state codes for each manufacturer so that wac and doses show up as 0 on map
+ (
+   SELECT DISTINCT
+     null order_id
+   , 'Sale' type
+   , null ship_date
+   , null receive_date
+   , null product_id
+   , null productnamelong
+   , null drug_class
+   , null qty
+   , null packagesize
+   , 0 total_doses
+   , shippingstatecode
+   , null account_type
+   , null donor_code
+   , null donor_id
+   , x.manufacturer
+   , null first_donation_date
+   , null dispensary_name
+   , null shippingpostalcode
+   , current_date day
+   , null iqvia_drugclass
+   , null iqvia_productnamelong
+   , null iqvia_packagesize
+   , 0 total_wac
+   , null site_id
+   , null order_pick_day__c
+   , null status
+   FROM
+     ((
+      SELECT DISTINCT name manufacturer
+      FROM
+        regular_donors
+   )  x
+   CROSS JOIN sf_account)
+   WHERE (shippingstatecode <> '')
+) 

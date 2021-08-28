@@ -1,0 +1,30 @@
+-- supply chain pipeline but central to other reports as well
+-- Table that shows donor_id values for all ndcs received to date
+-- The lot_id is formatted slightly differently in the Finale export compared to historical data
+-- This query accounts for differences in lot_id formatting and considers
+-- all unique combinations of product_id, lot_id, and donor_id
+-- Union between old format and new format to get all combinations
+
+Create table donor_id_finale as
+select distinct * from
+((SELECT DISTINCT
+ f.product_id,
+ f.lot_id,
+ case when rd.donor_code__c is not null then rd.donor_id__c else f.donor_id end donor_id
+FROM
+orders_historical_finale_timestamp f
+left join regular_donors rd
+ON f.donor_code = rd.donor_code__c
+where f.product_id <> '' and (donor_id__c <> '' or donor_id <>'') and donor_id <> '#N/A'
+group by 1,2,3)
+UNION ALL
+(SELECT DISTINCT
+ f.product_id,
+ replace(f.lot_id, 'Mfg: 0', 'Mfg: ') lot_id,
+ case when rd.donor_code__c is not null then rd.donor_id__c else f.donor_id end donor_id
+FROM
+orders_historical_finale_timestamp f
+left join regular_donors rd
+ON f.donor_code = rd.donor_code__c
+where f.product_id <> '' and (donor_id__c <> '' or donor_id <>'') and donor_id <> '#N/A'
+group by 1,2,3))

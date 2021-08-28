@@ -1,0 +1,39 @@
+-- Part of supply chain pipeline
+-- Used mainly for scotts dashboard
+-- Shows target list and primary/flex total products broken down by priority
+-- primary, flex, and target list totals are separated in the category column
+-- category column created through union all query
+
+create table scotts_db_1 as
+select p.category, sum(p.unique_products) as unique_products, p.priority
+from
+
+(  -- selecting  number of primary products in stock
+  (select count(distinct productnamelong) as unique_products, priority, 'Primary Products' as category from 
+   (select iq.target_list_product, iq.priority, iq.primary, iq.combined_molecule, iq.strength, iq.product_sum, iq.rx_status, iq.drug_class, iq.ndc, iq.packagesize,inv.productnamelong, inv.total_in_stock from iqvia_target_primary iq
+left join view_inventory_master inv
+ON iq.ndc = inv.product_id) 
+     
+     where total_in_stock <> 0 and total_in_stock is not null and primary = 'yes'
+   group by priority)
+UNION ALL
+( -- selecting number of flexible products in stock
+select count(distinct productnamelong) as unique_products, priority, 'Flex Products' as category from 
+  (select iq.target_list_product, iq.priority, iq.primary, iq.combined_molecule, iq.strength, iq.product_sum, iq.rx_status, iq.drug_class, iq.ndc, iq.packagesize,inv.productnamelong, inv.total_in_stock from iqvia_target_primary iq
+left join view_inventory_master inv
+ON iq.ndc = inv.product_id)  
+ where total_in_stock <> 0 and total_in_stock is not null and primary = 'no'
+   group by priority)
+
+UNION ALL
+( -- selecting total number of target list products based on the iqvia table
+select count(distinct target_list_product) as unique_products, priority, 'TL Product Total' as category  from 
+   (select iq.target_list_product, iq.priority, iq.primary, iq.combined_molecule, iq.strength, iq.product_sum, iq.rx_status, iq.drug_class, iq.ndc, iq.packagesize,inv.productnamelong, inv.total_in_stock from iqvia_target_primary iq
+left join view_inventory_master inv
+ON iq.ndc = inv.product_id) 
+where target_list_product <> 'None'
+   group by priority)  
+  
+ 
+) p
+group by p.priority, p.category

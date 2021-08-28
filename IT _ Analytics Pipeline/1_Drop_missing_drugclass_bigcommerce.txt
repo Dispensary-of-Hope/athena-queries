@@ -1,0 +1,2 @@
+-- part of IT and analytics pipeline
+Drop table missing_drugclass_bigcommerce

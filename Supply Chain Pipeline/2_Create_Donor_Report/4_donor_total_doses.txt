@@ -1,0 +1,18 @@
+-- Part of supply chain pipeline and used for donor report
+-- aggregates total doses for everything prior to 2018 in the historical_donations table
+-- and everything after 2018 in the donor report view
+-- shows total doses donated by each donor since they started donating, some as early as 2012
+-- only showing products received/purchased not distribution/sales
+
+Create table donor_total_doses AS
+select
+  x.donor_id, x.donor_code, sum(x.total_doses) total_doses, rd.name as manufacturer
+ From
+(select donor_id, donor_code, doses_donated as total_doses from historical_donations hd
+UNION ALL
+select donor_id, donor_code, sum(total_doses) as total_doses from view_donor_report
+where receive_date is not null 
+group by 1,2) as x
+LEFT JOIN regular_donors rd
+ON x.donor_id = rd.donor_id__c
+group by 1,2,4

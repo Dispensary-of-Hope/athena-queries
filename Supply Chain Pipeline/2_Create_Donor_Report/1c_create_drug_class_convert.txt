@@ -1,0 +1,20 @@
+-- supply chain pipeline but central to other reports as well
+-- Parent2 is the first tier drug class in the therapeutic_concept_tree_denorm table
+-- One drug should map to one drug class to prevent duplicate values when aggregating data
+-- However, sometimes drugs can fall into more than one drug class in Elsevier
+-- This table maps the first tier drug class in Elsevier back to one value instead of multiple
+-- Manually created and stored in S3
+
+CREATE EXTERNAL TABLE drug_class_convert (aggregated_drug_class string, main_drug_class string
+
+)
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+WITH SERDEPROPERTIES (
+  'separatorChar' = ',',
+  'quoteChar' = '"',
+  'escapeChar' = '\n'
+)
+LOCATION 's3://elsevier-exports/drug_class_convert/'
+TBLPROPERTIES (
+  'skip.header.line.count' = '1'
+)

@@ -1,0 +1,17 @@
+-- part of quarterly numbers pipeline
+-- pulls in quarterly number information being loaded into RDS database from BigCommerce app
+-- table of all quarterly numbers from the new system
+
+CREATE EXTERNAL TABLE quarterly_numbers(
+  fills int,
+  encounters int,
+  uniquepatients int,
+  quarter int,
+  year int,
+  site string,
+  siteid string,
+  quarter_end_date timestamp
+)
+STORED AS PARQUET
+LOCATION 's3://rds-snapshots-doh/prod/exporttask-prod-4-7-2021/prodDB/prodDB.QuarterlyNumbers/'
+tblproperties ("parquet.compression"="SNAPPY")

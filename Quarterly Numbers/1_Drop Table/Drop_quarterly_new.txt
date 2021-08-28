@@ -1,0 +1,2 @@
+-- Part of quarterly numbers pipeline
+DROP TABLE quarterly_new;

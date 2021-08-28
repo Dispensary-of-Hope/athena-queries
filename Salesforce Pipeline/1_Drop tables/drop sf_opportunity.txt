@@ -1,0 +1,2 @@
+-- part of Salesforce pipeline 
+DROP TABLE sf_opportunity;

@@ -1,0 +1,9 @@
+-- Part of supply chain pipeline and reports
+-- Pulls manufacturer names from the manufacturer offers table 
+-- where the offer date is within the past year
+
+create table manufacturer_offers_past_year as
+select z.manufacturer, offer_date
+from
+(select manufacturer, try_cast(try(date_format(date_parse(offer_date,'%m/%d/%Y'),'%Y-%m-%d %T'))as timestamp) as offer_date from manufacturer_offers) z
+where z.offer_date >= date_add('day',-365,current_timestamp)

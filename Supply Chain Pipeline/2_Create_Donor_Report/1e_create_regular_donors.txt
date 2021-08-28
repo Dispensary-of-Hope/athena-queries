@@ -1,0 +1,9 @@
+-- Supply chain pipeline but central to other reports
+-- Creates table to show all regular donors listed as active in Salesforce
+
+create table regular_donors AS
+SELECT name, type, donor_code__c, replace(donor_id__c,'.0') as donor_id__c, account_record_type_text__c, try(date_parse(date_became_active__c,'%m/%d/%Y')) as date_became_active, donating_planned__c, donating_excess__c,
+try(date_parse(first_donation__c,'%m/%d/%Y')) as first_donation_date
+
+from sf_account
+where type = 'Active' and account_record_type_text__c in ('Distributor', 'Manufacturers')

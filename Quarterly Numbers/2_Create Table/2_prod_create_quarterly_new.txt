@@ -1,0 +1,7 @@
+-- Part of the quarterly numbers pipeline
+-- Union between old and new quarterly number data
+-- dates formatted to timestamps
+
+CREATE TABLE quarterly_new AS 
+SELECT fills, encounters, uniquepatients, quarter, year, site, siteid, quarter_end_date FROM quarterly_numbers UNION ALL SELECT cast(fills as int) as fills, cast(encounters as int) as encounters, cast(uniquepatients as int) as uniquepatients, cast(quarter as int) as quarter, cast(year as int) as year, site, siteid, cast(try(date_format(date_parse(quarter_end_date,'%m/%d/%Y'),'%Y-%m-%d %T'))as timestamp) as quarter_end_date
+FROM quarterly_historical

@@ -1,0 +1,15 @@
+--Part of supply chain pipeline
+--Supply chain has an excel file that they update to keep up with offers
+--Pulls in manufacturer offers from this dataset which is manually uploaded to S3
+
+CREATE EXTERNAL TABLE manufacturer_offers 
+( manufacturer string, offer_date string, WAC string, AWP string, NDC string, Description string, Brand_drugclass string, Packagesize string, Lot string, Exp_date string, Available_Bottles string, Qty_accepted string, Doses_Offered string, Doses_Accepted string,AWP_Offered string, AWP_accepted string, WAC_Offered string, WAC_accepted string, thirty_day_fills_accepted string, Target_drug string, thirty_day_fills_offered string)
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+WITH SERDEPROPERTIES (
+  'separatorChar' = ',',
+  'quoteChar' = '"',
+  'escapeChar' = '\n'
+)
+LOCATION 's3://historical-data-powerbi/offers/'
+TBLPROPERTIES ('has_encrypted_data'='false', 'skip.header.line.count' = '1'
+)

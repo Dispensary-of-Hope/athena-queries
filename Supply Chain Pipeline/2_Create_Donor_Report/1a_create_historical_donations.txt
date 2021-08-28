@@ -1,0 +1,22 @@
+-- supply chain pipeline
+-- table for donor report
+-- This table was created to show aggregate doses donated per manufacturer prior to 2018
+-- This accounts for difficulties in aggregating data prior to 2018
+
+
+CREATE EXTERNAL TABLE historical_donations(
+donor_code string,
+donor_id string,
+doses_donated double,
+total_units_received bigint
+
+)
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe'
+WITH SERDEPROPERTIES (
+  'serialization.format' = ',',
+  'field.delim' = ','
+)
+LOCATION 's3://historical-data-powerbi/historical_donations/'
+TBLPROPERTIES (
+  'skip.header.line.count' = '1'
+)

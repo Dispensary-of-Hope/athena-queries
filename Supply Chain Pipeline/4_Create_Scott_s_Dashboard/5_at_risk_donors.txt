@@ -1,0 +1,12 @@
+-- Part of supply chain pipeline
+-- Pulls in names and ids of donors that have not donated in the past 9 months
+-- Does this by joining table of active donors to x which is all manufacturers that have donated
+-- Then only manufacturers not in x are selected
+
+Create table at_risk_donors AS
+select rd.name, rd.donor_id__c, rd.donor_code__c from regular_donors rd
+left join
+(select donor_id, manufacturer, sum(qty) from view_donor_report where receive_date >= "date_add"('month', -9, current_timestamp) and ship_date is null
+group by donor_id, manufacturer)x
+ON rd.donor_id__c = x.donor_id
+where x.manufacturer is null

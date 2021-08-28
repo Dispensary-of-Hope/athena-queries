@@ -1,0 +1,119 @@
+-- part of Salesforce pipeline but central to other reports
+-- table to pull in health system info and associated accounts
+-- only shows info for active accounts
+
+create table site_info as 
+
+select distinct                
+     sfa.name site_name
+   , sfa2.name health_system
+   , sfa.shippingstate
+   , sfa.shippingcity
+   , sfa.salesforce_id__c
+   , split_part(sfa.site_id_formatted__c, ' ', 2) as site_id
+ -- this function is used to get rid of text and leave just the site id info
+   , sfa.company_id__c
+   , sfa.ehope_type__c
+   , sfa.account_record_type_text__c
+   , (CASE WHEN ( try(date_parse(sfa.renewal_date__c, '%m/%d/%Y')) < current_date) THEN "date_add"('day', 365,  try(date_parse(sfa.renewal_date__c, '%m/%d/%Y'))) ELSE  try(date_parse(sfa.renewal_date__c, '%m/%d/%Y')) END) renewal_date
+-- case statement to account for issues with the renewal date field in sf_account
+-- this field would sometimes show previous renewal and sometimes show next renewal
+-- date should always be in the future and renewal date would be the same month/day each year
+   , try(date_parse(sfa.joined_network__c, '%m/%d/%Y')) as joined_date
+   , sfu.firstname || ' ' || sfu.lastname as account_manager
+   , fee.subscription_fee
+   , fee.monthly_subscription_fee
+   , sfa.lilly_approved__c
+   , sfa.licensed_pharmacy_licensed_distributor__c
+   , sfa.primary_contact__c
+   , sfa.order_pick_day__c
+   , wac_last_renewal.total_wac wac_since_last_renewal
+   , sfa.new_dispensing_entity__c
+   , sfa.dispensing_entity__c
+   , sfa.shippingpostalcode
+   , sfa.shippingstatecode
+   , sfa.ascension_owned__c
+   , sfa.ascension_ministry__c
+   , sfa.purchased_medicine__c
+   
+      
+   from sf_account sfa
+   
+   left join sf_account sfa2
+   on sfa2.id = sfa.health_system__c
+
+-- health system and accounts are in the same table in salesforce
+-- the health_system__c field has all of the unique ids for the health systems
+-- health_system__c is populated with the id of the health system that each account in linked to
+-- the health system id is the same id field as for the individual accounts
+-- recursive join to account for this and link health system ids back to each account
+   
+   left join sf_user sfu
+   on sfu.id = sfa.ownerid    -- key/lookup relationship
+ 
+   LEFT JOIN 
+( -- SQL to pull in annual and monthly subscription fee info for each account 
+   select
+   distinct
+
+   sfa.name
+   , sfa.salesforce_id__c
+   , Case When round(max(Cast(sfo.amount as double)), 2) = 0.0
+     Then 1.0    -- to avoid dividing by zero
+     Else round(max(Cast(sfo.amount as double)), 2) 
+     End as subscription_fee
+   , Case When round(max(Cast(sfo.amount as double))/12, 2) = 0.0
+     Then 1.0    -- to avoid dividing by zero
+     Else round(max(Cast(sfo.amount as double))/12, 2) 
+     End as monthly_subscription_fee
+    
+   from sf_account sfa
+
+   left join sf_opportunity sfo
+   on sfa.id = sfo.accountid
+  
+   where sfo.amount in ('0.0','12500.0', '7500.0', '150000.0')
+   and lower(sfa.account_record_type_text__c) IN ('active access site')
+   and lower(sfa.type) IN ('active')
+    
+   group by 1,2
+   ) fee
+  ON fee.salesforce_id__c = sfa.salesforce_id__c
+  
+  LEFT JOIN
+  ( -- SQL to calculate WAC value distributed to sites since the date they last renewed contract
+select
+  vcd.name
+, vcd.site_id
+, rd.date_renewal
+, sum(vcd.wac_total) as total_wac
+FROM view_customer_dashboard as vcd
+
+LEFT JOIN (
+select distinct
+  split_part(sf.site_id_formatted__c, ' ', 2) site_id
+ , Case when try(date_parse(sf.renewal_date__c, '%m/%d/%Y')) < current_date
+                        then try(date_parse(sf.renewal_date__c, '%m/%d/%Y'))
+                        else (try(date_parse(sf.renewal_date__c, '%m/%d/%Y'))) - interval '365' day
+                        end as date_renewal
+-- case statement to get last renewal date which would always be in the past
+
+from sf_account as sf
+   
+) as rd
+ON vcd.site_id = rd.site_id
+
+where vcd.ship_date between rd.date_renewal and current_date
+-- showing only shipping info and wac value for time period between today's date and last renewal date
+
+group by 1,2,3) wac_last_renewal
+ON split_part(sfa.site_id_formatted__c, ' ', 2) = wac_last_renewal.site_id
+  
+  
+
+
+  where lower(sfa.account_record_type_text__c) IN ('active access site')
+  and lower(sfa.type) IN ('active')
+  and lower(sfa.name) not like 'wwt'
+
+-- showing only active accounts

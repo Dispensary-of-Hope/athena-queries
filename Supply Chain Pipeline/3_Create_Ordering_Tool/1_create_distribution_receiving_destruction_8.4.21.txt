@@ -1,0 +1,56 @@
+--Part of supply chain pipeline
+--Mainly used for the ordering tool but central to some other reports
+--shows distribution, receiving, and destruction side by side in one table
+--excludes data prior to 2019 
+-- several null ndc values exist  prior to 2019 and aggregation would not be accurate
+
+Create table distribution_receiving_destruction as
+select h.product_id, h.day, h.lot_id, h.expire_dt, case when sum(h.total_units_received) is null then 0 else sum(h.total_units_received) end as total_units_received, case when sum(h.total_units_distributed) is null then 0 else sum(h.total_units_distributed) end as total_units_distributed, case when sum(h.total_units_destroyed) is null then 0 else sum(h.total_units_destroyed) end as total_units_destroyed
+FROM
+(
+(
+-- selecting relevant values from test_receiving which includes only non null receive dates
+
+select distinct x.product_id, dt.day, x.lot_id, x.expire_dt, x.total_units_received, x.total_units_distributed, x.total_units_destroyed from
+(select product_id, receive_date, lot_id, expire_dt, sum(total_units_received) as total_units_received, null as total_units_distributed, null as total_units_destroyed from 
+(SELECT *, TRY_CAST(o.total_units AS bigint) total_units_received FROM orders_historical_finale_timestamp o where receive_date is not null) as test_receiving 
+ 
+where product_id <> '00000000000' AND product_id <> '99999999999' 
+--excluding non relevant NDCs
+group by product_id, receive_date, lot_id, expire_dt) x
+left join date_table dt
+ON x.receive_date = dt.day)
+ -- pulling in date value mapped to receive date so that one date filter can be used in quicksight
+
+UNION ALL
+(
+-- selecting relevant values from test_distribution which includes only non-null ship dates
+-- test_distribution filters out destruction site id 194
+
+select distinct y.product_id, dt2.day, y.lot_id, y.expire_dt, y.total_units_received, y.total_units_distributed, y.total_units_destroyed from
+(select product_id, ship_date,  lot_id, expire_dt,  null as total_units_received, sum(total_units_distributed) as total_units_distributed, null as total_units_destroyed from
+(SELECT *, TRY_CAST(o.total_units AS bigint) total_units_distributed FROM orders_historical_finale_timestamp o where ship_date is not null) as test_distribution
+ 
+where site_id <> '194' AND product_id <> '00000000000' AND product_id <> '99999999999'
+group by product_id, ship_date, lot_id, expire_dt) y
+left join date_table dt2 
+ON y.ship_date = dt2.day)
+ -- pulling in date value mapped to ship date so that one date filter can be used in quicksight
+  
+UNION ALL
+(
+-- selecting relevant values from test_distribution2 which includes only non-null ship dates
+-- test_distribution2 include only destruction site id 194
+
+select distinct z.product_id, dt3.day, z.lot_id, z.expire_dt, z.total_units_received, z.total_units_distributed, z.total_units_destroyed from
+(select product_id, ship_date, lot_id, expire_dt, null as total_units_received, null as total_units_distributed,  sum(total_units_distributed) as total_units_destroyed from
+(SELECT *, TRY_CAST(o.total_units AS bigint) total_units_distributed FROM orders_historical_finale_timestamp o where ship_date is not null) as test_distribution2 
+where site_id = '194' AND product_id <> '00000000000' AND product_id <> '99999999999'
+group by product_id, ship_date, lot_id, expire_dt) z
+left join date_table dt3
+ON z.ship_date = dt3.day) 
+ -- pulling in date value mapped to ship date so that one date filter can be used in quicksight 
+  )h
+where h.day >= timestamp '2019-01-01 00:00:00.000'
+group by h.product_id, h.day, h.lot_id, h.expire_dt
+order by h.day, h.product_id, h.lot_id, h.expire_dt

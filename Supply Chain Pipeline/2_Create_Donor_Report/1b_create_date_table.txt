@@ -1,0 +1,16 @@
+-- supply chain pipeline but central to other reports as well
+-- Date table can be used to join multiple date fields to one filter value
+-- Manually created and stored in S3
+
+CREATE EXTERNAL TABLE date_table (
+day timestamp, year int, monthnamelong string, month_number int, day_of_week string, monthnameshort string, calendar_quarter string, fiscal_quarter string
+)
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe'
+WITH SERDEPROPERTIES (
+  'serialization.format' = ',',
+  'field.delim' = ','
+)
+LOCATION 's3://historical-data-powerbi/datestable/'
+TBLPROPERTIES (
+  'skip.header.line.count' = '1'
+)

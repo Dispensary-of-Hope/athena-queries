@@ -1,0 +1,2 @@
+-- part of Finale inventory pipeline
+DROP TABLE finale_inventory;

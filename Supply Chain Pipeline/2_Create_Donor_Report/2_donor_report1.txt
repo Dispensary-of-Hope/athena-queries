@@ -1,0 +1,47 @@
+-- Supply chain pipeline but central to other reports
+-- Pulls in all shipping and receiving order information linked to manufacturer and site
+
+create table donor_report_1 as
+SELECT distinct x.order_id, x.lot_id, x.type, x.ship_date, x.receive_date, x.product_id, x.qty, x.donor_code, x.donor_id, x.site_id, sf.site_name as dispensary_name, sf.shippingpostalcode, sf.shippingstatecode, sf.account_record_type_text__c account_type,  CASE WHEN (dcc.productnamelong = '' OR dcc.productnamelong is null) THEN iq.product_sum ELSE dcc.productnamelong END as productnamelong --some NDCs not in Elsevier found in iqvia table, this accounts for that
+ , dcc.packagesize
+, "array_join"("array_distinct"("array_agg"(dcc.organsystem)), ', ') drug_class -- first tier parent2 drug class from Elsevier in array to prevent duplicate NDCs
+, iq.drug_class as iqvia_drugclass
+, iq.product_sum as iqvia_productnamelong
+, try_cast(iq.packagesize as double) as iqvia_packagesize
+, iq.ndc 
+, avg(dcc.packageprice) as unit_WAC -- wholesale acquisition cost per package unit
+, (avg(dcc.packageprice) * x.qty) as total_WAC -- calculating total wholesale acquisition cost by multiplying number of units distributed and/or received by package size
+, x.status
+,sf.order_pick_day__c
+
+
+FROM (SELECT distinct
+  fpro.order_id
+, fpro.lot_id
+, fpro.type
+, fpro.ship_date
+, fpro.receive_date
+, fpro.Product_id
+, fpro.site_id
+, sum(TRY_CAST(fpro.total_units AS bigint)) QTY -- original table did not have total units as int
+, fpro.donor_code
+, f.donor_id as donor_id
+, fpro.status
+
+FROM
+orders_historical_finale_timestamp fpro
+LEFT JOIN donor_id_finale f ON ((fpro.product_id = f.product_id) and (fpro.lot_id = f.lot_id)) 
+-- joining on the donor id table to match ndcs and lot ids to the correct donor based on all unique combinations in that table
+
+WHERE fpro.site_id <> '194' and fpro.product_id <> '99999999999' and fpro.product_id <> '00000000000' and fpro.product_id <> '' and (ship_date >= timestamp '2018-01-01 00:00:00.000' or receive_date >= timestamp '2018-01-01 00:00:00.000'
+-- excluding site id of 194 which was PharmaLink where we previously sent drugs for destruction
+-- product ids that are excluded include dispensary of hope stickers and blank values
+-- For purposes of reports referencing this table, all shipping and receiving prior to 2018 were excluded Several missing NDCs before that period
+)
+     group by 1,2,3,4,5,6,7,9,10,11) x
+
+LEFT JOIN elsevier_1 dcc ON x.product_id = dcc.ndc11 -- pulling product information from elsevier
+Left JOIN iqvia_target_primary iq ON x.product_id = iq.ndc -- pulling product information from iqvia table to account for missing info in elsevier
+LEFT JOIN site_info sf ON (x.site_id = sf.site_id) -- pulling in account information
+group by 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,18,19,20,21,24,25
+

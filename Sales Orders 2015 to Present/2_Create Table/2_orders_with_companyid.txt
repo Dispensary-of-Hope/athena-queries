@@ -1,0 +1,14 @@
+-- part of sales orders 2015 to present pipeline
+-- this table pulls in all sales orders from orders_2015_to_present and adds in company_id by joining on site_Id
+-- site_id is the field that we are using to join because the finale export does not have any other ids to join to
+-- we need company_id as an identifier for sites when they sign on to Bigcommerce
+-- the company_id is used as a parameter in quicksight so that sites will only see their reports when signing onto Bigcommerce
+
+Create table orders_with_companyid as 
+
+SELECT sf.company_id__c, order_id, otp.type, status, try_cast(try(date_format(date_parse(order_date,'%m/%d/%Y'),'%Y-%m-%d %T'))as timestamp) as order_date, try_cast(try(date_format(date_parse(ship_date,'%m/%d/%Y'),'%Y-%m-%d %T'))as timestamp)as ship_date, product_id, split_part(sf.site_id_formatted__c, ' ', 2) as site_id
+, donor_id, salesforceid, drug_name, unit_of_measure, inner_package, try_cast(unit_wac as double) as unit_wac, try_cast(total_units_distributed as bigint) as total_units_distributed, manufacturer, lot_id,trim(drug_class) as drug_class, insulin, lot_number, donor_code, try_cast(order_qty as bigint) as order_qty, dispensary_name, strength, donor_lot, try_cast(try(date_format(date_parse(expire_dt,'%m/%d/%Y'),'%Y-%m-%d %T'))as timestamp) as expire_dt,generic, try_cast (unit_awp as double) as unit_awp, try_cast(packagesize as double) as packagesize FROM orders_2015_to_present otp left join sf_account sf ON otp.site_id= split_part(sf.site_id_formatted__c, ' ', 2) 
+
+-- dates formatted to timestamps
+-- site_id_formatted__c in the salesforce table needs split_part function to separate text from actual site_id
+

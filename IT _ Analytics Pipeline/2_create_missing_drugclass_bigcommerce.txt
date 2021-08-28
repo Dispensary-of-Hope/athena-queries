@@ -1,0 +1,20 @@
+-- part of IT and analytics pipeline
+-- pulls Bigcommerce export stored in S3 that shows ndcs that are missing drug classes
+-- drugs in Bigcommerce will not show up if a drug class is not assigned 
+
+CREATE EXTERNAL TABLE missing_drugclass_bigcommerce (
+  
+ ndc string,
+ name string,
+ drug_class string
+)
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+WITH SERDEPROPERTIES (
+  'separatorChar' = ',',
+  'quoteChar' = '"',
+  'escapeChar' = '\n'
+)
+LOCATION 's3://bigcommerce-products-production/'
+TBLPROPERTIES (
+  'skip.header.line.count' = '1'
+)

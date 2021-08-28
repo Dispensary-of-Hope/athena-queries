@@ -1,0 +1,30 @@
+-- Part of supply chain pipeline
+-- showing all primary products in stock and on hand percent of par level
+-- par level is distribution over the past 6 months
+-- on hand percent of par level compares current inventory stock to 6 months of distribution
+
+CREATE OR REPLACE VIEW view_pams_db AS 
+SELECT DISTINCT
+  inv.productnamelong
+, priority
+, "sum"(total_in_stock) total_in_stock
+, "sum"(available_qty) available_qty
+, par_level.total_units par_level_units
+, CAST(("sum"(total_in_stock) / par_level.total_units) AS decimal(10,4)) 
+on_hand_percent_of_par_level
+-- on hand percent of par level compares what we have in stock to past 6 months of distribution
+FROM
+  (view_inventory_master inv
+LEFT JOIN (
+
+   SELECT DISTINCT
+     productnamelong
+   , "sum"(qty) total_units
+   FROM
+     view_donor_report
+   WHERE ((ship_date >= "date_add"('month', -6, current_timestamp)) AND (receive_date IS NULL))
+   GROUP BY  DISTINCT productnamelong
+)  par_level ON (inv.productnamelong = par_level.productnamelong))
+-- joining inventory table on par_level which shows shipping from the last 6 months
+WHERE (primary = 'yes')
+GROUP BY  DISTINCT inv.productnamelong, inv.priority, par_level.total_units

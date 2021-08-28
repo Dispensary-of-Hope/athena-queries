@@ -1,0 +1,125 @@
+import json
+import boto3
+import pandas as pd 
+import io
+
+s3 = boto3.client('s3')
+
+def lambda_handler(event, context):
+    try:
+        bucket = 'salesforceobjectexport'
+        key = 'Account/Account.csv'
+        key2 = 'Opportunity/Opportunity.csv'
+        key3 = 'Contact/Contact.csv'
+        key4 = 'User/User.csv'
+        
+        dest_bukt = 'salesforceobjectexport'
+        dest_key = 'Account_clean/Account_clean.csv'
+        dest_key2 = 'Opportunity_clean/Opportunity_clean.csv'
+        dest_key3 = 'Contact_clean/Contact_clean.csv'
+        dest_key4 = 'User_clean/User_clean.csv'
+        
+        get_resp = s3.get_object(Bucket = bucket, Key = key)
+        # df_acc1 = pd.read_csv(io.BytesIO(get_resp['Body'].read()))
+        
+        # need to stop pandas read_csv from trying to interpret the data types automatically
+        # read_csv breaks large datasets into chunks (and then stitches it back together) 
+        # and each chunk can be interpreted differently
+        # need to explicitly make Company ID and Donor ID string types for Athena join conditions
+        df_acc1 = pd.read_csv(io.BytesIO(get_resp['Body'].read()),
+                              dtype = {'Donor_ID__c' : str, 'Company_ID__c' : str, 'ID__c' : str} 
+                             )
+        
+        df_acc2 = df_acc1.drop(columns = ['IsDeleted', 'BillingStreet', 'BillingAddress', 'ShippingStreet', 'ShippingAddress', 
+                                          'Phone', 'Fax', 'Website', 'PhotoUrl', 'Description', 'Jigsaw', 'JigsawCompanyId',
+                                          'SicDesc', 'Services_Offered__c', 'Accepted_Documentation__c',
+                                          'Specialty__c', 'Method_of_Sign_Up__c', 'Essential_Meds_last_donation__c', 'Coverage_Area__c', 
+                                          'Referral_Source__c', 'Sign_up_Source__c', 'ID_Customer_Name__c', 'Former_Account_Name_1__c',
+                                          'Former_Account_Name_2__c', 'Former_Account_Name_3__c', 'Former_Account_Name_4__c', 
+                                          'ALL_Former_Account_Names__c', 'Most_Recent_Account_Name__c', 'Inventory_Segregation_Process__c',
+                                          'Reason_for_changing_risk_level__c', 'Preferred_Web_Conferencing_Tool__c', 'Time_zone__c',
+                                          'Discontinued_Reason__c', 'Retired_Lost_Sale_Reason__c', 'Destruction_Service_or_Process__c', 
+                                          'Hours__c', 'Patient_Qualification__c'],
+                                          axis = 1)
+        
+        df_acc3 = df_acc2.dropna(axis = 1, how = 'all')
+        
+        # df_acc3 = df_acc1[['Id','Name','Type','RecordTypeId','ParentId','BillingCity',
+        #            'BillingState','BillingPostalCode','BillingCountry','BillingStateCode',
+        #            'ShippingCity','ShippingState','ShippingPostalCode','ShippingCountry',
+        #            'ShippingStateCode','OwnerId','CreatedDate','CreatedById','LastModifiedDate',
+        #            'LastModifiedById','SystemModstamp','LastActivityDate','AccountSource',
+        #            'Site_ID_Formatted__c','Percent_Uninsured__c','Pharmacy_Operating_System__c',
+        #            'Pharmacy_Structure__c','Clinic_Structure__c','Electronic_Medical_Record_System__c',
+        #            'Expiration_Date__c','License_Permit_Type__c','License_Registration__c','Day__c',
+        #            'Order_Pick_Day__c','Purchased_Medicine__c','Renewal_Date__c','Dispensing_Entity_Structure__c',
+        #            'Licensed_Pharmacy_Licensed_Distributor__c','Ascension_Owned__c','Donating_Planned__c',
+        #            'Donating_Excess__c','Central_Access_Program__c','Retired_Lost_Sale_Reason__c',
+        #            'eHope_Type__c','Open_Door__c','Mail_Order__c','SalesForce_ID__c','Donor_ID__c',
+        #            'Donor_Code__c','Retire_Date__c','Primary_contact__c','Primary_contact_email__c',
+        #            'Account_Record_Type_Text__c','Date_became_Active__c','Date_became_Retired__c',
+        #            'Lilly_Approved__c','Joined_Network__c','X250_FPG__c','Account_Manager__c',
+        #            'X340B__c','Health_System__c','Risk_Probability_of_Retirement__c']]
+        
+        df_acc4 = df_acc3.to_csv()
+        put_resp = s3.put_object(Bucket = dest_bukt,
+                                Key = dest_key,
+                                Body = df_acc4,
+                                ContentType = "application/vnd.ms-excel")
+        
+        get_resp2 = s3.get_object(Bucket = bucket, Key = key2)
+        df_opp1 = pd.read_csv(io.BytesIO(get_resp2['Body'].read()))
+        df_opp2 = df_opp1.drop(columns = ['Description', 'Funding_Comments__c', 'Retired_Lost_sale_Reason__c', 
+                                          'Unsuccessful_Renewal_Reason__c'], axis = 1)
+        # df_opp2 = df_opp1.dropna(axis = 1, how = 'all')
+        df_opp3 = df_opp2.to_csv()
+        put_resp2 = s3.put_object(Bucket = dest_bukt,
+                                Key = dest_key2,
+                                Body = df_opp3,
+                                ContentType = "application/vnd.ms-excel")
+                                
+        get_resp3 = s3.get_object(Bucket = bucket, Key = key3)
+        df_con1 = pd.read_csv(io.BytesIO(get_resp3['Body'].read()))
+        # try to replace the commas and other punctuation within the dataframe
+        # df_con2 = df_con1.apply(lambda x: x.str.replace(',','', regex = True))
+        # need to drop some columns that are affected how the csv reads 
+        df_con2 = df_con1.drop(columns = ['MailingStreet', 'MailingAddress', 'VerificationWebsite__c', 'Description', 
+                                          'Other_Regional_Management_Group__c'])
+        df_con3 = df_con2.dropna(axis = 1, how = 'all')
+        df_con4 = df_con3.to_csv()
+        put_resp3 = s3.put_object(Bucket = dest_bukt,
+                                Key = dest_key3,
+                                Body = df_con4,
+                                ContentType = "application/vnd.ms-excel")
+        
+        get_resp4 = s3.get_object(Bucket = bucket, Key = key4)
+        df_user1 = pd.read_csv(io.BytesIO(get_resp4['Body'].read()))
+        # need to drop some columns that are affected how the csv reads 
+        df_user2 = df_user1.drop(columns = ['Signature', 'StayInTouchSubject', 'StayInTouchSignature', 'StayInTouchNote'])
+        
+        df_user4 = df_user2.to_csv()
+        put_resp4 = s3.put_object(Bucket = dest_bukt,
+                                Key = dest_key4,
+                                Body = df_user4,
+                                ContentType = "application/vnd.ms-excel")
+        
+        
+        print(put_resp)
+        print(put_resp2)
+        print(put_resp3)
+        print(put_resp4)
+       # return {
+        
+        # print(put_resp)
+       # print(df_acc1)
+     
+    except Exception:
+       print("Error")
+ 
+    
+   # }
+    # TODO implement
+    # return {
+    #    'statusCode': 200,
+    #    'body': json.dumps('Hello from Lambda!')
+    

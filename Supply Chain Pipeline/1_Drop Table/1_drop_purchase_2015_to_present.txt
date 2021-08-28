@@ -1,0 +1,2 @@
+-- part of supply chain pipeline
+drop table purchase_2015_to_present

@@ -1,0 +1,2 @@
+-- part of supply chain pipeline
+Drop Table donor_total_doses

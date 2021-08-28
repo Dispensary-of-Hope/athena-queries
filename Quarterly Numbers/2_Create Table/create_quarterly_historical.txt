@@ -1,0 +1,24 @@
+-- part of the quarterly numbers pipeline
+-- table does not need to be refreshed but is used in creating quarterly_new
+-- table showing all historical quarterly numbers
+
+CREATE EXTERNAL TABLE quarterly_historical (
+fills int, 
+  encounters string, 
+  uniquepatients string,
+  quarter string, 
+  year string,
+  site string,
+  siteid string,
+  quarter_end_date string
+)
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+WITH SERDEPROPERTIES (
+  'separatorChar' = ',',
+  'quoteChar' = '"',
+  'escapeChar' = '\n'
+)
+LOCATION 's3://quarterlynumbershistorical/'
+TBLPROPERTIES (
+  'skip.header.line.count' = '1'
+)

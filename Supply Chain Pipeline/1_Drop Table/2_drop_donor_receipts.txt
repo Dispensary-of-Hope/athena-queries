@@ -1,0 +1,2 @@
+-- part of supply chain pipeline
+drop table donor_receipts
