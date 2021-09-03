@@ -1,0 +1,120 @@
+-- Part of distribution pipeline
+-- Compares distribution of drugs to destruction
+
+CREATE OR REPLACE VIEW view_destruction AS 
+SELECT DISTINCT
+  drd.day
+, (CASE WHEN (inv.productnamelong IS NULL) THEN dcc.productnamelong ELSE inv.productnamelong END) productnamelong
+-- case statement to pull productnamelong from Elsevier when not in inventory_master
+, drd.product_id
+, "replace"(drd.lot_id, 'Mfg: 0', 'Mfg: ') lot_id
+-- Formatting historical lot_id values to match new data
+, (CASE WHEN (inv.unit_of_measure IS NULL) THEN CAST(dcc.unit_of_measure AS varchar) ELSE inv.unit_of_measure END) unit_of_measure
+-- case statement to pull unit_of_measure from Elsevier when inventory_master is null
+, (CASE WHEN (inv.packagesize IS NULL) THEN dcc.packagesize ELSE inv.packagesize END) packagesize 
+-- case statement to pull package size from Elsevier when inventory_master is null
+, drd.category
+, drd.total_units
+FROM
+  (((
+-- pulling data from union of distribution and destruction since 2017
+   SELECT DISTINCT
+     h.product_id
+   , h.day
+   , h.lot_id
+   , h.expire_dt
+   , h.category 
+-- category field of Shipped vs. Destroyed added to be able to compare in pie chart
+   , (CASE WHEN ("sum"(h.total_units) IS NULL) THEN 0 ELSE "sum"(h.total_units) END) total_units
+   FROM
+     (
+(
+         SELECT DISTINCT
+           y.product_id
+         , dt2.day
+         , y.lot_id
+         , y.expire_dt
+         , y.category
+         , y.total_units
+         FROM
+           ((
+            SELECT
+              product_id
+            , ship_date
+            , lot_id
+            , expire_dt
+            , 'Shipped' category
+-- category field of Shipped vs. Destroyed added to be able to compare in pie chart
+            , "sum"(total_units_distributed) total_units
+            FROM
+              (
+               SELECT
+                 *
+               , TRY_CAST(o.total_units AS bigint) total_units_distributed
+               FROM
+                 orders_historical_finale_timestamp o
+               WHERE (ship_date IS NOT NULL)
+            )  test_distribution
+            WHERE (((NOT (site_id IN ('194', '10277'))) AND (product_id <> '00000000000')) AND (product_id <> '99999999999'))
+-- site_id excluding destruction and NDCs that are not relevant
+            GROUP BY product_id, ship_date, lot_id, expire_dt
+         )  y -- showing distribution to non-destruction sites
+         LEFT JOIN date_table dt2 ON (y.ship_date = dt2.day))
+      ) UNION ALL (
+         SELECT DISTINCT
+           z.product_id
+         , dt3.day
+         , z.lot_id
+         , z.expire_dt
+         , z.category
+         , z.total_units
+         FROM
+           ((
+            SELECT
+              product_id
+            , ship_date
+            , lot_id
+            , expire_dt
+            , 'Destroyed' category
+-- category field of Shipped vs. Destroyed added to be able to compare in pie chart
+            , "sum"(total_units_distributed) total_units
+            FROM
+              (
+               SELECT
+                 *
+               , TRY_CAST(o.total_units AS bigint) total_units_distributed
+               FROM
+                 orders_historical_finale_timestamp o
+               WHERE (ship_date IS NOT NULL)
+            )  test_distribution2
+            WHERE (((site_id IN ('194', '10277')) AND (product_id <> '00000000000')) AND (product_id <> '99999999999'))
+            GROUP BY product_id, ship_date, lot_id, expire_dt
+         )  z -- showing distribution that is destruction only
+         LEFT JOIN date_table dt3 ON (z.ship_date = dt3.day))
+      )    )  h -- union of destruction vs. distribution
+   GROUP BY h.product_id, h.day, h.lot_id, h.expire_dt, h.category
+   ORDER BY h.day ASC, h.product_id ASC, h.lot_id ASC, h.expire_dt ASC
+)  drd -- selecting from distribution vs. destruction
+LEFT JOIN (
+   SELECT DISTINCT
+     ndc11
+   , productnamelong
+   , packagesize
+   , unit_of_measure
+   FROM
+     view_elsevier_drugclass_convert
+)  dcc ON (drd.product_id = dcc.ndc11)) -- join from select distinct to avoid duplicates
+LEFT JOIN (
+   SELECT DISTINCT
+     product_id
+   , lot_id
+   , productnamelong
+   , unit_of_measure
+   , packagesize
+   FROM
+     view_inventory_master
+)  inv ON ((drd.product_id = inv.product_id) AND (drd.lot_id = inv.lot_id)))
+-- join from select distinct to avoid duplicates
+WHERE (drd.product_id <> '') 
+-- this is needed to reduce query time when joining to elsevier
+GROUP BY  DISTINCT 3, 2, 1, 4, 5, 6, 7, 8
