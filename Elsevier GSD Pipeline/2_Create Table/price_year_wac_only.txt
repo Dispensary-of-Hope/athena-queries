@@ -1,0 +1,4 @@
+create table price_year_wac_only as
+select *
+from price_year
+where pricetypeid = '2'
