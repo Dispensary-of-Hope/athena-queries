@@ -99,8 +99,8 @@ FROM
             , lot_id
             FROM
               finale_inventory fin
-            WHERE (sublocation <> 'Q0')
-      -- filtering out quarantine sublocation Q0
+            WHERE (sublocation <> 'Q0') and (sublocation not like '%-W')
+      -- filtering out quarantine sublocation Q0 and products ending in "-W" (waiting area)
          )       )  y
 -- overall y shows all combos of product_ids and lot_ids that we have in stock currently or in the past
       LEFT JOIN (
@@ -121,8 +121,8 @@ FROM
       WHERE (((y.product_id <> '') AND (y.product_id <> '99999999999')) AND (y.product_id <> '00000000000')) -- filtering out NDCs that are not relevant
       GROUP BY y.product_id, y.lot_id, dif.donor_id, epac.ndc11, epro.productnamelong, iq.product_sum, iq.packagesize, epac.packagesize, iq.priority, iq.primary, ncpdp_unit.unitname, ipu.unitname, epac.innerpackagecount, opu.unitname, ebgs.statusname
    )  z
-   LEFT JOIN (select * from finale_inventory where sublocation <> 'Q0') fin2 ON ((z."product_id" = "replace"(fin2."ndc11", '-')) AND (z.lot_id = fin2.lot_id)))
- -- once again filtering out sublocation Q0 (quarantine)
+   LEFT JOIN (select * from finale_inventory where sublocation <> 'Q0' and sublocation not like '%-W') fin2 ON ((z."product_id" = "replace"(fin2."ndc11", '-')) AND (z.lot_id = fin2.lot_id)))
+ -- once again filtering out sublocation Q0 (quarantine) and products ending in "-W" (waiting area)
  -- joining on lot_id and product_id to get the correct aggregate values
    GROUP BY z.productnamelong, z.lot_id, z.product_id, z.packagesize, z.priority, z.primary, z.unitname, z.inner_package, z.donor_id, z.outer_package, z.innerpackagecount, "date_parse"("split_part"(fin2.lot_id, ' ', 2), '%m/%d/%Y'), fin2.available_to_promise_units, fin2.purchase_order_quantity, z.statusname, fin2.sublocation
 )  w
