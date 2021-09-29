@@ -1,0 +1,165 @@
+-- Part of charitable formulary pipeline
+-- Selecting product information, inventory, 6 months receiving/distribution, TL priority, consistency, and latest receipt/ship dates
+
+CREATE OR REPLACE VIEW view_charitable_formulary AS 
+SELECT DISTINCT
+  x.productnamelong
+, x.unit_of_measure
+, "sum"(total_in_stock) total_in_stock
+, "sum"(available_qty) available_qty
+, "min"(x.min_exp_date) min_exp_date
+, "max"(latest_receipt_date) latest_receipt_date
+, "max"(latest_ship_date) latest_ship_date
+, six_months_dr.par_level
+, six_months_dr.total_units_received six_months_received
+, number_of_receipts_six_months.number_of_receipts
+, x.priority
+, x.primary
+FROM
+  (((
+
+-- selecting when a product was last shipped/received from distribution/receiving/destruction
+-- joining on view_inventory master and view_elsevier_drugclass convert to get
+-- product information, inventory, TL priority, and consistency primary list data
+   SELECT DISTINCT
+     (CASE WHEN (inv.productnamelong IS NULL) THEN dcc.productnamelong ELSE inv.productnamelong END) productnamelong
+   , (CASE WHEN (inv.unit_of_measure IS NULL) THEN CAST(dcc.unit_of_measure AS varchar) ELSE inv.unit_of_measure END) unit_of_measure
+-- case statements to pull the drug name from Elsevier when not in view_inventory_master
+   , inv.total_in_stock
+   , inv.available_qty
+   , inv.min_exp_date
+   , inv.priority
+   , inv.primary
+   , "max"(drd2.receipt_date) latest_receipt_date
+   , "max"(drd2.ship_date) latest_ship_date
+   FROM
+     (((distribution_receiving_destruction drd
+   LEFT JOIN (
+      SELECT DISTINCT
+        product_id
+      , productnamelong
+      , unit_of_measure
+      , "sum"(total_in_stock) total_in_stock
+      , unitname
+      , priority
+      , primary
+      , min_exp_date
+      , drug_class
+      , "sum"(available_qty) available_qty
+      FROM
+        view_inventory_master
+      GROUP BY 1, 2, 3, 5, 6, 7, 8, 9
+   )  inv ON (drd.product_id = inv.product_id)) 
+-- joining distribution/receiving/destruction on product_id in view_inventory_master
+-- lot_id was not in the select statement for view_inventory master and was not included in the join 
+-- The select statement groups by other variables without lot_id
+-- including lot_id in this case will result in null priority values
+
+   LEFT JOIN (
+      SELECT DISTINCT
+        ndc11
+      , productnamelong
+      , unit_of_measure
+      FROM
+        view_elsevier_drugclass_convert
+   )  dcc ON (drd.product_id = dcc.ndc11))
+-- joining distribution/receiving/destruction on product_id/ndc11 in view_elsevier_drugclass_convert
+
+   LEFT JOIN (
+    -- select statement to label dates as receipt_date or ship_date per product_id
+      SELECT DISTINCT
+        product_id
+      , (CASE WHEN (total_units_received > 0) THEN day ELSE null END) receipt_date
+      , (CASE WHEN (total_units_distributed > 0) THEN day ELSE null END) ship_date
+    -- case statements to get only dates for sales or only dates for purchases
+      FROM
+        distribution_receiving_destruction
+      GROUP BY 1, 2, 3
+   )  drd2 ON (drd.product_id = drd2.product_id))
+   -- joining distribution/receiving/destruction from above to new query drd2 
+   WHERE (drd.product_id <> '')
+   GROUP BY  DISTINCT 1, 2, 3, 4, 5, 6, 7
+   ORDER BY 1 ASC
+)  x -- giving a variable name to query above
+LEFT JOIN (
+-- repeating query from above to get distribution/sales and receiving/purchases filtered to the past 6 months
+   SELECT DISTINCT
+     (CASE WHEN (inv.productnamelong IS NULL) THEN dcc.productnamelong ELSE inv.productnamelong END) productnamelong
+   , "sum"(total_units_distributed) par_level
+   -- par_level indicates the total amount ordered over the past 6 months
+   , "sum"(total_units_received) total_units_received
+   -- showing 6 months of total_units received
+   FROM
+     ((distribution_receiving_destruction drd1
+   LEFT JOIN (
+      SELECT DISTINCT
+        product_id
+      , lot_id
+      , productnamelong
+      , unit_of_measure
+      , "sum"(total_in_stock) total_in_stock
+      , unitname
+      , priority
+      , primary
+      , min_exp_date
+      FROM
+        view_inventory_master
+      GROUP BY 1, 2, 3, 4, 6, 7, 8, 9
+   )  inv ON ((drd1.product_id = inv.product_id) AND (drd1.lot_id = inv.lot_id)))
+  -- joining distribution/receiving/destruction on both product_id and lot_id
+  -- lot_id was included in the select statement
+   LEFT JOIN (
+      SELECT DISTINCT
+        ndc11
+      , productnamelong
+      , unit_of_measure
+      FROM
+        view_elsevier_drugclass_convert
+   )  dcc ON (drd1.product_id = dcc.ndc11))
+ -- joining distribution/receiving/destruction on ndc11 in view_elsevier_drugclass_convert
+   WHERE (drd1.day >= "date_add"('day', -180, current_date))
+  -- filtering to the past 6 months
+   GROUP BY 1
+)  six_months_dr ON (x.productnamelong = six_months_dr.productnamelong))
+-- joining the past 6 months of distribution and receiving on product name in query above "x"
+-- including only product name to show 6 months of distribution/receiving by product name only
+LEFT JOIN (
+   SELECT DISTINCT
+     (CASE WHEN (inv.productnamelong IS NULL) THEN dcc.productnamelong ELSE inv.productnamelong END) productnamelong
+   , (CASE WHEN (inv.unit_of_measure IS NULL) THEN dcc.unit_of_measure ELSE inv.unit_of_measure END) unit_of_measure
+-- case statement to switch between elsevier and view_inventory_master
+   , "count"(order_id) number_of_receipts
+ -- counting the number of order_ids to get the number of receipts
+   FROM
+     ((orders_historical_finale_timestamp ohft
+   LEFT JOIN (
+      SELECT DISTINCT
+        product_id
+      , lot_id
+      , productnamelong
+      , unit_of_measure
+      , min_exp_date
+      FROM
+        view_inventory_master
+      GROUP BY 1, 2, 3, 4, 5
+   )  inv ON ((ohft.product_id = inv.product_id) AND (ohft.lot_id = inv.lot_id)))
+ -- joining orders table on both product_id and lot_id in inventory table
+   LEFT JOIN (
+      SELECT DISTINCT
+        ndc11
+      , productnamelong
+      , unit_of_measure
+      FROM
+        view_elsevier_drugclass_convert
+   )  dcc ON (ohft.product_id = dcc.ndc11))
+ -- joining orders table on ndc11 in view_elsevier_drugclass_convert
+   WHERE ((ohft.receive_date >= "date_add"('day', -180, current_date)) AND (ohft.receive_date IS NOT NULL))
+-- filtering to the past 6 months of receiving data only
+   GROUP BY 1, 2
+)  number_of_receipts_six_months ON ((x.productnamelong = number_of_receipts_six_months.productnamelong) AND (x.unit_of_measure = number_of_receipts_six_months.unit_of_measure)))
+-- joining number of receipts over past 6 months by product name and unit of measure to first query
+-- using both productname and unit of measure to denote unique product/package combinations
+-- not using NDC because that is more granular than what is needed for aggregation
+-- not using only product name because that is not granular enough for what is needed when aggregating
+GROUP BY 1, 2, 8, 9, 10, 11, 12
+ORDER BY 1 ASC

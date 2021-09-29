@@ -1,0 +1,21 @@
+-- Creating primary_list_master table from historical PowerBI data
+
+CREATE EXTERNAL TABLE 
+
+primary_list_master 
+(
+`quarter_begin_date` timestamp,
+`product` string,
+`primary` string,
+`priority` string
+)
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe'
+WITH SERDEPROPERTIES 
+(
+  'serialization.format' = ',',
+  'field.delim' = ','
+  
+ )
+  location 's3://historical-data-powerbi/primarylist/'
+  TBLProperties (
+    'skip.header.line.count' = '1' )

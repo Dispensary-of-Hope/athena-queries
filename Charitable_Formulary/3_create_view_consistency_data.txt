@@ -1,0 +1,104 @@
+-- Part of charitable formulary pipeline
+-- Selecting product information, inventory, 6 months distribution, and latest receipt date
+
+CREATE OR REPLACE VIEW view_consistency_data AS 
+SELECT DISTINCT
+  x.productnamelong
+, x.unit_of_measure
+, "sum"(total_in_stock) total_in_stock
+, min_exp_date
+, "max"(latest_receipt_date) latest_receipt_date
+, par_level.par_level
+FROM
+  ((
+   SELECT DISTINCT
+     (CASE WHEN (inv.productnamelong IS NULL) THEN dcc.productnamelong ELSE inv.productnamelong END) productnamelong
+   , (CASE WHEN (inv.unit_of_measure IS NULL) THEN CAST(dcc.unit_of_measure AS varchar) ELSE inv.unit_of_measure END) unit_of_measure
+-- case statements to pull product information from Elsevier when not in the inventory table
+   , inv.total_in_stock
+   , inv.min_exp_date
+   , "max"(receipt.receipt_date) latest_receipt_date
+   FROM
+     (((distribution_receiving_destruction drd
+   LEFT JOIN (
+      SELECT DISTINCT
+        product_id
+      , productnamelong
+      , unit_of_measure
+      , "sum"(total_in_stock) total_in_stock
+      , unitname
+      , priority
+      , primary
+      , min_exp_date
+      , drug_class
+      FROM
+        view_inventory_master
+      GROUP BY 1, 2, 3, 5, 6, 7, 8, 9
+   )  inv ON (drd.product_id = inv.product_id))
+ -- joining distribution/receiving/destruction on only product_id
+ -- lot_id was not pulled into the select query above to avoid null values
+   LEFT JOIN (
+      SELECT DISTINCT
+        ndc11
+      , productnamelong
+      , unit_of_measure
+      FROM
+        view_elsevier_drugclass_convert
+   )  dcc ON (drd.product_id = dcc.ndc11))
+-- joining on elsevier to pull in information not in the inventory table
+   LEFT JOIN (
+      SELECT DISTINCT
+        product_id
+      , day receipt_date
+      FROM
+        distribution_receiving_destruction
+      WHERE (total_units_received > 0)
+      GROUP BY 1, 2
+   )  receipt ON (drd.product_id = receipt.product_id))
+ -- pulling in only the receipt date which is referenced to get the latest_receipt_date value
+
+   WHERE ((drd.product_id <> '') AND (inv.total_in_stock > 0))
+-- only looking at products in stock since this is used to determine consistency
+   GROUP BY  DISTINCT 1, 2, 3, 4
+   ORDER BY 1 ASC
+)  x
+LEFT JOIN (
+-- repeating above but filtering to 6 months of distribution only to get par_level
+   SELECT DISTINCT
+     (CASE WHEN (inv.productnamelong IS NULL) THEN dcc.productnamelong ELSE inv.productnamelong END) productnamelong
+    -- case statement to search for product name in Elsevier when not present in the inventory table
+   , "sum"(total_units_distributed) par_level
+ -- par_level represents past 6 months of distribution
+   FROM
+     ((distribution_receiving_destruction drd1
+   LEFT JOIN (
+      SELECT DISTINCT
+        product_id
+      , lot_id
+      , productnamelong
+      , unit_of_measure
+      , "sum"(total_in_stock) total_in_stock
+      , unitname
+      , priority
+      , primary
+      , min_exp_date
+      FROM
+        view_inventory_master
+      GROUP BY 1, 2, 3, 4, 6, 7, 8, 9
+   )  inv ON ((drd1.product_id = inv.product_id) AND (drd1.lot_id = inv.lot_id)))
+  -- joining distribution/receiving/destruction on both product_id and lot_id
+   LEFT JOIN (
+      SELECT DISTINCT
+        ndc11
+      , productnamelong
+      , unit_of_measure
+      FROM
+        view_elsevier_drugclass_convert
+   )  dcc ON (drd1.product_id = dcc.ndc11))
+   WHERE (drd1.day >= "date_add"('day', -180, current_date))
+   GROUP BY 1
+)  par_level ON (x.productnamelong = par_level.productnamelong))
+-- joining on productnamelong only in order to aggregate only on product name
+GROUP BY 1, 2, 4, 6
+ORDER BY 1 ASC
+
