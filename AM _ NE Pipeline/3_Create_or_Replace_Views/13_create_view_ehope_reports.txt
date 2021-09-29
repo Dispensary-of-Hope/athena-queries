@@ -38,7 +38,8 @@ FROM
   (((((donor_report_1 dr1
 LEFT JOIN site_info si ON (dr1.site_id = si.site_id))
 LEFT JOIN view_elsevier_drugclass_convert dcc ON (dr1.product_id = dcc.ndc11))
-LEFT JOIN view_inventory_master inv ON (dr1.product_id = inv.product_id))
+LEFT JOIN (select distinct product_id, lot_id, productnamelong, unit_of_measure from view_inventory_master) inv ON (dr1.product_id = inv.product_id) and (dr1.lot_id = inv.lot_id))
+-- important to join on both product_id and lot_id in this instance
 LEFT JOIN regular_donors rd ON (dr1.donor_id = rd.donor_id__c))
 LEFT JOIN date_table dt ON (dt.day = dr1.ship_date))
 WHERE (dr1.ship_date IS NOT NULL)
