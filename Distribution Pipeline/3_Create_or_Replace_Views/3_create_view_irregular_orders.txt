@@ -41,6 +41,6 @@ LEFT JOIN (
 )  par_level -- shows what has been disrtibuted over the past 6 months
 
 ON (vim.productnamelong = par_level.productnamelong))
-WHERE (((owc.product_id <> '') AND (owc.product_id IS NOT NULL)) AND (owc.site_id <> '194'))
+WHERE (((owc.product_id <> '') AND (owc.product_id IS NOT NULL)) AND (owc.site_id NOT IN ('194','10277')))
 -- filtering out destruction and NDCs that are not relevant
 GROUP BY 1, 2, 3, 4, 5, 7, 8, 10, 11
