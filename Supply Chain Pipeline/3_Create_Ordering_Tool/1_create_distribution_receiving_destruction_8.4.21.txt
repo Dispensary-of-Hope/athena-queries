@@ -5,7 +5,7 @@
 -- several null ndc values exist  prior to 2019 and aggregation would not be accurate
 
 Create table distribution_receiving_destruction as
-select h.product_id, h.day, h.lot_id, h.expire_dt, case when sum(h.total_units_received) is null then 0 else sum(h.total_units_received) end as total_units_received, case when sum(h.total_units_distributed) is null then 0 else sum(h.total_units_distributed) end as total_units_distributed, case when sum(h.total_units_destroyed) is null then 0 else sum(h.total_units_destroyed) end as total_units_destroyed
+select h.product_id, h.day, h.lot_id, "date_parse"("split_part"(h.lot_id, ' ', 2), '%m/%d/%Y') expire_dt, case when sum(h.total_units_received) is null then 0 else sum(h.total_units_received) end as total_units_received, case when sum(h.total_units_distributed) is null then 0 else sum(h.total_units_distributed) end as total_units_distributed, case when sum(h.total_units_destroyed) is null then 0 else sum(h.total_units_destroyed) end as total_units_destroyed
 FROM
 (
 (
@@ -31,7 +31,7 @@ select distinct y.product_id, dt2.day, y.lot_id, y.expire_dt, y.total_units_rece
 (select product_id, ship_date,  lot_id, expire_dt,  null as total_units_received, sum(total_units_distributed) as total_units_distributed, null as total_units_destroyed from
 (SELECT *, TRY_CAST(o.total_units AS bigint) total_units_distributed FROM orders_historical_finale_timestamp o where ship_date is not null) as test_distribution
  
-where site_id <> '194' AND product_id <> '00000000000' AND product_id <> '99999999999'
+where site_id NOT IN ('194','10277') AND product_id <> '00000000000' AND product_id <> '99999999999'
 group by product_id, ship_date, lot_id, expire_dt) y
 left join date_table dt2 
 ON y.ship_date = dt2.day)
@@ -45,7 +45,7 @@ UNION ALL
 select distinct z.product_id, dt3.day, z.lot_id, z.expire_dt, z.total_units_received, z.total_units_distributed, z.total_units_destroyed from
 (select product_id, ship_date, lot_id, expire_dt, null as total_units_received, null as total_units_distributed,  sum(total_units_distributed) as total_units_destroyed from
 (SELECT *, TRY_CAST(o.total_units AS bigint) total_units_distributed FROM orders_historical_finale_timestamp o where ship_date is not null) as test_distribution2 
-where site_id = '194' AND product_id <> '00000000000' AND product_id <> '99999999999'
+where site_id IN ('194','10277') AND product_id <> '00000000000' AND product_id <> '99999999999'
 group by product_id, ship_date, lot_id, expire_dt) z
 left join date_table dt3
 ON z.ship_date = dt3.day) 
