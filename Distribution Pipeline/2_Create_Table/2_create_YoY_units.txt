@@ -23,7 +23,7 @@ date_add('day',-365,day) as day_previous_year from
       , "sum"(TRY_CAST(total_units AS bigint)) total_daily_units
       FROM
         orders_historical_finale_timestamp fpro
-               WHERE fpro.site_id <> '194' and fpro.product_id <> '99999999999' and fpro.product_id <> '00000000000' and fpro.product_id <> '' and (ship_date >= timestamp '2018-01-01 00:00:00.000' or receive_date >= timestamp '2018-01-01 00:00:00.000')
+               WHERE fpro.site_id NOT IN ('194','10277') and fpro.product_id <> '99999999999' and fpro.product_id <> '00000000000' and fpro.product_id <> '' and (ship_date >= timestamp '2018-01-01 00:00:00.000' or receive_date >= timestamp '2018-01-01 00:00:00.000')
 -- filtering out destruction and NDCs that are not relevant
 -- filtering out dates prior to Jan 2018
 
