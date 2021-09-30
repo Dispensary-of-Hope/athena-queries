@@ -33,7 +33,7 @@ orders_historical_finale_timestamp fpro
 LEFT JOIN donor_id_finale f ON ((fpro.product_id = f.product_id) and (fpro.lot_id = f.lot_id)) 
 -- joining on the donor id table to match ndcs and lot ids to the correct donor based on all unique combinations in that table
 
-WHERE fpro.site_id <> '194' and fpro.product_id <> '99999999999' and fpro.product_id <> '00000000000' and fpro.product_id <> '' and (ship_date >= timestamp '2018-01-01 00:00:00.000' or receive_date >= timestamp '2018-01-01 00:00:00.000'
+WHERE fpro.site_id NOT IN ('194','10277') and fpro.product_id <> '99999999999' and fpro.product_id <> '00000000000' and fpro.product_id <> '' and (ship_date >= timestamp '2018-01-01 00:00:00.000' or receive_date >= timestamp '2018-01-01 00:00:00.000'
 -- excluding site id of 194 which was PharmaLink where we previously sent drugs for destruction
 -- product ids that are excluded include dispensary of hope stickers and blank values
 -- For purposes of reports referencing this table, all shipping and receiving prior to 2018 were excluded Several missing NDCs before that period
