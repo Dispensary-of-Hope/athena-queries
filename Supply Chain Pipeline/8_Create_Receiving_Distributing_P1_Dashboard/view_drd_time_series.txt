@@ -1,0 +1,46 @@
+CREATE OR REPLACE VIEW view_drd_time_series AS 
+WITH
+  drd_time_series AS (
+   SELECT
+     dt.day
+   , COALESCE("sum"(vot.total_units_received), 0) daily_units_received
+   , COALESCE("sum"(vot.total_units_distributed), 0) daily_units_distributed
+   , COALESCE("sum"(vot.total_units_destroyed), 0) daily_units_destroyed
+   FROM
+     ((
+      SELECT *
+      FROM
+        view_ordering_tool
+      WHERE ((product_id <> '00000000001') AND (product_id <> '00000000002'))
+   )  vot
+   RIGHT JOIN (
+      SELECT *
+      FROM
+        date_table
+      WHERE ((day >= TIMESTAMP '2019-01-01 00:00:00.000') AND (day <= current_date))
+   )  dt ON (vot.day = dt.day))
+   GROUP BY dt.day
+) 
+, p1_drd AS (
+   SELECT
+     day
+   , priority
+   , "sum"(total_units_received) p1_daily_units_received
+   , "sum"(total_units_distributed) p1_daily_units_distributed
+   , "sum"(total_units_destroyed) p1_daily_units_destroyed
+   FROM
+     view_ordering_tool
+   WHERE (((product_id <> '00000000001') AND (product_id <> '00000000002')) AND (priority = 'P1'))
+   GROUP BY day, priority
+) 
+SELECT
+  dts.day
+, daily_units_received
+, daily_units_distributed
+, daily_units_destroyed
+, COALESCE(p1_daily_units_received, 0) p1_daily_units_received
+, COALESCE(p1_daily_units_distributed, 0) p1_daily_units_distributed
+, COALESCE(p1_daily_units_destroyed, 0) p1_daily_units_destroyed
+FROM
+  (drd_time_series dts
+LEFT JOIN p1_drd ON (dts.day = p1_drd.day))

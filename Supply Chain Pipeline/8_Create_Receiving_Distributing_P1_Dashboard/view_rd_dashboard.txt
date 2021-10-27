@@ -1,0 +1,129 @@
+CREATE OR REPLACE VIEW view_rd_dashboard AS 
+SELECT DISTINCT
+  drd.day
+, COALESCE(inv.productnamelong, dcc.productnamelong) productnamelong
+, drd.product_id
+, drd.lot_id
+, inv.priority
+, inv.drug_class
+, drd.total_units_received
+, drd.total_units_distributed
+, dcc.packageprice unit_WAC
+, "round"((drd.total_units_received * dcc.packageprice), 2) WAC_received
+, "round"((drd.total_units_distributed * dcc.packageprice), 2) WAC_distributed
+, drd.site_name
+, rd.donor_name
+FROM
+  ((((
+   SELECT
+     h.name site_name
+   , h.product_id
+   , h.day
+   , h.lot_id
+   , COALESCE("sum"(h.total_units_received), 0) total_units_received
+   , COALESCE("sum"(h.total_units_distributed), 0) total_units_distributed
+   , site_id
+   , donor_id
+   FROM
+     (
+(
+         SELECT DISTINCT
+           x.product_id
+         , dt.day
+         , x.lot_id
+         , x.total_units_received
+         , x.total_units_distributed
+         , sf.name
+         , x.site_id
+         , x.donor_id
+         FROM
+           ((((
+            SELECT
+              product_id
+            , receive_date
+            , lot_id
+            , "sum"(total_units_received) total_units_received
+            , null total_units_distributed
+            , site_id
+            , donor_id
+            FROM
+              (
+               SELECT
+                 *
+               , TRY_CAST(o.total_units AS bigint) total_units_received
+               FROM
+                 orders_historical_finale_timestamp o
+               WHERE (receive_date IS NOT NULL)
+            ) 
+            WHERE ((((product_id <> '00000000000') AND (product_id <> '99999999999')) AND (product_id <> '00000000001')) AND (product_id <> '00000000002'))
+            GROUP BY product_id, receive_date, lot_id, site_id, donor_id
+         )  x
+         LEFT JOIN donor_id_finale df1 ON ((x.product_id = df1.product_id) AND (x.lot_id = df1.lot_id)))
+         LEFT JOIN date_table dt ON (x.receive_date = dt.day))
+         LEFT JOIN sf_account sf ON (x.site_id = "split_part"(sf.site_id_formatted__c, ' ', 2)))
+      ) UNION ALL (
+         SELECT DISTINCT
+           y.product_id
+         , dt2.day
+         , y.lot_id
+         , y.total_units_received
+         , y.total_units_distributed
+         , sf.name
+         , y.site_id
+         , y.donor_id
+         FROM
+           ((((
+            SELECT
+              product_id
+            , ship_date
+            , lot_id
+            , null total_units_received
+            , "sum"(total_units_distributed) total_units_distributed
+            , site_id
+            , donor_id
+            FROM
+              (
+               SELECT
+                 *
+               , TRY_CAST(o.total_units AS bigint) total_units_distributed
+               FROM
+                 orders_historical_finale_timestamp o
+               WHERE (ship_date IS NOT NULL)
+            ) 
+            WHERE (((((NOT (site_id IN ('194', '10277'))) AND (product_id <> '00000000000')) AND (product_id <> '99999999999')) AND (product_id <> '00000000001')) AND (product_id <> '00000000002'))
+            GROUP BY product_id, ship_date, lot_id, site_id, donor_id
+         )  y
+         LEFT JOIN donor_id_finale df2 ON ((y.product_id = df2.product_id) AND (y.lot_id = df2.lot_id)))
+         LEFT JOIN date_table dt2 ON (y.ship_date = dt2.day))
+         LEFT JOIN sf_account sf ON (y.site_id = "split_part"(sf.site_id_formatted__c, ' ', 2)))
+      )    )  h
+   WHERE (h.day >= TIMESTAMP '2019-01-01 00:00:00.000')
+   GROUP BY h.name, h.product_id, h.day, h.lot_id, site_id, donor_id
+)  drd
+LEFT JOIN (
+   SELECT DISTINCT
+     product_id
+   , lot_id
+   , productnamelong
+   , priority
+   , drug_class
+   FROM
+     view_inventory_master
+)  inv ON ((drd.product_id = inv.product_id) AND (drd.lot_id = inv.lot_id)))
+LEFT JOIN (
+   SELECT DISTINCT
+     ndc11
+   , productnamelong
+   , "avg"(packageprice) packageprice
+   FROM
+     view_elsevier_drugclass_convert
+   GROUP BY ndc11, productnamelong
+)  dcc ON (drd.product_id = dcc.ndc11))
+LEFT JOIN (
+   SELECT DISTINCT
+     donor_id__c
+   , name donor_name
+   FROM
+     regular_donors
+)  rd ON (drd.donor_id = donor_id__c))
+WHERE (drd.product_id <> '')
