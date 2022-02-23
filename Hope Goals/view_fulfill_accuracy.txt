@@ -1,0 +1,34 @@
+CREATE OR REPLACE VIEW view_fulfill_accuracy AS 
+SELECT ((total_orders - incorrect) / total_orders) fulfill_acc
+FROM
+  (
+   SELECT
+     CAST("count"(*) AS double) incorrect
+   , CAST((SELECT "count"(DISTINCT order_id) distinct_orders
+FROM
+  orders_historical_finale_timestamp
+WHERE ((ship_date > CAST("date_add"('day', -90, current_date) AS timestamp)) AND (insulin = 'False'))
+) AS double) total_orders
+   FROM
+     (
+      SELECT
+        name
+      , sfc.type
+      , subject
+      , description
+      , created_date
+      FROM
+        ((
+         SELECT
+           account_id
+         , created_date
+         , type
+         , subject
+         , description
+         FROM
+           "database-prod".sf_cases
+         WHERE ((((((((((((((((((((((record_type_id = 'Access Site Case') AND (type <> 'Cardinal Issue')) AND (type <> 'FedEx Issue')) AND (type <> 'Irregular Order')) AND (type <> 'Site Error')) AND (type <> 'Authorized Return')) AND (type <> 'Unauthorized Return')) AND (NOT ("lower"(subject) LIKE '%insulin%'))) AND (NOT ("lower"(subject) LIKE '%basaglar%'))) AND (NOT ("lower"(subject) LIKE '%humalog%'))) AND (NOT ("lower"(subject) LIKE '%humalin%'))) AND (NOT ("lower"(subject) LIKE '%trulicity%'))) AND (NOT ("lower"(subject) LIKE '%inventory%'))) AND (NOT ("lower"(subject) LIKE '%illegible%'))) AND (NOT ("lower"(subject) LIKE '%late%'))) AND (NOT ("lower"(subject) LIKE '%unreadable%'))) AND (NOT ("lower"(subject) LIKE '%damaged%'))) AND (NOT ("lower"(subject) LIKE '%out%%stock%'))) AND (NOT ("lower"(subject) LIKE '%none%%stock%'))) AND (NOT ("lower"(subject) LIKE '%early%%pick%'))) AND (NOT ("lower"(subject) LIKE '%late%%pick%'))) AND (CAST("date_parse"(created_date, '%m/%d/%Y %h:%i:%s %p') AS timestamp) > CAST("date_add"('day', -90, current_date) AS timestamp)))
+      )  sfc
+      INNER JOIN "database-prod".sf_account sfa ON (sfc.account_id = sfa.id))
+   ) 
+) 

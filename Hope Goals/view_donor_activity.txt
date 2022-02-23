@@ -1,0 +1,20 @@
+CREATE OR REPLACE VIEW view_donor_activity AS 
+SELECT
+  (SELECT "count"(DISTINCT name)
+FROM
+  regular_donors
+) total_active_donors
+, "count"(DISTINCT name) donors_last_180_days
+FROM
+  (
+   SELECT name
+   FROM
+     (
+      SELECT *
+      FROM
+        (orders_historical_finale_timestamp ohft
+      INNER JOIN regular_donors rd ON (ohft.donor_id = rd.donor_id__c))
+      WHERE (receive_date > CAST("date_add"('day', -180, current_date) AS timestamp))
+   ) 
+   GROUP BY name
+) 

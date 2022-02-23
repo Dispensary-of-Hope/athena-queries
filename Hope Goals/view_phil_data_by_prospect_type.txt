@@ -1,0 +1,8 @@
+CREATE OR REPLACE VIEW view_phil_data_by_prospect_type AS 
+SELECT
+  t1.fiscal_year
+, t2.prospect_type
+, t2.number
+FROM
+  (view_philantropy_data t1
+CROSS JOIN UNNEST(ARRAY['prospects_potential_identified','prospects_pursuing','prospects_declined'], ARRAY[prospects_potential_identified,prospects_pursuing,prospects_declined]) t2 (prospect_type, number))

@@ -1,0 +1,55 @@
+CREATE OR REPLACE VIEW view_supplychain_metrics AS 
+SELECT
+  pipeline.date
+, pipeline.in_notstarted
+, pipeline.in_verified
+, pipeline.in_awareness
+, pipeline.in_engaged
+, closed.donors_closed
+FROM
+  ((
+   SELECT
+     CAST(date AS timestamp) date
+   , in_notstarted
+   , in_verified
+   , in_awareness
+   , in_engaged
+   FROM
+     supplychain_pipeline_historical
+)  pipeline
+INNER JOIN (
+   SELECT
+     month date
+   , COALESCE(donors_closed, 0) donors_closed
+   FROM
+     ((
+      SELECT
+        date
+      , "count"(name) donors_closed
+      FROM
+        (
+         SELECT
+           name
+         , "date_trunc"('Month', "date_parse"(closedate, '%m/%d/%Y')) date
+         , stagename
+         FROM
+           (
+            SELECT
+              "concat"(firstname, ' ', lastname) fullname
+            , *
+            FROM
+              (sf_opportunity sfo
+            INNER JOIN sf_user su ON (sfo.ownerid = su.id))
+            WHERE (isactive = '1')
+         ) 
+         WHERE (((((fullname = 'Caleb Staggs') OR (fullname = 'Danielle Basile')) OR (fullname = 'Josh Mitchell')) AND ((account_record_type__c = 'Manufacturers') OR (account_record_type__c = 'Distributor'))) AND (stagename = 'Closed - Donor'))
+      ) 
+      GROUP BY date
+   )  sf
+   RIGHT JOIN (
+      SELECT DISTINCT "date_trunc"('Month', day) month
+      FROM
+        date_table
+      WHERE (day <= current_date)
+   )  dt ON (sf.date = dt.month))
+)  closed ON (pipeline.date = closed.date))

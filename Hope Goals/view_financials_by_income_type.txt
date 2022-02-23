@@ -1,0 +1,9 @@
+CREATE OR REPLACE VIEW view_financials_by_income_type AS 
+SELECT
+  t1.month_year
+, t1.fiscal_year
+, t2.income_type
+, t2.amount
+FROM
+  (view_doh_financials_monthly t1
+CROSS JOIN UNNEST(ARRAY['earned_income_revenue','philantropy_revenue','grants_revenue'], ARRAY[earned_income_revenue,philantropy_revenue,grants_revenue]) t2 (income_type, amount))
