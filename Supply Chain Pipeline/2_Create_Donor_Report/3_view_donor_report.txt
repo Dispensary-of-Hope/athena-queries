@@ -15,9 +15,14 @@ CREATE OR REPLACE VIEW view_donor_report AS
                 , y.product_id
                 , y.productnamelong
                 , (CASE WHEN (y.drug_class <> '') THEN dcc2.main_drug_class ELSE y.iqvia_drugclass END) drug_class
+                --dcc2 takes the drug class array from donor_report_1 and maps back to one drug class per NDC to avoid duplicates
+                --case statement to switch from Elsevier to iqvia drug class if product is not found in Elsevier
                 , y.qty
                 , y.packagesize
                 , (CASE WHEN ((y.iqvia_packagesize IS NOT NULL) AND (product_id not in('72065013011','72065013012'))) THEN "round"((y.iqvia_packagesize * y.qty), 2) WHEN ((y.iqvia_packagesize IS NULL) AND (product_id not in('72065013011','72065013012'))) THEN "round"((y.packagesize * y.qty), 2) WHEN (product_id in('72065013011','72065013012')) THEN "round"((2 * y.qty), 2) ELSE 0 END) total_doses
+                --case statement to switch from Elsevier to iqvia drug class if product is not found in Elsevier
+                --iqvia table only has package size manually populated for products not found in Elsevier
+                -- Added in the extra NDCs for a product with a package size less than one which was showing up as zero doses
                 , y.shippingstatecode
                 , y.account_type
                 , sf.donor_code__c donor_code
@@ -37,9 +42,15 @@ CREATE OR REPLACE VIEW view_donor_report AS
                 FROM
                   (((donor_report_1 y
                 INNER JOIN date_table dt ON ((dt.day = y.ship_date) OR (dt.day = y.receive_date)))
+                --join to date table to use one date filter in quicksight
                 LEFT JOIN drug_class_convert dcc2 ON (y.drug_class = dcc2.aggregated_drug_class))
+                --join to drug_class_convert to map one drug class to each NDC
                 LEFT JOIN (select distinct name, donor_id__c, donor_code__c, first_donation__c from sf_account where account_record_type_text__c in ('Distributor', 'Manufacturers') and type in ('Active','Retired')) sf ON ((y.donor_code = sf.donor_code__c) OR (y.donor_id = sf.donor_id__c)))
-             ) UNION ALL (
+                --joining on table of active donors to pull in donor info
+                -- Adding in both active and retired donors per request by SC
+             ) UNION ALL 
+             -- to show all possible state codes for each manufacturer so that wac and doses show up as 0 on map
+             (
                 SELECT DISTINCT
                   null order_id
                 , 'Sale' type
