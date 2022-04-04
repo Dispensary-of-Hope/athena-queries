@@ -1,0 +1,1 @@
+drop table if exists quarterly_insulin_rec
