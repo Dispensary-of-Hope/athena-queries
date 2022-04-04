@@ -1,0 +1,78 @@
+CREATE OR REPLACE VIEW view_top_40_products AS 
+(
+   SELECT DISTINCT
+     system_class
+   , disease_state
+   , moa
+   , top_40_product
+   , iqvia_tl_product
+   , day
+   , productnamelong
+   , product_id
+   , lot_id
+   , vtd.unit_of_measure
+   , unitname
+   , vtd.priority
+   , vtd.primary
+   , COALESCE(total_in_stock, 0) total_in_stock
+   , COALESCE(available_qty, 0) available_qty
+   , COALESCE(purchase_order_qty, 0) purchase_order_qty
+   , min_exp_date
+   , vtd.drug_class
+   , COALESCE(total_units_received, 0) total_units_received
+   , COALESCE(total_units_distributed, 0) total_units_distributed
+   , site_name
+   , health_system
+   , ehope_type__c
+   , null fills
+   , null encounters
+   , null uniquepatients
+   , null quarter_end_date
+   , request_date
+   , account_manager
+   , statusname
+   FROM
+     ((
+      SELECT *
+      FROM
+        (top_40_drugs tfd
+      LEFT JOIN iqvia_target_primary iq ON (tfd.iqvia_tl_product = iq.target_list_product))
+   )  tfd_mapping
+   LEFT JOIN view_therapeutics_dashboard vtd ON (tfd_mapping.ndc = vtd.product_id))
+) UNION ALL (
+   SELECT DISTINCT
+     null system_class
+   , null disease_state
+   , null moa
+   , null top_40_product
+   , null iqvia_tl_product
+   , dt.day
+   , null productnamelong
+   , null product_id
+   , null lot_id
+   , null unit_of_measure
+   , null unitname
+   , null priority
+   , null primary
+   , 0 total_in_stock
+   , 0 available_qty
+   , 0 purchase_order_qty
+   , null min_exp_date
+   , null drug_class
+   , 0 total_units_received
+   , 0 total_units_distributed
+   , sf.site_name
+   , sf.health_system
+   , sf.ehope_type__c
+   , qn.fills
+   , qn.encounters
+   , qn.uniquepatients
+   , qn.quarter_end_date
+   , null request_date
+   , sf.account_manager
+   , null statusname
+   FROM
+     ((quarterly_new qn
+   INNER JOIN date_table dt ON (qn.quarter_end_date = dt.day))
+   LEFT JOIN site_info sf ON (qn.siteid = sf.site_id))
+) 

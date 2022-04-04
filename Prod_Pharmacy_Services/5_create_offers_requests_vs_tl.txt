@@ -1,0 +1,18 @@
+create table offers_requests_vs_tl as
+select mfg.description, mfg.priority, mfg_offers.number_of_offers, count(mr.request_date) number_of_requests from
+(select distinct description, priority from
+(select distinct description, iq.priority, try_cast(try(date_format(date_parse(offer_date,'%m/%d/%Y'),'%Y-%m-%d %T'))as timestamp) offer_date from manufacturer_offers mfg
+left join (select distinct ndc, priority from iqvia_target_primary) iq
+ON mfg.ndc = iq.ndc)
+where offer_date >= date_add('day', -365, current_date)
+) mfg
+join 
+(select count(distinct concat(cast(offer_date as varchar),manufacturer,description)) number_of_offers, description from
+(select distinct try_cast(try(date_format(date_parse(offer_date,'%m/%d/%Y'),'%Y-%m-%d %T'))as timestamp) offer_date, manufacturer, description from manufacturer_offers)
+where offer_date >= date_add('day', -365, current_date)
+group by 2) mfg_offers
+ON mfg.description = mfg_offers.description
+left join (select * from medication_requests where request_date >= date_add('day',-365, current_date)) mr
+ON mfg_offers.description = mr.productnamelong
+where (mfg.priority = 'P4' or mfg.priority is null or mfg.priority = '') and mfg_offers.number_of_offers > 2
+group by 1,2,3

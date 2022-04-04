@@ -1,0 +1,10 @@
+create table offers_vs_med_requests as
+select distinct mr.productnamelong, mfg_offers.number_of_offers, count(mr.request_date) number_of_requests from medication_requests mr
+join
+(select count(distinct concat(cast(offer_date as varchar),manufacturer,description)) number_of_offers, description from
+(select distinct try_cast(try(date_format(date_parse(offer_date,'%m/%d/%Y'),'%Y-%m-%d %T'))as timestamp) offer_date, manufacturer, description from manufacturer_offers)
+where offer_date >= date_add('day', -180, current_date)
+group by 2) mfg_offers
+ON mr.productnamelong = mfg_offers.description
+where request_date >= date_add('day',-180, current_date)
+group by 1,2

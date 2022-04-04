@@ -1,0 +1,12 @@
+CREATE EXTERNAL TABLE medication_requests ( productnamelong string, request_date timestamp, site_id string, site_name string, product_id string, priority string)
+
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe'
+WITH SERDEPROPERTIES 
+(
+  'serialization.format' = ',',
+  'field.delim' = ','
+  
+ )
+  location 's3://historical-data-powerbi/medication_requests/'
+  TBLProperties (
+    'skip.header.line.count' = '1' )

@@ -1,0 +1,1 @@
+drop table offers_requests_vs_tl
