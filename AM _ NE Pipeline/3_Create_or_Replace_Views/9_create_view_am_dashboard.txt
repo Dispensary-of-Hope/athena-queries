@@ -1,5 +1,8 @@
+-- part of NE and AM report pipeline
+-- merges health system/site utilization with quarterly numbers 
+
 CREATE OR REPLACE VIEW view_am_dashboard AS 
-(
+( -- selecting health system and site utilization
    SELECT DISTINCT
      sf.health_system
    , sf.site_name
@@ -21,6 +24,9 @@ CREATE OR REPLACE VIEW view_am_dashboard AS
    , null encounters
    , null uniquepatients
    , (CASE WHEN (sf.renewal_date < current_date) THEN "date_add"('day', 365, sf.renewal_date) ELSE sf.renewal_date END) renewal_date
+   -- case statement to get next renewal date
+-- current field shows sometimes last renewal and sometimes next renewal
+-- case statement changes to only show next renewal
    , null quarter_end_date
    , sf.licensed_pharmacy_licensed_distributor__c licensed_pharmacy
    , sf.lilly_approved__c
@@ -32,7 +38,7 @@ CREATE OR REPLACE VIEW view_am_dashboard AS
    FROM
      (((orders_with_companyid ocid
    LEFT JOIN (
-      SELECT DISTINCT
+      SELECT DISTINCT --needs to be distinct to get correct values
         product_id ndc11
       , packagesize
       FROM
@@ -40,9 +46,11 @@ CREATE OR REPLACE VIEW view_am_dashboard AS
    )  pkg ON (ocid.product_id = pkg.ndc11))
    INNER JOIN date_table dt ON (ocid.ship_date = dt.day))
    LEFT JOIN site_info sf ON (ocid.company_id__c = sf.company_id__c))
-   WHERE (sf.company_id__c <> '')
+   WHERE (sf.company_id__c <> '') -- make sure company id is populated to show only active accounts
    GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28
 ) UNION ALL (
+-- selecting all quarterly number data and using a union query to get QNs in the same table as distribution
+-- union query to be able to use the same date filter in Quicksight 
    SELECT DISTINCT
      sf.health_system
    , sf.site_name
@@ -64,6 +72,9 @@ CREATE OR REPLACE VIEW view_am_dashboard AS
    , qn.encounters
    , qn.uniquepatients
    , (CASE WHEN (sf.renewal_date < current_date) THEN "date_add"('day', 365, sf.renewal_date) ELSE sf.renewal_date END) renewal_date
+   -- case statement to get next renewal date
+-- current field shows sometimes last renewal and sometimes next renewal
+-- case statement changes to only show next renewal
    , qn.quarter_end_date
    , sf.licensed_pharmacy_licensed_distributor__c licensed_pharmacy
    , sf.lilly_approved__c
