@@ -2,9 +2,6 @@
 -- Table to show everything that we currently have in stock and also product information for items we have had in stock in the past
 
 CREATE OR REPLACE VIEW view_inventory_master AS 
--- selecting elsevier product information based on all product_id/lot_id combinations for products we currently have is stock or have carried before
-       -- switching to iqvia when NDCs are not in Elsevier
-       -- pulling in target list and primary/flexible information from iqvia
 SELECT
   w.productnamelong
 , w.product_id
@@ -13,8 +10,7 @@ SELECT
 , w.unitname
 , w.inner_package
 , w.outer_package
-, (CASE WHEN (w.inner_package <> '') THEN "concat"(w.outer_package, ',', ' ', "replace"(CAST((w.packagesize / w.innerpackagecount) AS varchar), '.0', ''), ' ', w.unitname, ' ', "replace"(CAST(w.innerpackagecount AS varchar), '.0', ''), ' ', w.inner_package) ELSE "concat"(w.outer_package, ',', ' ', "replace"(CAST(w.packagesize AS varchar), '.0', ''), ' ', w.unitname) END) unit_of_measure
--- case statement to pull multiple components into a unit_of_measure field for ease of use in reports
+, (CASE WHEN (dcc.packagesize is null) then iq2.unit_of_measure else (CASE WHEN (w.inner_package <> '') THEN "concat"(w.outer_package, ',', ' ', "replace"(CAST((w.packagesize / w.innerpackagecount) AS varchar), '.0', ''), ' ', w.unitname, ' ', "replace"(CAST(w.innerpackagecount AS varchar), '.0', ''), ' ', w.inner_package) ELSE "concat"(w.outer_package, ',', ' ', "replace"(CAST(w.packagesize AS varchar), '.0', ''), ' ', w.unitname) END) END) unit_of_measure
 , w.innerpackagecount
 , w.priority
 , w.primary
@@ -22,25 +18,17 @@ SELECT
 , "sum"(w.available_qty) available_qty
 , "sum"(w.purchase_order_quantity) purchase_order_qty
 , "min"(w.expiration_date) min_exp_date
-, (CASE WHEN ((dcc.main_drug_class = '') OR (dcc.main_drug_class IS NULL)) THEN iq2.drug_class WHEN ((dcc.main_drug_class <> '') OR (dcc.main_drug_class IS NOT NULL)) THEN dcc.main_drug_class ELSE 'Off Market' END) drug_class
--- case statement to pull drug class from iqvia when a product is not found in Elsevier
--- the iqvia table should have all products not found in Elsevier manually added to the .csv file
-, "split_part"(dcc.therapeutic_class, ',', 1) therapeutic_class
--- therapeutic class is in an array that needs to be split to show one therapeutic class per NDC
+, (CASE WHEN (iq2.packagesize is not null) THEN trim(iq2.drug_class) WHEN ((dcc.main_drug_class <> '') OR (dcc.main_drug_class IS NOT NULL)) THEN trim(dcc.main_drug_class) ELSE 'Off Market' END) drug_class
+, (CASE WHEN ((dcc.therapeutic_class = '') OR (dcc.therapeutic_class IS NULL)) THEN iq2.therapeutic_class WHEN ((dcc.therapeutic_class <> '') OR (dcc.therapeutic_class IS NOT NULL)) THEN "split_part"(dcc.therapeutic_class, ',', 1) ELSE 'Off Market' END) therapeutic_class
 , CAST(current_date AS timestamp) current_date_in_stock
--- current date field added to inventory table for daily inventory snapshot and to use in quicksight report filters
 , w.statusname
 , w.donor_id
 , w.sublocation
--- sublocation of Q0 is filtered out
 , dcc.packageprice unit_WAC
 , (dcc.packageprice * w.total_in_stock) total_WAC
 , rd.name donor_name
 FROM
   ((((
--- selecting elsevier product information based on all product_id/lot_id combinations for products we currently have is stock or have carried before
-       -- switching to iqvia when NDCs are not in Elsevier
-       -- pulling in target list and primary/flexible information from iqvia
    SELECT
      z.productnamelong
    , z.product_id
@@ -54,20 +42,15 @@ FROM
    , z.priority
    , z.primary
    , "date_parse"("split_part"(fin2.lot_id, ' ', 2), '%m/%d/%Y') expiration_date
-   -- pulling expiration date from the lot_id in finale inventory export
    , fin2.available_to_promise_units available_qty
    , (CASE WHEN ("sum"(fin2.quantity_on_hand_units) IS NULL) THEN 0 ELSE "sum"(fin2.quantity_on_hand_units) END) total_in_stock
-  -- case statement to assign 0 to null in stock values
    , z.statusname
    , fin2.purchase_order_quantity
    , fin2.sublocation
    FROM
-     (( -- selecting elsevier product information based on all product_id/lot_id combinations for products we currently have is stock or have carried before
-       -- switching to iqvia when NDCs are not in Elsevier
-       -- pulling in target list and primary/flexible information from iqvia
-      SELECT DISTINCT 
+     ((
+      SELECT DISTINCT
         (CASE WHEN ((epro.productnamelong IS NULL) AND (y.product_id IS NOT NULL)) THEN iq.product_sum ELSE epro.productnamelong END) productnamelong
-      -- case statement to switch to iqvia product name when not in elsevier
       , y.product_id
       , y.lot_id
       , dif.donor_id
@@ -76,33 +59,26 @@ FROM
       , opu.unitname outer_package
       , epac.innerpackagecount
       , (CASE WHEN (epac.packagesize IS NULL) THEN TRY_CAST(iq.packagesize AS double) ELSE epac.packagesize END) packagesize
-        -- case statement to switch to iqvia package size when not in elsevier
       , (CASE WHEN (iq.priority IS NULL) THEN 'P4' ELSE iq.priority END) priority
-        -- case statement to label products as P4 (R&D) when not listed in iqvia as being a P1, P2, or P3
       , (CASE WHEN (iq.primary IS NULL) THEN 'no' ELSE iq.primary END) primary
-      -- case statement to label non-primary products as 'no'
       , ebgs.statusname
       FROM
         (((((((((
-( -- selecting all product_ids and lot_ids that we have received or shipped since 2019
+(
             SELECT DISTINCT
               product_id
             , "replace"(lot_id, 'Mfg: 0', 'Mfg: ') lot_id
-        -- using replace function to match lot_id formats between historical data and new data
             FROM
               orders_historical_finale_timestamp
             WHERE ((receive_date >= TIMESTAMP '2019-01-01 00:00:00.000') OR (ship_date >= TIMESTAMP '2019-01-01 00:00:00.000'))
          ) UNION (
--- union on all product_ids and lot_ids from Finale inventory to get all possible product_id/lot_id combinations for products that we carry
             SELECT DISTINCT
               "replace"(fin."ndc11", '-') product_id
             , lot_id
             FROM
               finale_inventory fin
             WHERE (sublocation <> 'Q0') and (sublocation not like '%-W')
-      -- filtering out quarantine sublocation Q0 and products ending in "-W" (waiting area)
          )       )  y
--- overall y shows all combos of product_ids and lot_ids that we have in stock currently or in the past
       LEFT JOIN (
          SELECT DISTINCT
            product_id
@@ -110,23 +86,21 @@ FROM
          , donor_id
          FROM
            donor_id_finale
-      )  dif ON ((y.product_id = dif.product_id) AND (y.lot_id = dif.lot_id))) -- joining to both product_id and lot_id to get an accurate donor_id 
-      LEFT JOIN package epac ON (y.product_id = epac."ndc11")) -- pulling in package info
-      LEFT JOIN inner_package_unit ipu ON (epac.innerpackageunitid = ipu.innerpackageunitid)) -- pulling in package info
-      LEFT JOIN outer_package_unit opu ON (epac.outerpackageunitid = opu.outerpackageunitid)) -- pulling in package info
-      LEFT JOIN ncpdp_unit ON (epac.ncpdpbillingunitid = ncpdp_unit.ncpdpunitid)) -- pulling in package info
-      LEFT JOIN iqvia_target_primary iq ON (y.product_id = iq."ndc")) -- pulling in target list info along with NDCs not in Elsevier
-      LEFT JOIN product epro ON (epac.productid = epro.productid)) -- pulling in product info from elsevier
-      LEFT JOIN brand_generic_status ebgs ON (epro.brandgenericstatusid = ebgs.brandgenericstatusid)) -- pulling in brand generic status
-      WHERE (((y.product_id <> '') AND (y.product_id <> '99999999999')) AND (y.product_id <> '00000000000')) -- filtering out NDCs that are not relevant
+      )  dif ON ((y.product_id = dif.product_id) AND (y.lot_id = dif.lot_id)))
+      LEFT JOIN package epac ON (y.product_id = epac."ndc11"))
+      LEFT JOIN inner_package_unit ipu ON (epac.innerpackageunitid = ipu.innerpackageunitid))
+      LEFT JOIN outer_package_unit opu ON (epac.outerpackageunitid = opu.outerpackageunitid))
+      LEFT JOIN ncpdp_unit ON (epac.ncpdpbillingunitid = ncpdp_unit.ncpdpunitid))
+      LEFT JOIN iqvia_target_primary iq ON (y.product_id = iq."ndc"))
+      LEFT JOIN product epro ON (epac.productid = epro.productid))
+      LEFT JOIN brand_generic_status ebgs ON (epro.brandgenericstatusid = ebgs.brandgenericstatusid))
+      WHERE (((y.product_id <> '') AND (y.product_id <> '99999999999')) AND (y.product_id <> '00000000000') and ((epro.offmarketdate IS NULL) OR (epro.offmarketdate >= timestamp '2011-05-01 00:00:00.000')))
       GROUP BY y.product_id, y.lot_id, dif.donor_id, epac.ndc11, epro.productnamelong, iq.product_sum, iq.packagesize, epac.packagesize, iq.priority, iq.primary, ncpdp_unit.unitname, ipu.unitname, epac.innerpackagecount, opu.unitname, ebgs.statusname
    )  z
    LEFT JOIN (select * from finale_inventory where sublocation <> 'Q0' and sublocation not like '%-W') fin2 ON ((z."product_id" = "replace"(fin2."ndc11", '-')) AND (z.lot_id = fin2.lot_id)))
- -- once again filtering out sublocation Q0 (quarantine) and products ending in "-W" (waiting area)
- -- joining on lot_id and product_id to get the correct aggregate values
    GROUP BY z.productnamelong, z.lot_id, z.product_id, z.packagesize, z.priority, z.primary, z.unitname, z.inner_package, z.donor_id, z.outer_package, z.innerpackagecount, "date_parse"("split_part"(fin2.lot_id, ' ', 2), '%m/%d/%Y'), fin2.available_to_promise_units, fin2.purchase_order_quantity, z.statusname, fin2.sublocation
 )  w
 LEFT JOIN view_elsevier_drugclass_convert dcc ON (w.product_id = dcc.ndc11))
-LEFT JOIN iqvia_target_primary iq2 ON (w.product_id = iq2.ndc)) 
-LEFT JOIN regular_donors rd ON (w.donor_id = rd.donor_id__c)) -- pulling in all active donor information
+LEFT JOIN iqvia_target_primary iq2 ON (w.product_id = iq2.ndc))
+LEFT JOIN regular_donors rd ON (w.donor_id = rd.donor_id__c))
 GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 16, 17, 18, 19, 20, 21, 22, 23, 24
