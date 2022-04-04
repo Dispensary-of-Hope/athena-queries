@@ -1,0 +1,18 @@
+CREATE EXTERNAL TABLE 
+
+consistent_list
+(
+`quarter_begin_date` timestamp,
+`consistent_products` string,
+`priority` string
+)
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe'
+WITH SERDEPROPERTIES 
+(
+  'serialization.format' = ',',
+  'field.delim' = ','
+  
+ )
+  location 's3://historical-data-powerbi/consistentlist/'
+  TBLProperties (
+    'skip.header.line.count' = '1' )
