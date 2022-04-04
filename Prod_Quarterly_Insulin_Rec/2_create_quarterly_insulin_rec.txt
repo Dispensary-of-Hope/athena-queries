@@ -1,0 +1,13 @@
+CREATE EXTERNAL TABLE quarterly_insulin_rec (
+  `date` string,Email string,Account_Owner string,Site_ID string,Company_ID string,Account_Name string,Product string,NDC string,Prev string,Ordered string,Dispensed string,filled_not_picked string,Expired string,total string,match string,explanation string,Number_to_Start_with_Next_Quarter string
+  
+  )
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+WITH SERDEPROPERTIES (
+  'separatorChar' = ',',
+  'quoteChar' = '"',
+  'escapeChar' = '\n'
+)
+LOCATION 's3://qir-csv/Current/'
+TBLPROPERTIES ('has_encrypted_data'='false', 'skip.header.line.count' = '1'
+)

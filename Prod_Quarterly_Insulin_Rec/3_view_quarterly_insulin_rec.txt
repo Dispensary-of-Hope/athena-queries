@@ -1,0 +1,20 @@
+CREATE OR REPLACE VIEW view_quarterly_insulin_rec AS 
+SELECT
+  TRY_CAST(TRY("date_format"("date_parse"(date, '%m-%d-%Y'), '%Y-%m-%d %T')) AS timestamp) day
+, email
+, account_owner
+, site_id
+, company_id
+, account_name
+, product
+, "replace"(ndc, '`', '') ndc
+, TRY_CAST(prev AS bigint) prev
+, TRY_CAST(ordered AS bigint) ordered
+, TRY_CAST(dispensed AS bigint) dispensed
+, TRY_CAST(filled_not_picked AS bigint) filled_not_picked
+, TRY_CAST(expired AS bigint) expired
+, TRY_CAST(total AS bigint) total
+, match
+, explanation
+FROM
+  quarterly_insulin_rec
