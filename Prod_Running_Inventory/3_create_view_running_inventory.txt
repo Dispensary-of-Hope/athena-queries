@@ -1,0 +1,27 @@
+CREATE or replace view view_running_inventory AS
+select
+productnamelong,
+product_id,
+lot_id,
+try_cast(packagesize as double) packagesize,
+unitname, 
+inner_package,
+outer_package, 
+unit_of_measure, 
+try_cast(innerpackagecount as bigint) innerpackagecount,
+priority, 
+primary, 
+try_cast (total_in_stock as bigint) total_in_stock,
+try_cast (available_qty as bigint) available_qty,
+try_cast (purchase_order_qty as bigint) purchase_order_qty,
+try_cast (min_exp_date as timestamp) min_exp_date,
+drug_class,
+therapeutic_class, 
+try_cast (current_date_in_stock as timestamp) current_date_in_stock,
+statusname, 
+donor_id,
+sublocation, 
+try_cast (unit_WAC as double) unit_WAC, 
+try_cast (total_WAC as double) total_WAC, 
+donor_name
+from running_inventory

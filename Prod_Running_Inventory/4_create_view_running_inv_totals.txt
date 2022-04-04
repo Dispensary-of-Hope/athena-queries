@@ -1,0 +1,4 @@
+create or replace view view_running_inv_totals as
+SELECT distinct current_date_in_stock, priority, productnamelong, sum(total_in_stock) total_in_stock FROM view_running_inventory
+where total_in_stock > 0
+group by 1,2,3
