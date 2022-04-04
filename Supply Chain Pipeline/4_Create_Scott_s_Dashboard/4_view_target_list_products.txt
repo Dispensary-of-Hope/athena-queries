@@ -1,17 +1,5 @@
 -- Part of supply chain pipeline
 -- selects all target list products from iqvia table
 -- joins on ordering tool to get receiving and total in stock information
-
-CREATE OR REPLACE VIEW view_target_list_products AS 
-SELECT
-  iq.target_list_product
-, iq.priority
-, ofh.day
-, "sum"(ofh.total_units_received) total_units_received
-, "sum"(ofh.total_in_stock) total_in_stock
-, ofh.productnamelong
-FROM
-  (iqvia_target_primary iq
-LEFT JOIN view_ordering_tool ofh ON (ofh.product_id = iq.ndc))
-WHERE (target_list_product <> 'None')
-GROUP BY 1, 2, 3, 6
+CREATE OR REPLACE VIEW view_target_list_products AS SELECT  iq.target_list_product, iq.priority, ofh.day, "sum"(ofh.total_units_received) total_units_received, "sum"(ofh.total_in_stock) total_in_stock, ofh.productnamelong FROM  (iqvia_target_primary iq LEFT JOIN view_ordering_tool ofh ON (ofh.product_id = iq.ndc))
+WHERE (target_list_product <> 'None')GROUP BY 1, 2, 3, 6
