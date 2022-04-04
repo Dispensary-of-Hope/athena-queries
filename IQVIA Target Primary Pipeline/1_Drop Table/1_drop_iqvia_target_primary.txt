@@ -1,0 +1,2 @@
+-- part of IQVIA target primary pipeline
+DROP TABLE iqvia_target_primary;
