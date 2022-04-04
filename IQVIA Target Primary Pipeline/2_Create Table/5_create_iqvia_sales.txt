@@ -1,0 +1,32 @@
+CREATE EXTERNAL TABLE iqvia_sales ( 
+  `Month` string, 
+  `Target_List_Product` string,
+  `Priority` string,
+  `Primary` string,
+  `Dosage_Form` string,
+  `Major_Class` string,
+  `Manufacturer` string,
+  `NDC` string,
+  `Pack_QTY` string,
+  `Pack_Size` string,
+  `Repackage` string,
+  `Product_Sum` string,
+  `Brand_Generic` string,
+  `Rx_Status` string,
+  `Product_Launch_Date` string,
+  `Strength` string,
+  `Sales` string,
+  `Units` string,
+  `Eaches` string,
+  `NSP_Ext_Units` string,
+  `WAC_Price` string,
+  `NSP_Price` string )
+
+ ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+ WITH SERDEPROPERTIES (
+  'separatorChar' = ',',
+  'quoteChar' = '\"',
+  'escapeChar' = '\n'
+ ) LOCATION 's3://iqviatables/IQVIA_Sales/'
+ TBLPROPERTIES ('has_encrypted_data'='false',
+               'skip.header.line.count' = '1');

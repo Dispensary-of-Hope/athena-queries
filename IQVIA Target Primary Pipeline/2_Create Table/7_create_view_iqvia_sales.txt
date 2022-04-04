@@ -1,0 +1,53 @@
+CREATE OR REPLACE VIEW view_iqvia_sales AS 
+SELECT
+  CAST(month AS timestamp) day
+, concat('Q',cast(quarter(cast(month as timestamp)) as varchar),CHR(39),' ',cast(year(cast(month as timestamp)) as varchar)) quarter  
+, target_list_product
+, priority
+, primary
+, dosage_form
+, major_class
+, manufacturer
+, (CASE WHEN ((iq_mfg.type <> '') OR (iq_mfg.type IS NOT NULL)) THEN iq_mfg.type WHEN ((iq_mfg.type IS NULL) OR (iq_mfg.type = '')) THEN 'Potential Donor' END) donor_status
+, (CASE WHEN ((iq_mfg.donor_name <> '') OR (iq_mfg.donor_name IS NOT NULL)) THEN iq_mfg.donor_name WHEN ((iq_mfg.donor_name = '') OR (iq_mfg.donor_name IS NULL)) THEN manufacturer END) donor_name
+, ndc
+, TRY_CAST(pack_qty AS double) pack_qty
+, TRY_CAST(pack_size AS double) pack_size
+, repackage
+, product_sum
+, brand_generic
+, rx_status
+, CAST(product_launch_date AS timestamp) product_launch_date
+, strength
+, TRY_CAST(sales AS double) sales
+, TRY_CAST(units AS double) units
+, TRY_CAST(eaches AS double) eaches
+, TRY_CAST(nsp_ext_units AS double) nsp_ext_units
+, TRY_CAST(wac_price AS double) wac_price
+, TRY_CAST(nsp_price AS double) nsp_price
+FROM
+  (iqvia_sales iqs
+LEFT JOIN (
+   SELECT
+     rd.name donor_name
+   , rd.type
+   , iq.iqvia_donor
+   FROM
+     ((
+      SELECT
+        name
+      , type
+      , donor_code__c
+      , "replace"(donor_id__c, '.0') donor_id__c
+      , account_record_type_text__c
+      , TRY("date_parse"(date_became_active__c, '%m/%d/%Y')) date_became_active
+      , donating_planned__c
+      , donating_excess__c
+      , TRY("date_parse"(first_donation__c, '%m/%d/%Y')) first_donation_date
+      FROM
+        sf_account
+      WHERE (account_record_type_text__c IN ('Distributor', 'Manufacturers'))
+   )  rd
+   LEFT JOIN donor_id_iqvia iq ON (rd.donor_id__c = iq.donor_id))
+   WHERE (rd.donor_id__c <> '54500')
+)  iq_mfg ON (iqs.manufacturer = iq_mfg.iqvia_donor))
