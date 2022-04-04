@@ -2,25 +2,76 @@
 -- shows monthly wac distributed compared to quarterly numbers
 
 CREATE OR REPLACE VIEW view_ehope_dashboard AS 
-SELECT DISTINCT
-  sf.company_id__c company_id
-, sf.id__c site_id
-, "year"(ohft.ship_date) year
-, "quarter"(ohft.ship_date) quarter
-, "concat"('Q', TRY_CAST("quarter"(ohft.ship_date) AS varchar), ' ', TRY_CAST("year"(ohft.ship_date) AS varchar)) quarter_year
-, "month"(ohft.ship_date) shipment_month_number
-, "date_format"(ohft.ship_date, '%M') shipment_month_name
-, "min"(CAST(ohft.ship_date AS date)) first_shipment_date
-, qn.encounters quarterly_patient_encounters
-, qn.fills quarterly_fills
-, qn.uniquepatients quarterly_unique_patients
-, "round"("sum"((ohft.total_units_distributed * ohft.unit_wac)), 2) total_monthly_wac
-, sf.name
-, (CASE WHEN ((sf.renewal_date__c <> '') AND (sf.renewal_date__c IS NOT NULL)) THEN "date_parse"(sf.renewal_date__c, '%c/%e/%Y') ELSE null END) renewal_date
-FROM
-  ((orders_with_companyid ohft
-LEFT JOIN sf_account sf ON (ohft.site_id = sf.id__c))
-LEFT JOIN quarterly_new qn ON (((ohft.site_id = qn.siteid) AND ("year"(ohft.ship_date) = "year"(qn.quarter_end_date))) AND ("month"(ohft.ship_date) = "month"(qn.quarter_end_date))))
--- joining on year and month between quarterly numbers and orders to line up values
-WHERE ((NOT (ohft.product_id IN ('00000000000', '99999999999', ''))) AND (NOT (ohft.company_id__c LIKE '')))
-GROUP BY 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 13, 14
+(
+(
+      SELECT DISTINCT
+        sf.company_id__c company_id
+      , sf.id__c site_id
+      , "year"(ohft.ship_date) year
+      , "quarter"(ohft.ship_date) quarter
+      , "concat"('Q', TRY_CAST("quarter"(ohft.ship_date) AS varchar), ' ', TRY_CAST("year"(ohft.ship_date) AS varchar)) quarter_year
+      , "month"(ohft.ship_date) shipment_month_number
+      , "date_format"(ohft.ship_date, '%M') shipment_month_name
+      , "min"(CAST(ohft.ship_date AS date)) first_shipment_date
+      , null quarterly_patient_encounters
+      , null quarterly_fills
+      , null quarterly_unique_patients
+      , "round"("sum"((ohft.total_units_distributed * ohft.unit_wac)), 2) total_monthly_wac
+      , sf.name
+      , (CASE WHEN ((sf.renewal_date__c <> '') AND (sf.renewal_date__c IS NOT NULL)) THEN "date_parse"(sf.renewal_date__c, '%c/%e/%Y') ELSE null END) renewal_date
+      , dt.day
+      , null quarter_end_date
+      FROM
+        ((orders_with_companyid ohft
+      INNER JOIN date_table dt ON (ohft.ship_date = dt.day))
+      LEFT JOIN sf_account sf ON (ohft.site_id = sf.id__c))
+      WHERE ((NOT (ohft.product_id IN ('99999999999', ''))) AND (NOT (ohft.company_id__c LIKE '')))
+      GROUP BY 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 13, 14, 15, 16
+   ) UNION ALL (
+      SELECT DISTINCT
+        sf.company_id__c company_id
+      , sf.id__c site_id
+      , "year"(qn.quarter_end_date) year
+      , "quarter"(qn.quarter_end_date) quarter
+      , "concat"('Q', TRY_CAST("quarter"(qn.quarter_end_date) AS varchar), ' ', TRY_CAST("year"(qn.quarter_end_date) AS varchar)) quarter_year
+      , null shipment_month_number
+      , null shipment_month_name
+      , null first_shipment_date
+      , "sum"(qn.encounters) quarterly_patient_encounters
+      , "sum"(qn.fills) quarterly_fills
+      , "sum"(qn.uniquepatients) quarterly_unique_patients
+      , 0 total_monthly_wac
+      , sf.name
+      , (CASE WHEN ((sf.renewal_date__c <> '') AND (sf.renewal_date__c IS NOT NULL)) THEN "date_parse"(sf.renewal_date__c, '%c/%e/%Y') ELSE null END) renewal_date
+      , dt.day
+      , quarter_end_date
+      FROM
+        ((view_quarterly_numbers qn
+      INNER JOIN date_table dt ON (qn.quarter_end_date = dt.day))
+      LEFT JOIN sf_account sf ON (qn.site_id = sf.id__c))
+      GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 12, 13, 14, 15, 16
+   ) UNION ALL (
+      SELECT DISTINCT
+        sf.company_id__c company_id
+      , sf.id__c site_id
+      , "year"(dt.day) year
+      , "quarter"(dt.day) quarter
+      , "concat"('Q', TRY_CAST("quarter"(dt.day) AS varchar), ' ', TRY_CAST("year"(dt.day) AS varchar)) quarter_year
+      , null shipment_month_number
+      , null shipment_month_name
+      , null first_shipment_date
+      , null quarterly_patient_encounters
+      , null quarterly_fills
+      , null quarterly_unique_patients
+      , 0 total_monthly_wac
+      , sf.name
+      , (CASE WHEN ((sf.renewal_date__c <> '') AND (sf.renewal_date__c IS NOT NULL)) THEN "date_parse"(sf.renewal_date__c, '%c/%e/%Y') ELSE null END) renewal_date
+      , "date_trunc"('month', dt.day) day
+      , null quarter_end_date
+      FROM
+        ((orders_with_companyid ohft
+      LEFT JOIN sf_account sf ON (ohft.site_id = sf.id__c))
+      CROSS JOIN date_table dt)
+      WHERE (((dt.day >= TIMESTAMP '2020-01-01 00:00:00.000') AND (dt.day <= current_date)) AND ((NOT (ohft.product_id IN ('99999999999', ''))) AND (NOT (ohft.company_id__c LIKE ''))))
+      GROUP BY 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 13, 14, 15
+   ) )
