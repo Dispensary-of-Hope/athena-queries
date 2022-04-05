@@ -1,0 +1,17 @@
+create or replace view view_offers_distributed_received as
+select distinct day, ndc, productnamelong, priority, donor_name, sum(available_bottles) available_bottles, sum(qty_accepted) qty_accepted, sum(received) received, sum(distributed) distributed, sum(destroyed) destroyed from
+((select distinct try_cast(try(date_format(date_parse(offer_date,'%m/%d/%Y'),'%Y-%m-%d %T'))as timestamp) as day, mfg.ndc, try_cast(try(date_format(date_parse(offer_date,'%m/%d/%Y'),'%Y-%m-%d %T'))as timestamp) offer_date, sum(try_cast(available_bottles as bigint)) available_bottles, sum(try_cast(qty_accepted as bigint)) qty_accepted, 0 received, 0 distributed, 0 destroyed from manufacturer_offers mfg
+group by 1,2)
+UNION ALL
+(select distinct drd.day, product_id ndc, null offer_date, 0 available_bottles, 0 qty_accepted, sum(total_units_received) received, sum(total_units_distributed) distributed, sum(total_units_destroyed) destroyed from distribution_receiving_destruction drd
+ join
+ (select distinct mfg.ndc from manufacturer_offers mfg) mfg_2
+ ON drd.product_id = mfg_2.ndc
+group by 1,2,3,4,5)) mfg3
+join 
+(select distinct inv.product_id, inv.priority, inv.productnamelong, case when inv.donor_name is null then inv2.donor_name else inv.donor_name end donor_name from view_inventory_master inv
+left join (select distinct product_id, donor_name from view_inventory_master where donor_name is not null) inv2
+ ON inv.product_id = inv2.product_id) inv
+ON mfg3.ndc = inv.product_id
+where day >= timestamp '2020-01-01 00:00:00.000'
+group by 1,2,3,4,5
