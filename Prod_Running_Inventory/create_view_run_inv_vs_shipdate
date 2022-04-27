@@ -1,0 +1,30 @@
+CREATE OR REPLACE VIEW "view_run_inv_vs_shipdate" AS 
+( 
+
+select ldis.productnamelong, ldis.product_id, ldis.current_date_in_stock last_day_in_stock, lsd.last_ship_date, sum(vri.total_in_stock) total_last_day_in_stock from 
+
+-- selecting max date in stock, product name, and product_id 
+(select distinct max(current_date_in_stock) current_date_in_stock, productnamelong, product_id from view_running_inventory 
+where total_in_stock > 0 
+group by 2,3) ldis 
+
+--joining to get total in stock amount for the max date in stock 
+-- left join to pull all ndcs previously in stock  
+
+left join (select sum(total_in_stock) total_in_stock, current_date_in_stock, product_id, productnamelong from view_running_inventory 
+group by 2,3,4) vri 
+ON ldis.product_id = vri.product_id AND ldis.current_date_in_stock = vri.current_date_in_stock 
+
+--joining to get last ship date per product_id currently or previously in stock 
+left join  
+
+-- left join to pull all ndcs previously in stock  
+(SELECT DISTINCT product_id, max(ship_date) last_ship_date from orders_with_companyid ocid 
+
+--filtering out NDCs going to destruction 
+WHERE ocid.site_id NOT IN ('10277', '194')  
+group by 1)lsd 
+
+ON ldis.product_id = lsd.product_id 
+group by 1,2,3,4 
+) 
