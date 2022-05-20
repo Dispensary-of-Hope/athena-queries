@@ -1,0 +1,22 @@
+CREATE OR REPLACE VIEW "view_distribution_by_drug_class" AS 
+(
+   SELECT
+     td.day
+   , td.drug_class
+   , td.productnamelong
+   , td.product_id
+   , td.priority
+   , td.total_in_stock
+   , td.available_qty
+   , td.total_units_distributed
+   , im.packagesize
+   , (CASE WHEN ((im.packagesize IS NOT NULL) AND (NOT (td.product_id IN ('72065013011', '72065013012')))) THEN "round"((im.packagesize * td.total_units_distributed), 2) WHEN ((im.packagesize IS NULL) AND (NOT (td.product_id IN ('72065013011', '72065013012')))) THEN "round"((im.packagesize * td.total_units_distributed), 2) WHEN (td.product_id IN ('72065013011', '72065013012')) THEN "round"((2 * td.total_units_distributed), 2) ELSE 0 END) total_doses
+   FROM
+     (view_therapeutics_dashboard td
+   LEFT JOIN (
+      SELECT DISTINCT
+        product_id
+      , packagesize
+      FROM
+        view_inventory_master)  im ON (td.product_id = im.product_id))
+)
