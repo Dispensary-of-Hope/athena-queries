@@ -1,0 +1,1 @@
+CREATE OR REPLACE VIEW "view_ehope_missing_products" AS SELECT DISTINCT  product_id, productnamelong, sku, "sum"(total_in_stock) total_in_stockFROM  (view_inventory_master invLEFT JOIN (   SELECT "lpad"(sku, 11, '0') sku   FROM     products)  p ON (inv.product_id = p.sku))WHERE ((total_in_stock > 0) AND (sku IS NULL))GROUP BY 1, 2, 3
