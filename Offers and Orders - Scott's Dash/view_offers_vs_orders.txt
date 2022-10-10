@@ -1,23 +1,22 @@
-"""CREATE OR REPLACE VIEW "view_offers_vs_orders" AS
-    SELECT Distinct month(fd.day) month, year(fd.day) year,Max(number_on_primary) primary_formulary, 
-    (
-        SELECT Count (distinct tlp.target_list_product) 
-        FROM view_target_list_products tlp 
-        Where tlp.priority in ('P1','P2','P3') and tlp.target_list_product Not IN ('null')
-    ) target_list_product,
-mmo.offers_total, top.excess_orders_placed, top.planned_orders_placed, top.total_orders_placed, total_orders_received
-       
-FROM "database-prod"."view_formulary_vs_distribution" fd
-    
-    LEFT JOIN view_total_orders_placed_received top ON top.month = month(fd.day) AND top.year = year(fd.day)
-   
-    LEFT JOIN view_target_list_products tlp ON fd.day = tlp.day
-    LEFT JOIN "view_manufacturer_monthly_offers" mmo ON mmo.year_offer_date = year(fd.day) AND mmo.month_offer_date = month(fd.day)
-
-        where fd.day >= timestamp '2022-07-01 00:00:00.000'
-        GROUP BY year(fd.day), month(fd.day), mmo.offers_total, excess_orders_placed, planned_orders_placed, total_orders_placed, total_orders_received
+"""CREATE OR REPLACE VIEW "view_offers_vs_orders" AS
+    SELECT Distinct fd.day, Max(number_on_primary) primary_formulary, 
+        (
+            SELECT Count (distinct tlp.target_list_product) 
+            FROM view_target_list_products tlp 
+            Where tlp.priority in ('P1','P2','P3') and tlp.target_list_product Not IN ('null')
+        ) target_list_product, mmo.offers_total, top.excess_orders_placed, top.planned_orders_placed, top.total_orders_placed, total_orders_received
+           
+    FROM "database-prod"."view_formulary_vs_distribution" fd
         
-UNION ALL
-    SELECT distinct pftl.month, pftl.year, primary_formulary, target_list_product, offers_total, excess_orders_placed, planned_orders_placed, total_orders_placed, pftl.total_orders_received FROM "historical_pf_tl_offers_orders" pftl
-    ORDER BY year DESC, month DESC;"""
-   
+        LEFT JOIN view_total_orders_placed_received top ON top.purchase_order_date = fd.day
+        LEFT JOIN view_manufacturer_monthly_offers mmo ON mmo.offer_date = fd.day
+       
+        LEFT JOIN view_target_list_products tlp ON fd.day = tlp.day
+    
+            WHERE fd.day >= timestamp '2022-07-01 00:00:00.000' AND offers_total IS NOT NULL AND excess_orders_placed IS NOT NULL AND planned_orders_placed IS NOT NULL AND total_orders_placed IS NOT NULL AND total_orders_received IS NOT NULL
+            
+            GROUP BY fd.day, offers_total, excess_orders_placed, planned_orders_placed, total_orders_placed, total_orders_received
+            
+    UNION
+        SELECT distinct pftl.month, primary_formulary, target_list_product, offers_total, excess_orders_placed, planned_orders_placed, total_orders_placed, pftl.total_orders_received 
+        FROM "historical_pf_tl_offers_orders" pftl;"""
