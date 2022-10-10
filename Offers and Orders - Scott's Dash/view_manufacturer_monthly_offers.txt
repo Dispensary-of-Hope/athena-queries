@@ -1,1 +1,20 @@
-CREATE OR REPLACE VIEW "view_manufacturer_monthly_offers" AS(SELECT    year(offer_date) year_offer_date,     month(offer_date) month_offer_date,    COUNT (DISTINCT CASE WHEN offer_id = '99999999-9N' THEN mfg_offerdate                         WHEN offer_id <> '99999999-9N' THEN offer_id          END) offers_totalFROM (SELECT cast(date_parse(offer_date,'%m/%d/%Y') as date) as offer_date, manufacturer, offer_id,              concat(manufacturer, offer_date) mfg_offerdate FROM "database-prod"."manufacturer_offers")    GROUP BY 1, 2    ORDER BY 1 DESC, 2 DESC)SELECT    year(cast(date_parse(offer_date,'%m/%d/%Y') as date)) year_offer_date,    month(cast(date_parse(offer_date,'%m/%d/%Y') as date)) month_offer_date,    COUNT (DISTINCT        CASE            WHEN (offer_date < '7/12/2022') THEN manufacturer            WHEN (offer_date > '7/12/2022') THEN offer_id        ELSE NULL END) offers_totalFROM "database-prod"."manufacturer_offers"    GROUP BY 1, 2    ORDER BY 1 DESC, 2 DESC
+CREATE OR REPLACE VIEW "view_manufacturer_monthly_offers" AS
+(
+   SELECT
+    cast(date_parse(offer_date,'%m/%d/%Y') as timestamp) as offer_date 
+
+   , "count"(DISTINCT (CASE WHEN (offer_id = '99999999-9N') THEN mfg_offerdate WHEN (offer_id <> '99999999-9N') THEN offer_id END)) offers_total
+   FROM
+     (
+      SELECT
+        offer_date
+      , manufacturer
+      , offer_id
+      , "concat"(manufacturer, offer_date) mfg_offerdate
+      FROM
+        "database-prod"."manufacturer_offers"
+   ) 
+   GROUP BY 1
+   ORDER BY 1 DESC
+) 
+
