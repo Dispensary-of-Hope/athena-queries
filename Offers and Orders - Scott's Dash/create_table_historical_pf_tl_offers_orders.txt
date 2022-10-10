@@ -1,1 +1,19 @@
-CREATE EXTERNAL TABLE historical_pf_tl_offers_orders (month int,year int,primary_formulary int,target_list_product int,offers_total int,excess_orders_placed int,planned_orders_placed int, total_orders_placed int,total_orders_received int)ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe'WITH SERDEPROPERTIES (  'serialization.format' = ',',  'field.delim' = ',') LOCATION 's3://offers-and-orders/create_offers_orders_historical_table/'TBLPROPERTIES ('has_encrypted_data'='false',              'skip.header.line.count'='1');
+CREATE EXTERNAL TABLE historical_pf_tl_offers_orders 
+(month Timestamp,
+year int,
+primary_formulary int,
+target_list_product int,
+offers_total int,
+excess_orders_placed int,
+planned_orders_placed int, 
+total_orders_placed int,
+total_orders_received int)
+
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.lazy.LazySimpleSerDe'
+WITH SERDEPROPERTIES (
+  'serialization.format' = ',',
+  'field.delim' = ','
+) LOCATION 's3://offers-and-orders/create_offers_orders_historical_table/'
+TBLPROPERTIES ('has_encrypted_data'='false',
+              'skip.header.line.count'='1');
+              
