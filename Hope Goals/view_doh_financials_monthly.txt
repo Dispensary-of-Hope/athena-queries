@@ -1,19 +1,19 @@
-CREATE OR REPLACE VIEW view_doh_financials_monthly AS 
+CREATE OR REPLACE VIEW "view_doh_financials_monthly" AS 
 WITH
   total_revenue AS (
 (
       SELECT
         fiscal_year
-      , CAST("date_format"("date_parse"(month_year, '%b-%y'), '%Y-%m-%d') AS timestamp) month_year
-      , CAST("substr"("replace"(actual_this_month, ',', ''), 2) AS int) total_operating_revenue
+      , CAST("date_format"("date_parse"(month_year, '%y-%b'), '%Y-%m-%d') AS timestamp) month_year
+      , CAST(actual_this_month AS int) total_operating_revenue
       FROM
         cfytd_revenue
       WHERE (account = 'TotalOperatingRevenues')
    ) UNION (
       SELECT
         fiscal_year
-      , CAST("date_format"("date_parse"(month_year, '%b-%y'), '%Y-%m-%d') AS timestamp) month_year
-      , CAST("substr"("replace"(actual_this_month, ',', ''), 2) AS int) total_operating_revenue
+      , CAST("date_format"("date_parse"(month_year, '%y-%b'), '%Y-%m-%d') AS timestamp) month_year
+      , CAST(actual_this_month AS int) total_operating_revenue
       FROM
         revenue_historical
       WHERE (account = 'TotalOperatingRevenues')
@@ -23,16 +23,16 @@ WITH
 (
       SELECT
         fiscal_year
-      , CAST("date_format"("date_parse"(month_year, '%b-%y'), '%Y-%m-%d') AS timestamp) month_year
-      , CAST("substr"("replace"(actual_this_month, ',', ''), 2) AS int) total_operating_expenses
+      , CAST("date_format"("date_parse"(month_year, '%y-%b'), '%Y-%m-%d') AS timestamp) month_year
+      , CAST(actual_this_month AS int) total_operating_expenses
       FROM
         cfytd_expenses
       WHERE (account = 'TotalOperatingExpenses')
    ) UNION (
       SELECT
         fiscal_year
-      , CAST("date_format"("date_parse"(month_year, '%b-%y'), '%Y-%m-%d') AS timestamp) month_year
-      , CAST("substr"("replace"(actual_this_month, ',', ''), 2) AS int) total_operating_expenses
+      , CAST("date_format"("date_parse"(month_year, '%y-%b'), '%Y-%m-%d') AS timestamp) month_year
+      , CAST(actual_this_month AS int) total_operating_expenses
       FROM
         expenses_historical
       WHERE (account = 'TotalOperatingExpenses')
@@ -41,15 +41,15 @@ WITH
    SELECT
      fiscal_year
    , CAST(month_year AS timestamp) month_year
-   , "sum"((CASE WHEN ((account = 'ContractServRevenue') OR (account = 'ICRevenueSharedServices-502010')) THEN CAST("substr"("replace"(actual_this_month, ',', ''), 2) AS int) ELSE 0 END)) earned_income_revenue
-   , "sum"((CASE WHEN (account = 'OperatgRevterCompBetweenHMs-502005') THEN CAST("substr"("replace"(actual_this_month, ',', ''), 2) AS int) ELSE 0 END)) grants_revenue
-   , "sum"((CASE WHEN (account = 'FoundationICTrnsf-500100') THEN CAST("substr"("replace"(actual_this_month, ',', ''), 2) AS int) ELSE 0 END)) philantropy_revenue
+   , "sum"((CASE WHEN ((account = 'ContractServRevenue') OR (account = 'ICRevenueSharedServices-502010')) THEN CAST(actual_this_month AS int) ELSE 0 END)) earned_income_revenue
+   , "sum"((CASE WHEN (account = 'OperatgRevterCompBetweenHMs-502005') THEN CAST(actual_this_month AS int) ELSE 0 END)) grants_revenue
+   , "sum"((CASE WHEN (account = 'FoundationICTrnsf-500100') THEN CAST(actual_this_month AS int) ELSE 0 END)) philantropy_revenue
    FROM
      (
 (
          SELECT
            fiscal_year
-         , "date_format"("date_parse"(month_year, '%b-%y'), '%Y-%m-%d') month_year
+         , "date_format"("date_parse"(month_year, '%y-%b'), '%Y-%m-%d') month_year
          , actual_this_month
          , account
          FROM
@@ -57,7 +57,7 @@ WITH
       ) UNION (
          SELECT
            fiscal_year
-         , "date_format"("date_parse"(month_year, '%b-%y'), '%Y-%m-%d') month_year
+         , "date_format"("date_parse"(month_year, '%y-%b'), '%Y-%m-%d') month_year
          , actual_this_month
          , account
          FROM
