@@ -1,19 +1,21 @@
 -- Part of quarterly numbers pipeline
 -- Shows all quarterly numbers, old and new, joins to date table, and pulls in company id
 
-CREATE OR REPLACE VIEW view_quarterly_numbers AS 
+CREATE OR REPLACE VIEW "view_quarterly_numbers" AS 
 SELECT
   qn.fills
 , qn.encounters
 , qn.uniquepatients
 , qn.quarter
 , qn.year
-, qn.site
+, sf.name site
 , qn.siteid site_id
-, qn.quarter_end_date
+, TRY_CAST(qn.quarter_end_date AS timestamp) quarter_end_date
 , dt.day
 , sf.company_id__c company_id
+, "concat"("concat"(sfu.firstname, ' '), sfu.lastname) account_manager
 FROM
-  ((quarterly_new qn
-INNER JOIN date_table dt ON (qn.quarter_end_date = dt.day))
+  (((quarterly_numbers_aurora qn
+INNER JOIN date_table dt ON (TRY_CAST(qn.quarter_end_date AS timestamp) = dt.day))
 LEFT JOIN sf_account sf ON (qn.siteid = sf.id__c))
+LEFT JOIN sf_user sfu ON (sfu.id = sf.ownerid))
