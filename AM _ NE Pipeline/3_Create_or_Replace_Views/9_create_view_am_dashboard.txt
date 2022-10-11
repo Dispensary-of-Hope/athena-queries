@@ -1,8 +1,5 @@
--- part of NE and AM report pipeline
--- merges health system/site utilization with quarterly numbers 
-
-CREATE OR REPLACE VIEW view_am_dashboard AS 
-( -- selecting health system and site utilization
+CREATE OR REPLACE VIEW "view_am_dashboard" AS 
+(
    SELECT DISTINCT
      sf.health_system
    , sf.site_name
@@ -24,9 +21,6 @@ CREATE OR REPLACE VIEW view_am_dashboard AS
    , null encounters
    , null uniquepatients
    , (CASE WHEN (sf.renewal_date < current_date) THEN "date_add"('day', 365, sf.renewal_date) ELSE sf.renewal_date END) renewal_date
-   -- case statement to get next renewal date
--- current field shows sometimes last renewal and sometimes next renewal
--- case statement changes to only show next renewal
    , null quarter_end_date
    , sf.licensed_pharmacy_licensed_distributor__c licensed_pharmacy
    , sf.lilly_approved__c
@@ -35,22 +29,85 @@ CREATE OR REPLACE VIEW view_am_dashboard AS
    , sf.primary_contact__c
    , sf.account_manager
    , sf.new_dispensing_entity__c
+   , sf.First_Donated_IAP_Order__c
    FROM
      (((orders_with_companyid ocid
    LEFT JOIN (
-      SELECT DISTINCT --needs to be distinct to get correct values
+      SELECT DISTINCT
         product_id ndc11
       , packagesize
       FROM
         view_inventory_master
    )  pkg ON (ocid.product_id = pkg.ndc11))
    INNER JOIN date_table dt ON (ocid.ship_date = dt.day))
-   LEFT JOIN site_info sf ON (ocid.company_id__c = sf.company_id__c))
-   WHERE (sf.company_id__c <> '') -- make sure company id is populated to show only active accounts
-   GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28
+   LEFT JOIN (
+      SELECT DISTINCT
+        sfa.name site_name
+      , sfa2.name health_system
+      , sfa.shippingstate
+      , sfa.shippingcity
+      , sfa.salesforce_id__c
+      , "split_part"(sfa.site_id_formatted__c, ' ', 2) site_id
+      , sfa.company_id__c
+      , sfa.ehope_type__c
+      , sfa.account_record_type_text__c
+      , (CASE WHEN ((TRY("date_parse"(sfa.renewal_date__c, '%m/%d/%Y')) < current_date) AND (fee.expiration_date__c IS NULL)) THEN "date_add"('day', 365, TRY("date_parse"(sfa.renewal_date__c, '%m/%d/%Y'))) WHEN ((TRY("date_parse"(sfa.renewal_date__c, '%m/%d/%Y')) >= current_date) AND (fee.expiration_date__c IS NULL)) THEN TRY("date_parse"(sfa.renewal_date__c, '%m/%d/%Y')) ELSE fee.expiration_date__c END) renewal_date
+      , TRY("date_parse"(sfa.joined_network__c, '%m/%d/%Y')) joined_date
+      , "concat"("concat"(sfu.firstname, ' '), sfu.lastname) account_manager
+      , fee.subscription_fee
+      , fee.monthly_subscription_fee
+      , sfa.lilly_approved__c
+      , sfa.licensed_pharmacy_licensed_distributor__c
+      , sfa.primary_contact__c
+      , sfa.order_pick_day__c
+      , wac_last_renewal.total_wac wac_since_last_renewal
+      , sfa.new_dispensing_entity__c
+      , sfa.dispensing_entity__c
+      , sfa.shippingpostalcode
+      , sfa.shippingstatecode
+      , sfa.ascension_owned__c
+      , sfa.ascension_ministry__c
+      , sfa.purchased_medicine__c
+      , TRY("date_parse"(sfa.First_Donated_IAP_Order__c, '%m/%d/%Y')) First_Donated_IAP_Order__c
+      FROM
+        ((((sf_account sfa
+      LEFT JOIN sf_account sfa2 ON (sfa2.id = sfa.health_system__c))
+      LEFT JOIN sf_user sfu ON (sfu.id = sfa.ownerid))
+      LEFT JOIN (
+         SELECT DISTINCT
+           sfa.name
+         , sfa.salesforce_id__c
+         , (CASE WHEN ("round"("max"(CAST(sfo.amount AS double)), 2) = 0E0) THEN 1E0 ELSE "round"("max"(CAST(sfo.amount AS double)), 2) END) subscription_fee
+         , (CASE WHEN ("round"(("max"(CAST(sfo.amount AS double)) / 12), 2) = 0E0) THEN 1E0 ELSE "round"(("max"(CAST(sfo.amount AS double)) / 12), 2) END) monthly_subscription_fee
+         , "max"((CASE WHEN (sfo.name LIKE '%IAP%') THEN TRY("date_parse"(sfo.expiration_date__c, '%m/%d/%Y')) END)) expiration_date__c
+         FROM
+           (sf_account sfa
+         LEFT JOIN sf_opportunity sfo ON (sfa.id = sfo.accountid))
+         WHERE (((sfo.amount IN ('0.0', '12500.0', '7500.0', '150000.0')) AND ("lower"(sfa.account_record_type_text__c) IN ('active access site'))) AND ("lower"(sfa.type) IN ('active', 'retired')))
+         GROUP BY 1, 2
+      )  fee ON (fee.salesforce_id__c = sfa.salesforce_id__c))
+      LEFT JOIN (
+         SELECT
+           vcd.name
+         , vcd.site_id
+         , rd.date_renewal
+         , "sum"(vcd.wac_total) total_wac
+         FROM
+           (view_customer_dashboard vcd
+         LEFT JOIN (
+            SELECT DISTINCT
+              "split_part"(sf.site_id_formatted__c, ' ', 2) site_id
+            , (CASE WHEN (TRY("date_parse"(sf.renewal_date__c, '%m/%d/%Y')) < current_date) THEN TRY("date_parse"(sf.renewal_date__c, '%m/%d/%Y')) ELSE (TRY("date_parse"(sf.renewal_date__c, '%m/%d/%Y')) - INTERVAL  '365' DAY) END) date_renewal
+            FROM
+              sf_account sf
+         )  rd ON (vcd.site_id = rd.site_id))
+         WHERE (vcd.ship_date BETWEEN rd.date_renewal AND current_date)
+         GROUP BY 1, 2, 3
+      )  wac_last_renewal ON ("split_part"(sfa.site_id_formatted__c, ' ', 2) = wac_last_renewal.site_id))
+      WHERE ((("lower"(sfa.account_record_type_text__c) IN ('active access site')) AND ("lower"(sfa.type) IN ('active', 'retired'))) AND (NOT ("lower"(sfa.name) LIKE 'wwt')))
+   )  sf ON (ocid.site_id = sf.site_id))
+   GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29
 ) UNION ALL (
--- selecting all quarterly number data and using a union query to get QNs in the same table as distribution
--- union query to be able to use the same date filter in Quicksight 
    SELECT DISTINCT
      sf.health_system
    , sf.site_name
@@ -72,9 +129,6 @@ CREATE OR REPLACE VIEW view_am_dashboard AS
    , qn.encounters
    , qn.uniquepatients
    , (CASE WHEN (sf.renewal_date < current_date) THEN "date_add"('day', 365, sf.renewal_date) ELSE sf.renewal_date END) renewal_date
-   -- case statement to get next renewal date
--- current field shows sometimes last renewal and sometimes next renewal
--- case statement changes to only show next renewal
    , qn.quarter_end_date
    , sf.licensed_pharmacy_licensed_distributor__c licensed_pharmacy
    , sf.lilly_approved__c
@@ -83,8 +137,74 @@ CREATE OR REPLACE VIEW view_am_dashboard AS
    , sf.primary_contact__c
    , sf.account_manager
    , sf.new_dispensing_entity__c
+   , sf.First_Donated_IAP_Order__c
    FROM
-     ((quarterly_new qn
+     ((view_quarterly_numbers qn
    INNER JOIN date_table dt ON (qn.quarter_end_date = dt.day))
-   LEFT JOIN site_info sf ON (qn.siteid = sf.site_id))
-)
+   LEFT JOIN (
+      SELECT DISTINCT
+        sfa.name site_name
+      , sfa2.name health_system
+      , sfa.shippingstate
+      , sfa.shippingcity
+      , sfa.salesforce_id__c
+      , "split_part"(sfa.site_id_formatted__c, ' ', 2) site_id
+      , sfa.company_id__c
+      , sfa.ehope_type__c
+      , sfa.account_record_type_text__c
+      , (CASE WHEN ((TRY("date_parse"(sfa.renewal_date__c, '%m/%d/%Y')) < current_date) AND (fee.expiration_date__c IS NULL)) THEN "date_add"('day', 365, TRY("date_parse"(sfa.renewal_date__c, '%m/%d/%Y'))) WHEN ((TRY("date_parse"(sfa.renewal_date__c, '%m/%d/%Y')) >= current_date) AND (fee.expiration_date__c IS NULL)) THEN TRY("date_parse"(sfa.renewal_date__c, '%m/%d/%Y')) ELSE fee.expiration_date__c END) renewal_date
+      , TRY("date_parse"(sfa.joined_network__c, '%m/%d/%Y')) joined_date
+      , "concat"("concat"(sfu.firstname, ' '), sfu.lastname) account_manager
+      , fee.subscription_fee
+      , fee.monthly_subscription_fee
+      , sfa.lilly_approved__c
+      , sfa.licensed_pharmacy_licensed_distributor__c
+      , sfa.primary_contact__c
+      , sfa.order_pick_day__c
+      , wac_last_renewal.total_wac wac_since_last_renewal
+      , sfa.new_dispensing_entity__c
+      , sfa.dispensing_entity__c
+      , sfa.shippingpostalcode
+      , sfa.shippingstatecode
+      , sfa.ascension_owned__c
+      , sfa.ascension_ministry__c
+      , sfa.purchased_medicine__c
+      , TRY("date_parse"(sfa.First_Donated_IAP_Order__c, '%m/%d/%Y')) First_Donated_IAP_Order__c
+      FROM
+        ((((sf_account sfa
+      LEFT JOIN sf_account sfa2 ON (sfa2.id = sfa.health_system__c))
+      LEFT JOIN sf_user sfu ON (sfu.id = sfa.ownerid))
+      LEFT JOIN (
+         SELECT DISTINCT
+           sfa.name
+         , sfa.salesforce_id__c
+         , (CASE WHEN ("round"("max"(CAST(sfo.amount AS double)), 2) = 0E0) THEN 1E0 ELSE "round"("max"(CAST(sfo.amount AS double)), 2) END) subscription_fee
+         , (CASE WHEN ("round"(("max"(CAST(sfo.amount AS double)) / 12), 2) = 0E0) THEN 1E0 ELSE "round"(("max"(CAST(sfo.amount AS double)) / 12), 2) END) monthly_subscription_fee
+         , "max"((CASE WHEN (sfo.name LIKE '%IAP%') THEN TRY("date_parse"(sfo.expiration_date__c, '%m/%d/%Y')) END)) expiration_date__c
+         FROM
+           (sf_account sfa
+         LEFT JOIN sf_opportunity sfo ON (sfa.id = sfo.accountid))
+         WHERE (((sfo.amount IN ('0.0', '12500.0', '7500.0', '150000.0')) AND ("lower"(sfa.account_record_type_text__c) IN ('active access site'))) AND ("lower"(sfa.type) IN ('active', 'retired')))
+         GROUP BY 1, 2
+      )  fee ON (fee.salesforce_id__c = sfa.salesforce_id__c))
+      LEFT JOIN (
+         SELECT
+           vcd.name
+         , vcd.site_id
+         , rd.date_renewal
+         , "sum"(vcd.wac_total) total_wac
+         FROM
+           (view_customer_dashboard vcd
+         LEFT JOIN (
+            SELECT DISTINCT
+              "split_part"(sf.site_id_formatted__c, ' ', 2) site_id
+            , (CASE WHEN (TRY("date_parse"(sf.renewal_date__c, '%m/%d/%Y')) < current_date) THEN TRY("date_parse"(sf.renewal_date__c, '%m/%d/%Y')) ELSE (TRY("date_parse"(sf.renewal_date__c, '%m/%d/%Y')) - INTERVAL  '365' DAY) END) date_renewal
+            FROM
+              sf_account sf
+         )  rd ON (vcd.site_id = rd.site_id))
+         WHERE (vcd.ship_date BETWEEN rd.date_renewal AND current_date)
+         GROUP BY 1, 2, 3
+      )  wac_last_renewal ON ("split_part"(sfa.site_id_formatted__c, ' ', 2) = wac_last_renewal.site_id))
+      WHERE ((("lower"(sfa.account_record_type_text__c) IN ('active access site')) AND ("lower"(sfa.type) IN ('active', 'retired'))) AND (NOT ("lower"(sfa.name) LIKE 'wwt')))
+   )  sf ON (qn.site_id = sf.site_id))
+) 
