@@ -1,4 +1,4 @@
-CREATE OR REPLACE VIEW view_therapeutics_dashboard AS 
+CREATE OR REPLACE VIEW "view_therapeutics_dashboard" AS 
 (
    SELECT DISTINCT
      drd.day
@@ -255,4 +255,4 @@ CREATE OR REPLACE VIEW view_therapeutics_dashboard AS
       FROM
         view_elsevier_drugclass_convert
    )  dcc ON (mr.product_id = dcc.ndc11))
-)
+) 
