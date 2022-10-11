@@ -1,0 +1,38 @@
+CREATE OR REPLACE VIEW "view_run_inv_top_40" AS 
+SELECT DISTINCT
+  system_class
+, disease_state
+, moa
+, top_40_product
+, iqvia_tl_product
+, priority
+, primary
+, ndc
+, productnamelong
+, product_id
+, current_date_in_stock
+, max_day_in_stock
+, total_in_stock
+FROM
+  ((top_40_drugs tfd
+LEFT JOIN iqvia_target_primary iq ON (tfd.iqvia_tl_product = iq.target_list_product))
+LEFT JOIN (
+   SELECT DISTINCT
+     inv.productnamelong
+   , inv.product_id
+   , inv.current_date_in_stock
+   , max_day_in_stock
+   , "sum"(inv.total_in_stock) total_in_stock
+   FROM
+     (view_inventory_master inv
+   LEFT JOIN (
+      SELECT DISTINCT
+        product_id
+      , "max"(current_date_in_stock) max_day_in_stock
+      FROM
+        view_running_inventory
+      WHERE (total_in_stock > 0)
+      GROUP BY 1
+   )  last_in_stock ON (inv.product_id = last_in_stock.product_id))
+   GROUP BY 1, 2, 3, 4
+)  inv_last_in_stock ON (iq.ndc = inv_last_in_stock.product_id))
