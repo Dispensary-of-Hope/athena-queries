@@ -1,62 +1,60 @@
--- part of NE and AM report pipeline
--- table to show unique patients and prescription totals for each health system
--- compares utilization from first year vs. since inception
--- union of query for first year and query of since inception
-
 Create table ne_exec_db_totals as
-( -- calculating utilization values for first year
-
-select qn2.health_system, null fills_since_inception, null uniquepatients_since_inception, sum(qn.fills) fills_first_year, (sum(cast(qn.uniquepatients as decimal (10,2)))/(count(distinct qn.quarter_end_date))) avg_uniquepatients_first_year, 
--- needs to be cast as decimal to get correct values
--- sum of unique patients divided by the number of quarters
--- depending on start date it will sometimes show 4 quarters and sometimes show 5
-null as day, qn2.first_qn_reporting_day
--- first quarterly number reporting day where 2015 is the earliest
+(select qn2.health_system, null fills_since_inception, null uniquepatients_since_inception, sum(qn.fills) fills_first_year, (sum(cast(qn.uniquepatients as decimal (10,2)))/(count(distinct qn.quarter_end_date))) avg_uniquepatients_first_year, null as day, qn2.first_qn_reporting_day
 from
 view_quarterly_numbers as qn
 left join
-site_info si 
-ON qn.company_id = si.company_id__c
+( select distinct
+  sfa.name site_name
+      , sfa2.name health_system
+      , "split_part"(sfa.site_id_formatted__c, ' ', 2) site_id
+      FROM
+     sf_account sfa
+      LEFT JOIN sf_account sfa2 ON (sfa2.id = sfa.health_system__c))si
+ON qn.site_id = si.site_id
 left join
 (SELECT
      sf.health_system
    , case when min(dt.day) >= timestamp '2015-01-01 00:00:00.000' then min(dt.day)
      else timestamp '2015-01-01 00:00:00.000' end as first_qn_reporting_day
- -- case statement to only show quarterly numbers reported after the beginning of 2015
-   , min(sf.joined_date) as first_join_date
-  
-   FROM 
--- selecting from historical and new quarterly number data
-     ((quarterly_new qn 
+
+   FROM
+     ((view_quarterly_numbers qn
    INNER JOIN date_table dt ON (qn.quarter_end_date = dt.day))
-   LEFT JOIN site_info sf ON (qn.siteid = sf.site_id))
-   WHERE (sf.company_id__c <> '') and health_system <> ''
+   LEFT JOIN ( select distinct
+  sfa.name site_name
+      , sfa2.name health_system
+      , "split_part"(sfa.site_id_formatted__c, ' ', 2) site_id
+      FROM
+     sf_account sfa
+      LEFT JOIN sf_account sfa2 ON (sfa2.id = sfa.health_system__c)) sf ON (qn.site_id = sf.site_id))
+   WHERE health_system <> ''
    group by 1) qn2
 ON si.health_system = qn2.health_system   
    
 where qn.quarter_end_date <= date_add('day',365,qn2.first_qn_reporting_day) and qn.quarter_end_date >= timestamp '2015-01-01 00:00:00.000'
--- filtering down to only the first year of reporting after Jan 2015
   
   group by 1,2,3,6,7)
   
 UNION ALL 
 
-( -- calculating utilization values since health system joined our program
-SELECT
+(SELECT
      sf.health_system
    , sum(qn.fills) fills_since_inception
    , (sum(cast(qn.uniquepatients as decimal(10,2)))/cast(count(distinct quarter_end_date) as decimal(10,2))) uniquepatients_since_inception
--- needs to be cast as decimal to get correct values
--- sum of unique patients over number of quarters
--- depending on start date it will sometimes show 4 quarters and sometimes show 5
    , null fills_first_year
    , null avg_uniquepatients_first_year
    , min(dt.day) as day
    , null as first_qn_reporting_day
   
    FROM
-     ((quarterly_new qn
+     ((view_quarterly_numbers qn
    INNER JOIN date_table dt ON (qn.quarter_end_date = dt.day))
-   LEFT JOIN site_info sf ON (qn.siteid = sf.site_id))
-   WHERE (sf.company_id__c <> '') and health_system <> ''
-   group by 1,4,5,7) 
+   LEFT JOIN ( select distinct
+  sfa.name site_name
+      , sfa2.name health_system
+      , "split_part"(sfa.site_id_formatted__c, ' ', 2) site_id
+      FROM
+     sf_account sfa
+      LEFT JOIN sf_account sfa2 ON (sfa2.id = sfa.health_system__c)) sf ON (qn.site_id = sf.site_id))
+   WHERE health_system <> ''
+   group by 1,4,5,7)
