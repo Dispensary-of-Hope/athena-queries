@@ -1,0 +1,51 @@
+CREATE OR REPLACE VIEW "view_tl_oos_vs_running_inv" AS 
+SELECT DISTINCT
+  target_list_product tl_product_OOS
+, tl_ndc_OOS.priority
+, run_inv.drug_class
+, run_inv.primary
+, run_inv.productnamelong
+, "sum"(run_inv.total_in_stock) total_in_stock
+, run_inv.current_date_in_stock
+FROM
+  ((
+   SELECT
+     tl_not_in_stock.target_list_product
+   , iq.priority
+   , iq.ndc
+   FROM
+     ((
+      SELECT target_list_product
+      FROM
+        (
+         SELECT DISTINCT
+           iq.target_list_product
+         , "sum"(ofh.total_in_stock) total_in_stock
+         FROM
+           (iqvia_target_primary iq
+         LEFT JOIN view_inventory_master ofh ON (iq.ndc = ofh.product_id))
+         WHERE ((target_list_product <> 'None') AND (target_list_product IS NOT NULL))
+         GROUP BY 1
+      ) 
+      WHERE ((total_in_stock = 0) OR (total_in_stock IS NULL))
+   )  tl_not_in_stock
+   LEFT JOIN iqvia_target_primary iq ON (tl_not_in_stock.target_list_product = iq.target_list_product))
+   WHERE (iq.target_list_product IS NOT NULL)
+)  tl_ndc_OOS
+LEFT JOIN (
+   SELECT DISTINCT
+     productnamelong
+   , product_id
+   , primary
+   , "sum"(total_in_stock) total_in_stock
+   , drug_class
+   , current_date_in_stock
+   FROM
+     view_running_inventory
+   GROUP BY 1, 2, 3, 5, 6
+)  run_inv ON (tl_ndc_OOS.ndc = run_inv.product_id))
+GROUP BY 1, 2, 3, 4, 5, 7
+
+
+
+
