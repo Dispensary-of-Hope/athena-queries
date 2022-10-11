@@ -1,0 +1,37 @@
+CREATE OR REPLACE VIEW "view_totals_sd_vs_run_inv" AS 
+SELECT DISTINCT
+  avg_short_dated_in_stock
+, "date_trunc"('quarter', vri.current_date_in_stock) current_quarter_in_stock
+, number_inv_short_dated_products
+, "count"(DISTINCT vri.productnamelong) number_inv_total_products
+, ("sum"(total_in_stock) / "count"(DISTINCT vri.current_date_in_stock)) avg_inv_total_in_stock
+, total_units_distributed
+, number_of_sites
+, number_of_orders
+, unique_short_dated_shipped
+FROM
+  ((view_running_inventory vri
+LEFT JOIN (
+   SELECT DISTINCT
+     ("sum"(total_in_stock) / "count"(DISTINCT current_date_in_stock)) avg_short_dated_in_stock
+   , "date_trunc"('quarter', current_date_in_stock) quarter_in_stock
+   , "count"(DISTINCT productnamelong) number_inv_short_dated_products
+   FROM
+     view_running_inventory
+   WHERE ((total_in_stock > 0) AND ("date_diff"('day', current_date_in_stock, min_exp_date) <= 120))
+   GROUP BY 2
+)  short_dated_inv ON ("date_trunc"('quarter', vri.current_date_in_stock) = short_dated_inv.quarter_in_stock))
+LEFT JOIN (
+   SELECT
+     "date_trunc"('quarter', ship_date) ship_quarter
+   , "sum"(total_units_distributed) total_units_distributed
+   , "count"(DISTINCT site_id) number_of_sites
+   , "count"(DISTINCT order_id) number_of_orders
+   , "count"(DISTINCT drug_name) unique_short_dated_shipped
+   FROM
+     orders_with_companyid
+   WHERE (((NOT (site_id IN ('194', '10277'))) AND (ship_date >= TIMESTAMP '2021-10-01 00:00:00.000')) AND ("date_diff"('day', ship_date, TRY("date_parse"("split_part"(lot_id, ' ', 2), '%m/%d/%Y'))) <= 120))
+   GROUP BY 1
+)  ocid ON ("date_trunc"('quarter', vri.current_date_in_stock) = ocid.ship_quarter))
+WHERE (vri.total_in_stock > 0)
+GROUP BY 1, 2, 3, 6, 7, 8, 9
