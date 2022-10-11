@@ -1,4 +1,4 @@
-CREATE OR REPLACE VIEW view_missing_insulin_rec AS
+CREATE OR REPLACE VIEW "view_missing_insulin_rec" AS 
 SELECT
   qn2.site_name
 , qn2.site_id
@@ -16,6 +16,7 @@ SELECT
 , si2.account_manager
 , si2.joined_date
 , qn2.closedate
+, qn2.lastmodifieddate
 FROM
   ((
    SELECT DISTINCT
@@ -34,7 +35,8 @@ FROM
    , qn.day
    , si.account_manager
    , si.joined_date
-   , ins_program.closedate 
+   , ins_program.closedate
+   , ins_program.lastmodifieddate
    FROM
      (((
       SELECT DISTINCT
@@ -44,16 +46,23 @@ FROM
       , sfo.closedate
       FROM
         (sf_account sfa
-      LEFT JOIN (select distinct accountid, program__c, stagename, 
-                  "date_parse"(lastmodifieddate, '%m/%d/%Y') lastmodifieddate
-                 , date_parse(closedate, '%m/%d/%Y') as closedate from sf_opportunity) sfo ON (sfa.id = sfo.accountid))
-      WHERE ((((program__c LIKE 'Insulin%') AND (stagename LIKE 'Ordering%')) AND (sfa.type = 'Active')) AND (sfa.account_record_type_text__c = 'Active Access Site')) and closedate < date_trunc('quarter',current_date)
+      LEFT JOIN (
+         SELECT DISTINCT
+           accountid
+         , program__c
+         , stagename
+         , "date_parse"(lastmodifieddate, '%m/%d/%Y') lastmodifieddate
+         , "date_parse"(closedate, '%m/%d/%Y') closedate
+         FROM
+           sf_opportunity
+      )  sfo ON (sfa.id = sfo.accountid))
+      WHERE (((((program__c LIKE 'Insulin%') AND (stagename LIKE 'Ordering%')) AND (sfa.type = 'Active')) AND (sfa.account_record_type_text__c = 'Active Access Site')) AND (sfo.lastmodifieddate < "date_add"('day', -30, "date_trunc"('quarter', current_date))))
    )  ins_program
    LEFT JOIN (
       SELECT *
       FROM
         view_quarterly_insulin_rec
-      WHERE (day >= "date_add"('day', -1, date_trunc('quarter',current_date)))
+      WHERE (day >= "date_add"('day', -1, "date_trunc"('quarter', current_date)))
    )  qn ON (ins_program.site_id = qn.site_id))
    LEFT JOIN site_info si ON (qn.site_id = si.site_id))
 )  qn2
