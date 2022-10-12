@@ -1,0 +1,14 @@
+--showing active sites quarter over quarter for past 12 quarters
+--case statements comparing joined date and retired date to each associated quarter
+--as joined to the date table for the past 12 quarters
+create or replace view view_QoQ_active_sites AS
+select  quarter, count(site_name) number_of_active_sites from
+(select quarter, site_name, retire_date, joined_date, case when (retire_date is null and quarter > joined_date) then 'Active' when ((quarter > joined_date) and (quarter < retire_date)) then 'Active' when ((quarter > retire_date) or (quarter < joined_date)) then 'Retired' when ((retire_date is null and joined_date is null)) then 'Retired' end active_status from 
+(select distinct site_name, retire_date, joined_date, quarter from view_retire_join_date
+--cross join to date table to get past 12 quarters
+CROSS JOIN
+(SELECT distinct date_trunc('quarter',day) quarter from date_table dt
+where day >= date_add('day',-990,(date_trunc('quarter', current_date))) and day <= current_date
+order by 1 asc)))
+where active_status = 'Active'
+group by 1
