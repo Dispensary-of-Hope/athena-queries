@@ -1,0 +1,33 @@
+CREATE OR REPLACE VIEW "view_new_in_stock_internal_email" AS 
+(
+   SELECT DISTINCT
+     nps.productnamelong
+   , nps.drug_class
+   , nps.therapeutic_class
+   , im.primary
+   , nps.total_in_stock
+   , case when max_last_day_in_stock is null then 'New in Stock' when max_last_day_in_stock is not null then 'Back in Stock' end back_in_stock_status
+   , nps.days_in_stock
+   , ris.max_last_day_in_stock
+   FROM
+     "database-prod"."view_new_products_in_stock" nps
+   LEFT JOIN (
+      SELECT DISTINCT
+        productnamelong
+      , primary
+      FROM
+        "database-prod"."view_inventory_master"
+      GROUP BY productnamelong, primary
+   )  im ON (im.productnamelong = nps.productnamelong)
+   LEFT JOIN (
+      SELECT DISTINCT
+        productnamelong
+      , max(current_date_in_stock) max_last_day_in_stock
+      FROM
+        "database-prod"."view_running_inventory"
+      WHERE total_in_stock > 0 AND current_date_in_stock < current_date - INTERVAL '14' DAY    
+      GROUP BY 1
+   )  ris ON (ris.productnamelong = nps.productnamelong)
+   
+   GROUP BY 1, 2, 3, 4, 5, 6, 7,8
+) 
