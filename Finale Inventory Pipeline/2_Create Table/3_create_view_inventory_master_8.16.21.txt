@@ -77,7 +77,7 @@ FROM
             , lot_id
             FROM
               finale_inventory fin
-            WHERE ((sublocation <> 'Q0') AND (NOT (sublocation LIKE '%-W') AND (subocation <> 'R0')))
+            WHERE ((sublocation <> 'Q0') AND (NOT (sublocation LIKE '%-W') AND (sublocation <> 'R0')))
          )       )  y
       LEFT JOIN (
          SELECT DISTINCT
@@ -115,7 +115,7 @@ FROM
       SELECT *
       FROM
         finale_inventory
-      WHERE ((sublocation <> 'Q0') AND (NOT (sublocation LIKE '%-W') AND (subocation <> 'R0')))
+      WHERE ((sublocation <> 'Q0') AND (NOT (sublocation LIKE '%-W') AND (sublocation <> 'R0')))
    )  fin2 ON ((z."product_id" = "replace"(fin2."ndc11", '-')) AND (z.lot_id = fin2.lot_id)))
    GROUP BY z.productnamelong, z.lot_id, z.product_id, z.packagesize, z.priority, z.primary, z.unitname, z.inner_package, z.donor_id, z.outer_package, z.innerpackagecount, "date_parse"("split_part"(fin2.lot_id, ' ', 2), '%m/%d/%Y'), fin2.available_to_promise_units, fin2.purchase_order_quantity, z.statusname, fin2.sublocation, z.consistent_xgboost
 )  w
