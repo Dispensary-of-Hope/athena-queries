@@ -1,0 +1,197 @@
+(
+(
+      SELECT
+        ccn
+      , county_state
+      , hospital_facility_name
+      , street
+      , city
+      , state
+      , zip
+      , health_sys_id
+      , health_sys_facility_name
+      , zip_geoid
+      , hs.county_geoid
+      , provider_ccn
+      , state_code
+      , hospital_name
+      , rural_versus_urban
+      , ccn_facility_type
+      , county_latitude
+      , county_longitude
+      FROM
+        ((
+         SELECT *
+         FROM
+           (((
+            SELECT DISTINCT
+              ccn
+            , hospital_name hospital_facility_name
+            , hospital_street street
+            , hospital_city city
+            , hospital_state state
+            , "lpad"(hospital_zip, 5, '0') zip
+            , health_sys_id
+            , health_sys_name health_sys_facility_name
+            FROM
+              ahrq_health_system_compendium
+         )  ahrq
+         LEFT JOIN (
+            SELECT
+              zip_geoid
+            , "max"(county_geoid) county_geoid
+            FROM
+              view_county_zip_crosswalk
+            GROUP BY 1
+         )  czc ON (ahrq.zip = czc.zip_geoid))
+         LEFT JOIN (
+            SELECT DISTINCT
+              provider_ccn
+            , state_code
+            , "max"(hospital_name) hospital_name
+            , "max"(rural_versus_urban) rural_versus_urban
+            , ccn_facility_type
+            FROM
+              cms_hospital_cost_report
+            GROUP BY 1, 2, 5
+         )  chcr ON (ahrq.ccn = chcr.provider_ccn))
+         WHERE (chcr.ccn_facility_type IN ('STH', 'CAH'))
+      )  hs
+      LEFT JOIN (
+         SELECT DISTINCT
+           county_geoid
+         , county_state
+         , county_latitude
+         , county_longitude
+         FROM
+           view_county_zip_crosswalk
+      )  czc2 ON (hs.county_geoid = czc2.county_geoid))
+   ) UNION ALL (
+      SELECT
+        null ccn
+      , county_state
+      , hospital_facility_name
+      , street
+      , city
+      , state
+      , zip
+      , null health_sys_id
+      , prvdr_ctgry_cd health_sys_facility_name
+      , zip_geoid
+      , fqhc_rhc.county_geoid
+      , null provider_ccn
+      , null state_code
+      , null hospital_name
+      , null rural_versus_urban
+      , null ccn_facility_type
+      , county_latitude
+      , county_longitude
+      FROM
+        ((
+         SELECT *
+         FROM
+           ((
+            SELECT
+              (CASE WHEN (prvdr_ctgry_cd = '12') THEN 'Rural Health Clinic' WHEN (prvdr_ctgry_cd = '21') THEN 'Federally Qualified Health Center' END) prvdr_ctgry_cd
+            , facility_name hospital_facility_name
+            , st_adr street
+            , city_name city
+            , state_cd state
+            , "lpad"(zip_cd, 5, '0') zip
+            FROM
+              cms_fqhc_rhc_data
+         )  cfrd
+         LEFT JOIN (
+            SELECT
+              zip_geoid
+            , "max"(county_geoid) county_geoid
+            FROM
+              view_county_zip_crosswalk
+            GROUP BY 1
+         )  czc ON (cfrd.zip = czc.zip_geoid))
+      )  fqhc_rhc
+      LEFT JOIN (
+         SELECT DISTINCT
+           county_geoid
+         , county_state
+         , county_latitude
+         , county_longitude
+         FROM
+           view_county_zip_crosswalk
+      )  czc2 ON (fqhc_rhc.county_geoid = czc2.county_geoid))
+   ) UNION ALL (
+      SELECT DISTINCT
+        null ccn
+      , county_state
+      , site_name hospital_facility_name
+      , null street
+      , shippingcity city
+      , shippingstate state
+      , shippingpostalcode zip
+      , 'DoH' health_sys_id
+      , health_system health_sys_facility_name
+      , shippingpostalcode zip_geoid
+      , county_geoid
+      , null provider_ccn
+      , null state_code
+      , null hospital_name
+      , null rural_versus_urban
+      , null ccn_facility_type
+      , county_latitude
+      , county_longitude
+      FROM
+        view_county_site_crosswalk
+   ) UNION ALL (
+      SELECT
+        null ccn
+      , county_state
+      , hospital_facility_name
+      , street
+      , city
+      , state
+      , zip
+      , null health_sys_id
+      , prvdr_ctgry_cd health_sys_facility_name
+      , zip_geoid
+      , fqhc_rhc.county_geoid
+      , null provider_ccn
+      , null state_code
+      , null hospital_name
+      , null rural_versus_urban
+      , null ccn_facility_type
+      , county_latitude
+      , county_longitude
+      FROM
+        ((
+         SELECT *
+         FROM
+           ((
+            SELECT
+              membership_category prvdr_ctgry_cd
+            , organization hospital_facility_name
+            , address_1 street
+            , city city
+            , state state
+            , "lpad"(zip_code, 5, '0') zip
+            FROM
+              nafc_members
+         )  nafc
+         LEFT JOIN (
+            SELECT
+              zip_geoid
+            , "max"(county_geoid) county_geoid
+            FROM
+              view_county_zip_crosswalk
+            GROUP BY 1
+         )  czc ON (nafc.zip = czc.zip_geoid))
+      )  fqhc_rhc
+      LEFT JOIN (
+         SELECT DISTINCT
+           county_geoid
+         , county_state
+         , county_latitude
+         , county_longitude
+         FROM
+           view_county_zip_crosswalk
+      )  czc2 ON (fqhc_rhc.county_geoid = czc2.county_geoid))
+   ) ) 
