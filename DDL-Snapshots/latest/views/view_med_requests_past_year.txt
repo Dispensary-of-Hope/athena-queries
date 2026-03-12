@@ -1,0 +1,16 @@
+SELECT DISTINCT
+  name
+, site_id
+, (CASE WHEN ((generic_name IS NULL) OR (generic_name = '')) THEN brand_name ELSE generic_name END) med_name
+, concat(brand_name, ' ', generic_name, ' ', strength) brand_generic_strength
+, date_parse(site_request_date, '%m/%e/%Y') site_request_date
+FROM
+  (sf_med_requests smr
+LEFT JOIN (
+   SELECT DISTINCT
+     name
+   , id__c
+   FROM
+     sf_account
+)  sf ON (replace(smr.site_id, '.0', '') = sf.id__c))
+WHERE ((smr.site_id IS NOT NULL) AND (smr.site_id <> '') AND (site_request_date <> '') AND (site_request_date IS NOT NULL) AND (date_parse(site_request_date, '%m/%e/%Y') >= date_add('year', -1, current_date)))
