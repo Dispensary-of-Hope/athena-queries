@@ -1,0 +1,55 @@
+SELECT
+  order_id
+, productnamelong
+, array_join(array_distinct(array_agg(ohft.product_id)), ', ') product_ids
+, rx_otc_status
+, SUM(CAST(total_units AS BIGINT)) total_units
+FROM
+  (orders_historical_finale_timestamp ohft
+LEFT JOIN (
+   SELECT DISTINCT
+     product_id
+   , productnamelong
+   , rx_otc_status
+   FROM
+     view_inventory_master
+)  inv ON (ohft.product_id = inv.product_id))
+WHERE ((type = 'Purchase') AND (status = 'Committed'))
+GROUP BY order_id, productnamelong, rx_otc_status
+UNION ALL SELECT
+  order_id
+, 'Total Rx' productnamelong
+, null product_ids
+, 'Rx' rx_otc_status
+, SUM(CAST(total_units AS BIGINT)) total_units
+FROM
+  (orders_historical_finale_timestamp ohft
+LEFT JOIN (
+   SELECT DISTINCT
+     product_id
+   , productnamelong
+   , rx_otc_status
+   FROM
+     view_inventory_master
+)  inv ON (ohft.product_id = inv.product_id))
+WHERE ((type = 'Purchase') AND (status = 'Committed') AND (rx_otc_status = 'Rx'))
+GROUP BY order_id
+UNION ALL SELECT
+  order_id
+, 'Total OTC' productnamelong
+, null product_ids
+, 'OTC' rx_otc_status
+, SUM(CAST(total_units AS BIGINT)) total_units
+FROM
+  (orders_historical_finale_timestamp ohft
+LEFT JOIN (
+   SELECT DISTINCT
+     product_id
+   , productnamelong
+   , rx_otc_status
+   FROM
+     view_inventory_master
+)  inv ON (ohft.product_id = inv.product_id))
+WHERE ((type = 'Purchase') AND (status = 'Committed') AND (rx_otc_status = 'OTC'))
+GROUP BY order_id
+ORDER BY order_id ASC, (CASE WHEN (productnamelong = 'Total Rx') THEN 1 WHEN (productnamelong = 'Total OTC') THEN 2 ELSE 3 END) ASC, rx_otc_status ASC
