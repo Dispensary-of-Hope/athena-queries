@@ -1,0 +1,20 @@
+SELECT DISTINCT
+  gtin14
+, statusname
+FROM
+  (package p
+LEFT JOIN (
+   SELECT DISTINCT
+     productid
+   , p.legendstatusid
+   , statusname
+   FROM
+     (product p
+   LEFT JOIN (
+      SELECT DISTINCT
+        legendstatusid
+      , statusname
+      FROM
+        legend_status
+   )  ls ON (p.legendstatusid = ls.legendstatusid))
+)  x ON (p.productid = x.productid))
