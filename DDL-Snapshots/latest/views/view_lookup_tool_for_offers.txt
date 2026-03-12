@@ -1,0 +1,61 @@
+SELECT DISTINCT
+  y.productnamelong
+, y.ndc10
+, y.ndc11
+, y.unit_awp
+, y.unit_wac
+, (CASE WHEN (y.inner_package <> '') THEN "concat"(y.outer_package, ',', ' ', "replace"(CAST((y.packagesize / y.innerpackagecount) AS varchar), '.0', ''), ' ', y.unitname, ' ', "replace"(CAST(y.innerpackagecount AS varchar), '.0', ''), ' ', y.inner_package) ELSE "concat"(y.outer_package, ',', ' ', "replace"(CAST(y.packagesize AS varchar), '.0', ''), ' ', y.unitname) END) unit_of_measure
+FROM
+  (
+   SELECT
+     p.productnamelong
+   , p.offmarketdate
+   , pck.ndc11
+   , pck.ndc10
+   , p.productid
+   , prs.specificproductid
+   , pck.packagesize
+   , s.unit_awp
+   , s.unit_wac
+   , pck.offmarket
+   , pck.packageid
+   , co.companyname
+   , co.companynameshort
+   , ncp.unitname
+   , ebgs.statusname
+   , ipu.unitname inner_package
+   , opu.unitname outer_package
+   , pck.innerpackagecount
+   FROM
+     (((((((((product p
+   INNER JOIN package pck ON (p.productid = pck.productid))
+   LEFT JOIN inner_package_unit ipu ON (pck.innerpackageunitid = ipu.innerpackageunitid))
+   LEFT JOIN outer_package_unit opu ON (pck.outerpackageunitid = opu.outerpackageunitid))
+   LEFT JOIN brand_generic_status ebgs ON (p.brandgenericstatusid = ebgs.brandgenericstatusid))
+   LEFT JOIN package_ssms pcks ON (pck.packageid = pcks.packageid))
+   LEFT JOIN product_ssms prs ON (p.productid = prs.productid))
+   INNER JOIN ncpdp_unit ncp ON (pck.ncpdpbillingunitid = ncp.ncpdpunitid))
+   INNER JOIN company co ON (p.marketerid = co.companyid))
+   LEFT JOIN (
+      SELECT DISTINCT
+        packageid
+      , "max"((CASE WHEN (pricetypeid = '1') THEN packageprice END)) unit_awp
+      , "max"((CASE WHEN (pricetypeid = '2') THEN packageprice END)) unit_wac
+      FROM
+        (
+         SELECT DISTINCT
+           py.packageid
+         , py.packageprice
+         , py.pricetypeid
+         FROM
+           (price_year py
+         INNER JOIN price_type pt ON (py.pricetypeid = pt.pricetypeid))
+         WHERE ((pt.pricetypeid IN ('1', '2')) AND (enddate IS NULL))
+         ORDER BY 1 ASC
+      ) 
+      GROUP BY 1
+   )  s ON (pck.packageid = s.packageid))
+   WHERE ((offmarketdate IS NULL) OR (offmarketdate >= current_timestamp))
+)  y
+WHERE ((ndc10 <> '') OR (ndc11 <> ''))
+ORDER BY 2 ASC
