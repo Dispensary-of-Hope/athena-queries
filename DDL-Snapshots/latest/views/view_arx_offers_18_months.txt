@@ -1,0 +1,12 @@
+WITH
+  offers_with_date AS (
+   SELECT
+     *
+   , TRY_CAST(TRY("date_format"("date_parse"(offer_date, '%m/%d/%Y'), '%Y-%m-%d %T')) AS timestamp) offer_date2
+   FROM
+     manufacturer_offers
+) 
+SELECT *
+FROM
+  offers_with_date o
+WHERE ((offer_date2 > date_add('month', -18, current_date)) AND regexp_like(lower(description), '^(albuterol|amlodipine|amoxicillin/clavulanic acid|atorvastatin|cephalexin|cyclobenzaprine|fluticasone propionate|losartan|metformin|methylprednisolone|metoprolol succinate|ondansetron|pantoprazole|tamsulosin)'))
