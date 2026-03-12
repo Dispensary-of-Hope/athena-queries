@@ -1,0 +1,19 @@
+(
+   SELECT DISTINCT
+     oid.product_id
+   , oid.status
+   , oid.drug_name
+   , oid.manufacturer
+   , oid.insulin
+   , oid.order_date
+   , oid.order_id
+   , oid.total_units_distributed
+   , sf.name dispensary_name
+   , "count"(DISTINCT order_id) num_insulin_orders
+   FROM
+     ("database-prod"."orders_with_companyid" oid
+   LEFT JOIN sf_account sf ON (sf.company_id__c = oid.company_id__c))
+   WHERE ((((oid.insulin = 'True') AND (sf.name IS NOT NULL)) AND (account_record_type_text__c = 'Active Access Site')) AND (site_id <> '10277') AND (status <> 'Canceled'))
+   GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9
+   ORDER BY oid.order_date DESC
+) 
