@@ -1,0 +1,108 @@
+WITH
+  products_before_allocation AS (
+   SELECT DISTINCT
+     target_list_product
+   , inv.product_id
+   , x.priority
+   , sum(available_qty) available_qty
+   FROM
+     (view_running_inventory inv
+   INNER JOIN (
+      SELECT DISTINCT
+        target_list_product
+      , ndc
+      , priority
+      FROM
+        iqvia_target_primary
+      WHERE (priority IN ('P1', 'P2'))
+   )  x ON (inv.product_id = x.ndc))
+   WHERE ((current_date_in_stock = TIMESTAMP '2024-05-01 00:00:00.000') AND (available_qty > 0) AND (donor_id <> '702'))
+   GROUP BY 1, 2, 3
+) 
+, products_after_allocation AS (
+   SELECT DISTINCT
+     target_list_product
+   , inv.product_id
+   , x.priority
+   , sum(available_qty) available_qty
+   FROM
+     (view_running_inventory inv
+   INNER JOIN (
+      SELECT DISTINCT
+        target_list_product
+      , ndc
+      , priority
+      FROM
+        iqvia_target_primary
+      WHERE (priority IN ('P1', 'P2'))
+   )  x ON (inv.product_id = x.ndc))
+   WHERE ((current_date_in_stock = TIMESTAMP '2025-02-03 00:00:00.000') AND (available_qty > 0) AND (donor_id <> '702'))
+   GROUP BY 1, 2, 3
+) 
+SELECT DISTINCT
+  target_list_product
+, priority
+, count(DISTINCT (CASE WHEN ((stock_status = 'OOS') AND (current_date_in_stock < TIMESTAMP '2025-02-03 00:00:00.000')) THEN current_date_in_stock END)) days_oos_before_allocation
+, count(DISTINCT (CASE WHEN ((stock_status = 'OOS') AND (current_date_in_stock < TIMESTAMP '2025-02-03 00:00:00.000')) THEN week_in_stock END)) weeks_oos_before_allocation
+, count(DISTINCT (CASE WHEN ((stock_status = 'OOS') AND (current_date_in_stock < TIMESTAMP '2025-02-03 00:00:00.000')) THEN month_in_stock END)) months_oos_before_allocation
+, count(DISTINCT (CASE WHEN ((stock_status = 'OOS') AND (current_date_in_stock > TIMESTAMP '2025-02-03 00:00:00.000')) THEN current_date_in_stock END)) days_oos_after_allocation
+, count(DISTINCT (CASE WHEN ((stock_status = 'OOS') AND (current_date_in_stock > TIMESTAMP '2025-02-03 00:00:00.000')) THEN week_in_stock END)) weeks_oos_after_allocation
+, count(DISTINCT (CASE WHEN ((stock_status = 'OOS') AND (current_date_in_stock > TIMESTAMP '2025-02-03 00:00:00.000')) THEN month_in_stock END)) months_oos_after_allocation
+, count(DISTINCT (CASE WHEN (current_date_in_stock > TIMESTAMP '2025-02-03 00:00:00.000') THEN month_in_stock END)) total_months_after_allocation
+, count(DISTINCT (CASE WHEN (current_date_in_stock > TIMESTAMP '2025-02-03 00:00:00.000') THEN week_in_stock END)) total_weeks_after_allocation
+, count(DISTINCT (CASE WHEN (current_date_in_stock > TIMESTAMP '2025-02-03 00:00:00.000') THEN current_date_in_stock END)) total_days_after_allocation
+, count(DISTINCT (CASE WHEN (current_date_in_stock < TIMESTAMP '2025-02-03 00:00:00.000') THEN month_in_stock END)) total_months_before_allocation
+, count(DISTINCT (CASE WHEN (current_date_in_stock < TIMESTAMP '2025-02-03 00:00:00.000') THEN week_in_stock END)) total_weeks_before_allocation
+, count(DISTINCT (CASE WHEN (current_date_in_stock < TIMESTAMP '2025-02-03 00:00:00.000') THEN current_date_in_stock END)) total_days_before_allocation
+FROM
+  (
+   SELECT DISTINCT
+     target_list_product
+   , current_date_in_stock
+   , week_in_stock
+   , month_in_stock
+   , priority
+   , (CASE WHEN ((available_qty = 0) OR (available_qty < 0)) THEN 'OOS' WHEN (available_qty > 0) THEN 'In Stock' END) stock_status
+   FROM
+     (
+      SELECT DISTINCT
+        date_trunc('month', current_date_in_stock) month_in_stock
+      , date_trunc('week', current_date_in_stock) week_in_stock
+      , current_date_in_stock
+      , run_inv.target_list_product
+      , run_inv.priority
+      , sum(run_inv.available_qty) available_qty
+      FROM
+        ((
+         SELECT DISTINCT
+           current_date_in_stock
+         , inv.product_id
+         , iq.target_list_product
+         , iq.priority
+         , sum((CASE WHEN (available_qty IS NULL) THEN 0 ELSE available_qty END)) available_qty
+         FROM
+           (view_running_inventory inv
+         LEFT JOIN (
+            SELECT DISTINCT
+              ndc
+            , priority
+            , target_list_product
+            FROM
+              iqvia_target_primary
+         )  iq ON (inv.product_id = iq.ndc))
+         WHERE (current_date_in_stock >= TIMESTAMP '2024-05-01 00:00:00.000')
+         GROUP BY 1, 2, 3, 4
+         ORDER BY 2 ASC, 1 ASC
+      )  run_inv
+      INNER JOIN (
+         SELECT DISTINCT
+           products_before_allocation.product_id
+         , products_before_allocation.target_list_product
+         FROM
+           (products_before_allocation
+         INNER JOIN products_after_allocation ON (products_before_allocation.target_list_product = products_after_allocation.target_list_product))
+      )  target_products ON (run_inv.target_list_product = target_products.target_list_product))
+      GROUP BY 1, 2, 3, 4, 5
+   ) 
+) 
+GROUP BY 1, 2
