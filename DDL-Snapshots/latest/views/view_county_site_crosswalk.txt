@@ -1,0 +1,77 @@
+SELECT *
+FROM
+  ((
+   SELECT
+     site_name
+   , czc_si.site_id
+   , health_system
+   , shippingstate
+   , shippingcity
+   , shippingpostalcode
+   , czc2.county_geoid
+   , county_state
+   , county_latitude
+   , county_longitude
+   , total_fills
+   , estimated_annual_up
+   , total_unique_patients
+   , number_qed number_of_quarters
+   FROM
+     (((
+      SELECT
+        site_name
+      , site_id
+      , health_system
+      , czc.county_geoid
+      , shippingstate
+      , shippingcity
+      , "trim"("split_part"(shippingpostalcode, '-', 1)) shippingpostalcode
+      FROM
+        (site_info si
+      LEFT JOIN (
+         SELECT
+           zip_geoid
+         , "max"(county_geoid) county_geoid
+         FROM
+           view_county_zip_crosswalk
+         GROUP BY 1
+      )  czc ON ("trim"("split_part"(shippingpostalcode, '-', 1)) = czc.zip_geoid))
+   )  czc_si
+   LEFT JOIN (
+      SELECT DISTINCT
+        site_id
+      , total_fills
+      , (CAST((total_unique_patients / 4) AS double) * 2.54E0) estimated_annual_up
+      , total_unique_patients
+      , number_qed
+      FROM
+        (
+         SELECT DISTINCT
+           site_id
+         , "sum"(fills) total_fills
+         , "sum"(CAST(uniquepatients AS double)) total_unique_patients
+         , CAST("count"(DISTINCT quarter_end_date) AS double) number_qed
+         FROM
+           view_quarterly_numbers
+         WHERE (quarter_end_date BETWEEN "date_add"('year', -1, "date_trunc"('quarter', current_date)) AND "date_add"('day', -1, "date_trunc"('quarter', current_date)))
+         GROUP BY 1
+      ) 
+   )  qn ON (czc_si.site_id = qn.site_id))
+   LEFT JOIN (
+      SELECT DISTINCT
+        county_geoid
+      , county_state
+      , county_latitude
+      , county_longitude
+      FROM
+        view_county_zip_crosswalk
+   )  czc2 ON (czc_si.county_geoid = czc2.county_geoid))
+)  x
+LEFT JOIN (
+   SELECT DISTINCT
+     geoid
+   , total_percent_uninsured_below_300_fpl
+   , estimated_total_doh_eligible_population
+   FROM
+     view_optum_acs_data
+)  acs ON (x.county_geoid = acs.geoid))
