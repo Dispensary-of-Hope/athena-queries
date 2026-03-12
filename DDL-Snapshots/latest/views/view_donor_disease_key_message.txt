@@ -1,0 +1,18 @@
+SELECT DISTINCT
+  drug_class
+, vdr.productnamelong
+, vdr.manufacturer
+, vdr.day
+, key_messages
+, key_message_source
+FROM
+  (view_donor_report vdr
+LEFT JOIN (
+   SELECT DISTINCT
+     productnamelong
+   , key_messages
+   , key_message_source
+   FROM
+     (disease_state_calendar_list dscl
+   LEFT JOIN disease_state_calendar_drugs dscd ON (dscl.observance = dscd.observance))
+)  dsc ON (vdr.productnamelong = dsc.productnamelong))
