@@ -1,0 +1,35 @@
+WITH
+  inv AS (
+   SELECT DISTINCT
+     inv.productnamelong
+   , (CASE WHEN ((primary.primary = 'yes') AND (primary.primary <> 'no')) THEN 'Primary' ELSE 'Not Primary' END) primary
+   , ARRAY_JOIN(ARRAY_AGG(DISTINCT (CASE WHEN (donor_id IN ('2192', '53826')) THEN 'Planned' ELSE 'Excess' END)), ', ') planned_excess
+   , (CASE WHEN (tl.priority IN ('P1', 'P2', 'P3')) THEN 'On Target List' ELSE 'Not on Target List' END) tl_item
+   , ARRAY_JOIN(ARRAY_AGG(DISTINCT donor_name), ', ') donor_ids
+   , sum((CASE WHEN (donor_id IN ('2192', '53826')) THEN available_qty ELSE 0 END)) planned_qty_in_stock
+   , sum((CASE WHEN ((NOT (donor_id IN ('2192', '53826'))) OR (donor_id IS NULL)) THEN available_qty ELSE 0 END)) excess_qty_in_stock
+   , sum(available_qty) total_qty_in_stock
+   FROM
+     ((view_inventory_master inv
+   LEFT JOIN (
+      SELECT DISTINCT
+        productnamelong
+      , primary
+      FROM
+        view_inventory_master
+      WHERE (primary = 'yes')
+   )  primary ON (inv.productnamelong = primary.productnamelong))
+   LEFT JOIN (
+      SELECT DISTINCT
+        productnamelong
+      , priority
+      FROM
+        view_inventory_master
+      WHERE (priority IN ('P1', 'P2', 'P3'))
+   )  tl ON (inv.productnamelong = tl.productnamelong))
+   GROUP BY 1, 2, 4
+) 
+SELECT *
+FROM
+  inv
+WHERE (total_qty_in_stock > 0)
