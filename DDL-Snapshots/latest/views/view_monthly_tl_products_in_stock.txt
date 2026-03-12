@@ -1,0 +1,77 @@
+WITH
+  tl AS (
+   SELECT DISTINCT
+     current_date_in_stock
+   , target_list_product
+   , inv.priority
+   , sum(available_qty) available_qty
+   FROM
+     (view_running_inventory inv
+   LEFT JOIN (
+      SELECT DISTINCT
+        target_list_product
+      , ndc
+      FROM
+        iqvia_target_primary
+   )  iq ON (inv.product_id = iq.ndc))
+   GROUP BY 1, 2, 3
+) 
+, tl_number_in_stock AS (
+   SELECT
+     current_date_in_stock
+   , priority
+   , count(DISTINCT target_list_product) number_of_tl_products
+   , sum(available_qty) available_qty
+   FROM
+     tl
+   WHERE ((available_qty > 0) AND (priority IN ('P1', 'P2', 'P3')))
+   GROUP BY 1, 2
+) 
+, P4_in_stock AS (
+   SELECT DISTINCT
+     current_date_in_stock
+   , productnamelong
+   , inv.priority
+   , sum(available_qty) available_qty
+   FROM
+     (view_running_inventory inv
+   LEFT JOIN (
+      SELECT DISTINCT
+        target_list_product
+      , ndc
+      FROM
+        iqvia_target_primary
+   )  iq ON (inv.product_id = iq.ndc))
+   WHERE (target_list_product IS NULL)
+   GROUP BY 1, 2, 3
+) 
+, p4_number_in_stock AS (
+   SELECT
+     current_date_in_stock
+   , priority
+   , count(DISTINCT productnamelong) number_of_p4_products
+   , sum(available_qty) available_qty
+   FROM
+     P4_in_stock
+   WHERE ((available_qty > 0) AND (priority IN ('P4')))
+   GROUP BY 1, 2
+) 
+(
+   SELECT DISTINCT
+     date_trunc('month', tl.current_date_in_stock) month_in_stock
+   , tl.priority
+   , avg(tl.number_of_tl_products) avg_number_of_products
+   , avg(tl.available_qty) avg_units_in_stock
+   FROM
+     tl_number_in_stock tl
+   GROUP BY 1, 2
+) UNION ALL (
+   SELECT DISTINCT
+     date_trunc('month', p4_number_in_stock.current_date_in_stock) month_in_stock
+   , priority
+   , avg(number_of_p4_products) avg_number_of_products
+   , avg(available_qty) avg_units_in_stock
+   FROM
+     p4_number_in_stock
+   GROUP BY 1, 2
+) 
