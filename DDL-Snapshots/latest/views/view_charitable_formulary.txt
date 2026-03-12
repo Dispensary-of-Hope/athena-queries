@@ -1,0 +1,131 @@
+SELECT DISTINCT
+  x.productnamelong
+, x.unit_of_measure
+, "sum"(total_in_stock) total_in_stock
+, "sum"(available_qty) available_qty
+, "min"(x.min_exp_date) min_exp_date
+, "max"(latest_receipt_date) latest_receipt_date
+, "max"(latest_ship_date) latest_ship_date
+, six_months_dr.par_level
+, six_months_dr.total_units_received six_months_received
+, number_of_receipts_six_months.number_of_receipts
+, x.priority
+, x.primary
+FROM
+  (((
+   SELECT DISTINCT
+     (CASE WHEN (inv.productnamelong IS NULL) THEN dcc.productnamelong ELSE inv.productnamelong END) productnamelong
+   , (CASE WHEN (inv.unit_of_measure IS NULL) THEN CAST(dcc.unit_of_measure AS varchar) ELSE inv.unit_of_measure END) unit_of_measure
+   , inv.total_in_stock
+   , inv.available_qty
+   , inv.min_exp_date
+   , inv.priority
+   , inv.primary
+   , "max"(drd2.receipt_date) latest_receipt_date
+   , "max"(drd2.ship_date) latest_ship_date
+   FROM
+     (((distribution_receiving_destruction drd
+   LEFT JOIN (
+      SELECT DISTINCT
+        product_id
+      , productnamelong
+      , unit_of_measure
+      , "sum"(total_in_stock) total_in_stock
+      , unitname
+      , priority
+      , primary
+      , min_exp_date
+      , drug_class
+      , donor_id
+      , "sum"(available_qty) available_qty
+      FROM
+        view_inventory_master
+      GROUP BY 1, 2, 3, 5, 6, 7, 8, 9, 10
+   )  inv ON (drd.product_id = inv.product_id))
+   LEFT JOIN (
+      SELECT DISTINCT
+        ndc11
+      , productnamelong
+      , unit_of_measure
+      FROM
+        view_elsevier_drugclass_convert
+   )  dcc ON (drd.product_id = dcc.ndc11))
+   LEFT JOIN (
+      SELECT DISTINCT
+        product_id
+      , (CASE WHEN (total_units_received > 0) THEN day ELSE null END) receipt_date
+      , (CASE WHEN (total_units_distributed > 0) THEN day ELSE null END) ship_date
+      FROM
+        distribution_receiving_destruction
+      GROUP BY 1, 2, 3
+   )  drd2 ON (drd.product_id = drd2.product_id))
+   WHERE ((drd.product_id <> '') AND (inv.donor_id <> '702'))
+   GROUP BY  DISTINCT 1, 2, 3, 4, 5, 6, 7
+   ORDER BY 1 ASC
+)  x
+LEFT JOIN (
+   SELECT DISTINCT
+     (CASE WHEN (inv.productnamelong IS NULL) THEN dcc.productnamelong ELSE inv.productnamelong END) productnamelong
+   , "sum"(total_units_distributed) par_level
+   , "sum"(total_units_received) total_units_received
+   FROM
+     ((distribution_receiving_destruction drd1
+   LEFT JOIN (
+      SELECT DISTINCT
+        product_id
+      , lot_id
+      , productnamelong
+      , unit_of_measure
+      , "sum"(total_in_stock) total_in_stock
+      , unitname
+      , priority
+      , primary
+      , min_exp_date
+      , donor_id
+      FROM
+        view_inventory_master
+      GROUP BY 1, 2, 3, 4, 6, 7, 8, 9, 10
+   )  inv ON ((drd1.product_id = inv.product_id) AND (drd1.lot_id = inv.lot_id)))
+   LEFT JOIN (
+      SELECT DISTINCT
+        ndc11
+      , productnamelong
+      , unit_of_measure
+      FROM
+        view_elsevier_drugclass_convert
+   )  dcc ON (drd1.product_id = dcc.ndc11))
+   WHERE ((drd1.day >= "date_add"('day', -180, current_date)) AND (inv.donor_id <> '702'))
+   GROUP BY 1
+)  six_months_dr ON (x.productnamelong = six_months_dr.productnamelong))
+LEFT JOIN (
+   SELECT DISTINCT
+     (CASE WHEN (inv.productnamelong IS NULL) THEN dcc.productnamelong ELSE inv.productnamelong END) productnamelong
+   , (CASE WHEN (inv.unit_of_measure IS NULL) THEN dcc.unit_of_measure ELSE inv.unit_of_measure END) unit_of_measure
+   , "count"(order_id) number_of_receipts
+   FROM
+     ((orders_historical_finale_timestamp ohft
+   LEFT JOIN (
+      SELECT DISTINCT
+        product_id
+      , lot_id
+      , productnamelong
+      , unit_of_measure
+      , min_exp_date
+      , donor_id
+      FROM
+        view_inventory_master
+      GROUP BY 1, 2, 3, 4, 5, 6
+   )  inv ON ((ohft.product_id = inv.product_id) AND (ohft.lot_id = inv.lot_id)))
+   LEFT JOIN (
+      SELECT DISTINCT
+        ndc11
+      , productnamelong
+      , unit_of_measure
+      FROM
+        view_elsevier_drugclass_convert
+   )  dcc ON (ohft.product_id = dcc.ndc11))
+   WHERE (((ohft.receive_date >= "date_add"('day', -180, current_date)) AND (ohft.receive_date IS NOT NULL)) AND (inv.donor_id <> '702'))
+   GROUP BY 1, 2
+)  number_of_receipts_six_months ON ((x.productnamelong = number_of_receipts_six_months.productnamelong) AND (x.unit_of_measure = number_of_receipts_six_months.unit_of_measure)))
+GROUP BY 1, 2, 8, 9, 10, 11, 12
+ORDER BY 1 ASC
