@@ -1,0 +1,4 @@
+SELECT *
+FROM
+  finale_drug_class
+WHERE (((drug_class = '') OR (drug_class IS NULL)) AND (NOT (product_id IN ('00000000001', '00000000002'))) AND (productnamelong <> ''))
