@@ -1,0 +1,49 @@
+(
+   SELECT DISTINCT
+     dppt.order_date
+   , dppt.order_id
+   , dppt.grant_id
+   , dppt.states_covered
+   , dppl.supplier
+   , it.dispensary_name
+   , dppl.product_id
+   , dppl.description
+   , dppt.status
+   , dppl.quantity
+   , sum(im.total_in_stock) total_in_stock
+   , dppl.subtotal
+   , dppt.total_spent
+   , gt.grant_total
+   , count(dppt.order_id) num_orders
+   FROM
+     (((((
+      SELECT
+        date_parse(order_date, '%c/%e/%y') order_date
+      , order_id
+      , status
+      , supplier
+      , (CASE WHEN ((order_id LIKE '%OH%') OR (order_id LIKE '%MPP001%')) THEN 'MPP001' WHEN (order_id LIKE '%MPP002%') THEN 'MPP002' ELSE 'Pilot' END) grant_id
+      , (CASE WHEN ((order_id LIKE '%OH%') OR (order_id LIKE '%MPP001%')) THEN 'OH' WHEN (order_id LIKE '%MPP002%') THEN 'TN' ELSE 'Pilot' END) states_covered
+      , total_spent
+      FROM
+        drug_purchase_program_totals
+   )  dppt
+   LEFT JOIN drug_purchase_program_list dppl ON (dppl.order_id = dppt.order_id))
+   LEFT JOIN grant_totals gt ON (gt.grant_id = dppt.grant_id))
+   LEFT JOIN (
+      SELECT DISTINCT
+        ocid.company_id__c
+      , order_date
+      , order_id
+      , sf.name dispensary_name
+      , ocid.product_id
+      , drug_name
+      FROM
+        (orders_with_companyid ocid
+      LEFT JOIN sf_account sf ON (sf.id__c = ocid.site_id))
+   )  it ON ((it.product_id = dppl.product_id) AND (it.drug_name = dppl.description) AND (it.order_date = dppt.order_date)))
+   LEFT JOIN view_inventory_master im ON ((im.product_id = dppl.product_id) AND (im.current_date_in_stock = current_date)))
+   WHERE ((dppt.order_id LIKE '%OH%') OR (dppt.order_id LIKE '%MPP001%') OR (dppt.order_id LIKE '%MPP002%') OR (dppt.order_id LIKE '224230712') OR (dppt.order_id LIKE '19699397') OR (dppt.order_id LIKE '0321230744-00') OR (dppt.order_id LIKE '0324230721-00') OR (dppt.order_id LIKE '0404230829-00') OR (dppt.order_id LIKE '0420231205-00') OR (dppt.order_id LIKE '0425231349-00') OR (dppt.order_id LIKE '19841930') OR (dppt.order_id LIKE '19869945') OR (dppt.order_id LIKE 'QO05302023-00'))
+   GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 13, 14
+   ORDER BY order_date DESC, dispensary_name DESC
+) 
