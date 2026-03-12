@@ -1,0 +1,42 @@
+WITH
+  table_a AS (
+   SELECT
+     product_id
+   , productnamelong
+   , current_date_in_stock
+   , "sum"(total_in_stock) total_in_stock
+   , days_until_expire
+   FROM
+     (
+      SELECT
+        product_id
+      , productnamelong
+      , "regexp_replace"(lot_id, 'Mfg: [0-9]{1,2}/[0-9]{1,2}/[0-9]{4}', '') lot_id
+      , total_in_stock
+      , current_date_in_stock
+      , "date_parse"("regexp_extract"(lot_id, '[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}'), '%m/%d/%Y') expire_date
+      , "date_diff"('day', "max"(current_date_in_stock), "max"("date_parse"("regexp_extract"(lot_id, '[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}'), '%m/%d/%Y'))) days_until_expire
+      FROM
+        "view_inventory_master"
+      WHERE (total_in_stock > 0)
+      GROUP BY 1, 2, 3, 4, 5, 6
+   ) 
+   GROUP BY 1, 2, 3, 5
+) 
+, table_b AS (
+   SELECT
+     product_id
+   , productnamelong
+   , current_date_in_stock
+   , "sum"(total_in_stock) total_in_stock
+   , CAST("avg"(days_until_expire) AS int) avg_days_until_expire
+   FROM
+     table_a
+   GROUP BY 1, 2, 3
+) 
+SELECT
+  current_date_in_stock
+, ("sum"(avg_days_until_expire) / "count"(avg_days_until_expire)) avg_days_until_expire
+FROM
+  table_b
+GROUP BY 1
