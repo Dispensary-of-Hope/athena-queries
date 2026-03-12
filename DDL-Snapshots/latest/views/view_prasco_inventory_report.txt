@@ -1,0 +1,16 @@
+(
+   SELECT
+     date_parse(datarundate, '%m/%d/%Y') data_run_date
+   , ndc
+   , concat(replace(itemdesc1, '(dulaglutide)', ''), ' ', itemdesc2) productnamelong
+   , lotnumber lot
+   , date_parse(productexpirationdate, '%m/%d/%Y') expiration_date
+   , date_parse(receiveddate, '%m/%d/%Y') receive_date
+   , received units_received
+   , onhand on_hand
+   , onhold on_hold
+   , available available_qty
+   , committed units_committed
+   FROM
+     prasco_inventory
+) 
