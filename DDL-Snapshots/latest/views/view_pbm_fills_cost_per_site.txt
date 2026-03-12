@@ -1,0 +1,8 @@
+(
+   SELECT DISTINCT
+     site
+   , (fills * 2.4E-1) thirty_day_fills_cost
+   FROM
+     "database-prod"."view_quarterly_numbers"
+   WHERE ((day >= TIMESTAMP '2021-06-30 00:00:00.000') AND (day <= TIMESTAMP '2022-06-30 00:00:00.000'))
+) 
