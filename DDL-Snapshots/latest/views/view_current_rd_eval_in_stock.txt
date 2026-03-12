@@ -1,0 +1,57 @@
+WITH
+  rd_in_stock AS (
+   SELECT DISTINCT
+     productnamelong
+   , product_id
+   , lot_id
+   , priority
+   , sum(available_qty) available_qty_in_stock
+   FROM
+     view_inventory_master
+   WHERE ((priority = 'P4') AND (available_qty <> 0))
+   GROUP BY 1, 2, 3, 4
+) 
+, received AS (
+   SELECT DISTINCT
+     rd_in_stock.productnamelong
+   , min(receive_date) min_receive_date
+   , sum(qty_received) amount_received
+   , qty.qty_in_stock
+   FROM
+     ((rd_in_stock
+   LEFT JOIN (
+      SELECT DISTINCT
+        receive_date
+      , product_id
+      , lot_id
+      , sum(CAST(total_units AS bigint)) qty_received
+      FROM
+        orders_historical_finale_timestamp
+      WHERE (receive_date IS NOT NULL)
+      GROUP BY 1, 2, 3
+   )  ohft ON ((rd_in_stock.product_id = ohft.product_id) AND (rd_in_stock.lot_id = ohft.lot_id)))
+   LEFT JOIN (
+      SELECT DISTINCT
+        productnamelong
+      , sum(available_qty_in_stock) qty_in_stock
+      FROM
+        rd_in_stock
+      GROUP BY 1
+   )  qty ON (rd_in_stock.productnamelong = qty.productnamelong))
+   WHERE (available_qty_in_stock > 0)
+   GROUP BY 1, 4
+) 
+SELECT DISTINCT
+  rd_in_stock.productnamelong
+, r.min_receive_date
+, r.amount_received
+, r.qty_in_stock
+, (((date_diff('day', min_receive_date, current_date) - (2 * date_diff('week', min_receive_date, current_date))) - (CASE WHEN (day_of_week(min_receive_date) = 7) THEN 1 ELSE 0 END)) - (CASE WHEN (day_of_week(current_date) = 1) THEN 1 ELSE 0 END)) number_of_business_days_since_first_receipt
+, sum((CASE WHEN (drd.day >= min_receive_date) THEN total_units_distributed END)) units_distributed
+, sum((CASE WHEN (drd.day >= min_receive_date) THEN total_units_destroyed END)) units_destroyed
+, sum((CASE WHEN (drd.day >= min_receive_date) THEN total_units_received END)) units_received
+FROM
+  ((rd_in_stock
+LEFT JOIN distribution_receiving_destruction drd ON ((rd_in_stock.product_id = drd.product_id) AND (rd_in_stock.lot_id = drd.lot_id)))
+LEFT JOIN received r ON (rd_in_stock.productnamelong = r.productnamelong))
+GROUP BY 1, 2, 3, 4, 5
