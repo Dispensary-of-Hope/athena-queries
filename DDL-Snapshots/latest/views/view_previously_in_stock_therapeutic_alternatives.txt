@@ -1,0 +1,117 @@
+WITH
+  combined_molecule AS (
+   SELECT DISTINCT
+     target_list_product
+   , priority
+   , COALESCE(ARRAY_AGG(combined_molecule) FILTER (WHERE (combined_molecule = UPPER(combined_molecule)))[1], MAX(combined_molecule)) combined_molecule
+   FROM
+     iqvia_target_primary
+   WHERE (NOT (target_list_product IN ('None', 'null')))
+   GROUP BY 1, 2
+) 
+, minor_class AS (
+   SELECT DISTINCT
+     target_list_product
+   , max(iq.minor_class) minor_class
+   , max(iqdc.major_class) major_class
+   FROM
+     (iqvia_sales iq
+   INNER JOIN (
+      SELECT DISTINCT
+        product_id
+      , minor_class
+      , major_class
+      FROM
+        iqvia_drug_class
+   )  iqdc ON (iq.ndc = iqdc.product_id))
+   WHERE ((NOT (target_list_product IN ('None', 'null'))) AND (rx_status <> 'OTC') AND (ndc <> 'NDC'))
+   GROUP BY 1
+) 
+, dosage_form AS (
+   SELECT DISTINCT
+     target_list_product
+   , element_at(split(array_join(array_agg(DISTINCT normalized_form_name), '; '), '; '), 1) form_1
+   , element_at(split(array_join(array_agg(DISTINCT normalized_form_name), '; '), '; '), 2) form_2
+   , element_at(split(array_join(array_agg(DISTINCT normalized_form_name), '; '), '; '), 3) form_3
+   FROM
+     ((iqvia_target_primary iq
+   INNER JOIN (
+      SELECT DISTINCT
+        ndc11
+      , productnamelong
+      FROM
+        view_elsevier_drugclass_convert
+   )  dcc ON (iq.ndc = dcc.ndc11))
+   INNER JOIN (
+      SELECT DISTINCT
+        productnamelong
+      , normalized_form_name
+      FROM
+        (product p
+      INNER JOIN (
+         SELECT DISTINCT
+           productid
+         , normalized_form_name
+         FROM
+           product_strength_route_form
+      )  psrf ON (psrf.productid = p.productid))
+   )  form ON (dcc.productnamelong = form.productnamelong))
+   WHERE (NOT (target_list_product IN ('None', 'null')))
+   GROUP BY 1
+) 
+, historical_inventory AS (
+   SELECT DISTINCT
+     mc.target_list_product
+   , priority
+   , minor_class
+   , major_class
+   , combined_molecule
+   , form_1
+   , form_2
+   , form_3
+   , (CASE WHEN (previously_in_stock.target_list_product IS NULL) THEN 'previously OOS' WHEN (previously_in_stock.target_list_product IS NOT NULL) THEN 'previously in stock' END) historical_inventory_status
+   FROM
+     (((minor_class mc
+   LEFT JOIN combined_molecule cm ON (mc.target_list_product = cm.target_list_product))
+   LEFT JOIN dosage_form df ON (cm.target_list_product = df.target_list_product))
+   LEFT JOIN (
+      SELECT DISTINCT target_list_product
+      FROM
+        update_tl_projections
+   )  previously_in_stock ON (df.target_list_product = previously_in_stock.target_list_product))
+) 
+, therapeutic_alternatives AS (
+   SELECT
+     oos.target_list_product oos_product
+   , oos.priority oos_priority
+   , oos.minor_class oos_minor_class
+   , oos.major_class oos_major_class
+   , oos.combined_molecule oos_combined_molecule
+   , max(alt1.target_list_product) alt_product_1
+   , max(alt2.target_list_product) alt_product_2
+   , max(alt3.target_list_product) alt_product_3
+   FROM
+     (((historical_inventory oos
+   LEFT JOIN historical_inventory alt1 ON ((alt1.historical_inventory_status = 'previously in stock') AND (alt1.priority = oos.priority) AND (alt1.minor_class = oos.minor_class) AND (alt1.combined_molecule = oos.combined_molecule) AND (((alt1.form_1 IS NOT NULL) AND (alt1.form_1 IN (oos.form_1, oos.form_2, oos.form_3))) OR ((alt1.form_2 IS NOT NULL) AND (alt1.form_2 IN (oos.form_1, oos.form_2, oos.form_3))) OR ((alt1.form_3 IS NOT NULL) AND (alt1.form_3 IN (oos.form_1, oos.form_2, oos.form_3))))))
+   LEFT JOIN historical_inventory alt2 ON ((alt2.historical_inventory_status = 'previously in stock') AND (alt2.minor_class = oos.minor_class) AND (((alt2.form_1 IS NOT NULL) AND (alt2.form_1 IN (oos.form_1, oos.form_2, oos.form_3))) OR ((alt2.form_2 IS NOT NULL) AND (alt2.form_2 IN (oos.form_1, oos.form_2, oos.form_3))) OR ((alt2.form_3 IS NOT NULL) AND (alt2.form_3 IN (oos.form_1, oos.form_2, oos.form_3))))))
+   LEFT JOIN historical_inventory alt3 ON ((alt3.historical_inventory_status = 'previously in stock') AND (alt3.combined_molecule = oos.combined_molecule) AND (alt3.minor_class = oos.minor_class) AND (((alt2.form_1 IS NOT NULL) AND (alt2.form_1 IN (oos.form_1, oos.form_2, oos.form_3))) OR ((alt2.form_2 IS NOT NULL) AND (alt2.form_2 IN (oos.form_1, oos.form_2, oos.form_3))) OR ((alt2.form_3 IS NOT NULL) AND (alt2.form_3 IN (oos.form_1, oos.form_2, oos.form_3))))))
+   WHERE (oos.historical_inventory_status = 'previously OOS')
+   GROUP BY 1, 2, 3, 4, 5
+) 
+, final_therapeutic_matches AS (
+   SELECT
+     oos_product
+   , COALESCE(alt_product_1, alt_product_3, alt_product_2) recommended_alternative_product
+   FROM
+     therapeutic_alternatives
+) 
+SELECT DISTINCT
+  hi.target_list_product
+, hi.minor_class
+, hi.combined_molecule
+, hi.priority
+, ftm.recommended_alternative_product
+FROM
+  (historical_inventory hi
+LEFT JOIN final_therapeutic_matches ftm ON (hi.target_list_product = ftm.oos_product))
+WHERE ((hi.historical_inventory_status = 'previously OOS') AND (ftm.recommended_alternative_product IS NOT NULL))
