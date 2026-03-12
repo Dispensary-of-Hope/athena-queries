@@ -1,0 +1,31 @@
+WITH
+  inv AS (
+   SELECT DISTINCT
+     current_date_in_stock
+   , target_list_product
+   , sum(available_qty) available_qty
+   FROM
+     (view_running_inventory inv
+   LEFT JOIN (
+      SELECT DISTINCT
+        target_list_product
+      , ndc
+      FROM
+        iqvia_target_primary
+   )  iq ON (inv.product_id = iq.ndc))
+   WHERE ((current_date_in_stock >= date_add('month', -18, current_date)) AND (donor_id <> '702'))
+   GROUP BY 1, 2
+) 
+, Arx AS (
+   SELECT DISTINCT target_list_product
+   FROM
+     view_top_p1_fast_movers
+   WHERE (arx_priority = 'Yes')
+) 
+SELECT DISTINCT
+  current_date_in_stock
+, inv.target_list_product
+, available_qty
+FROM
+  (inv
+INNER JOIN Arx ON (inv.target_list_product = Arx.target_list_product))
