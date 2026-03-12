@@ -1,0 +1,83 @@
+SELECT
+  ccn
+, county_state
+, hospital_facility_name
+, street
+, city
+, (CASE WHEN (state = 'Michigan') THEN 'MI' WHEN (state <> 'Michigan') THEN state END) state
+, zip
+, (CASE WHEN (health_sys_id = 'DoH') THEN 'Dispensary of Hope Sites' WHEN (NOT (health_sys_facility_name IN ('Rural Health Clinic', 'Federally Qualified Health Center', 'Free & Charitable Clinic Membership', 'State Association Membership'))) THEN 'Hospitals' WHEN (health_sys_facility_name = 'Federally Qualified Health Center') THEN 'FQHCs' WHEN (health_sys_facility_name = 'Rural Health Clinic') THEN 'Rural Health Clinics' WHEN (health_sys_facility_name = 'Free & Charitable Clinic Membership') THEN 'NAFC Members' WHEN (health_sys_facility_name = 'State Association Membership') THEN 'NAFC Members' END) health_sys_id
+, (CASE WHEN ((health_sys_facility_name IS NULL) OR (health_sys_facility_name = '')) THEN 'Hospital/Facility outside of a Health System' WHEN (health_sys_facility_name IS NOT NULL) THEN health_sys_facility_name END) health_sys_facility_name
+, zip_geoid
+, county_geoid
+, provider_ccn
+, state_code
+, hospital_name
+, rural_versus_urban
+, ccn_facility_type
+, county_latitude
+, county_longitude
+, geoid
+, county_name
+, total_population
+, total_cre_3_rf
+, percentage_cre_3_rf
+, cre_3_rf_vs_national
+, no_veh_pe
+, broadband_pe
+, eng_lvw_pe
+, hs_grad_pe
+, rural_pop_pe
+, male_pe
+, female_pe
+, median_age
+, hispanic_pe
+, nh_white_alone_pe
+, nh_black_alone_pe
+, total_percent_uninsured_below_300_fpl
+, estimated_total_DOH_eligible_population
+, social_vulnerability_index
+, prevalence_copd
+, prevalence_asthma
+, prevalence_depression
+, prevalence_ckd
+, prevalence_high_cholesterol
+, prevalence_high_blood_pressure
+, prevalence_diabetes
+, prevalence_general_health
+FROM
+  (view_hs_fqhc_rhc_data facility
+LEFT JOIN (
+   SELECT DISTINCT
+     geoid
+   , acs.county_name
+   , total_population
+   , total_cre_3_rf
+   , percentage_cre_3_rf
+   , cre_3_rf_vs_national
+   , no_veh_pe
+   , broadband_pe
+   , eng_lvw_pe
+   , hs_grad_pe
+   , rural_pop_pe
+   , male_pe
+   , female_pe
+   , median_age
+   , hispanic_pe
+   , nh_white_alone_pe
+   , nh_black_alone_pe
+   , total_percent_uninsured_below_300_fpl
+   , estimated_total_DOH_eligible_population
+   , ph.social_vulnerability_index
+   , ph.prevalence_copd
+   , ph.prevalence_asthma
+   , ph.prevalence_depression
+   , ph.prevalence_ckd
+   , ph.prevalence_high_cholesterol
+   , ph.prevalence_high_blood_pressure
+   , ph.prevalence_diabetes
+   , ph.prevalence_general_health
+   FROM
+     (view_optum_acs_data acs
+   LEFT JOIN view_pop_health_data ph ON (acs.geoid = ph.county_geoid))
+)  acs_pop ON (facility.county_geoid = acs_pop.geoid))
