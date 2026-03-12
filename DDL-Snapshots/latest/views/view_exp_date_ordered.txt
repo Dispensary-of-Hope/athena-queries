@@ -1,0 +1,23 @@
+SELECT DISTINCT
+  order_date
+, ship_date
+, ocid.product_id
+, (CASE WHEN (productnamelong IS NULL) THEN drug_name ELSE productnamelong END) productnamelong
+, priority
+, "date_parse"("split_part"(lot_id, ' ', 2), '%m/%d/%Y') exp_date
+, "sum"(total_units_distributed) total_units_distributed
+, site_id
+, order_id
+, "date_diff"('day', order_date, TRY("date_parse"("split_part"(lot_id, ' ', 2), '%m/%d/%Y'))) number_days_till_exp
+FROM
+  (orders_with_companyid ocid
+LEFT JOIN (
+   SELECT DISTINCT
+     product_id
+   , productnamelong
+   , priority
+   FROM
+     view_inventory_master
+)  inv ON (ocid.product_id = inv.product_id))
+WHERE ((NOT (site_id IN ('194', '10277'))) AND (order_date >= TIMESTAMP '2021-01-01 00:00:00.000'))
+GROUP BY 1, 2, 3, 4, 5, 6, 8, 9
