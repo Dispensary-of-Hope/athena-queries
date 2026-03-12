@@ -1,0 +1,25 @@
+(
+(
+      SELECT
+        "date_trunc"('quarter', ship_date) day
+      , drug_name
+      , (CASE WHEN ((primary = '') OR (primary IS NULL)) THEN 'no' ELSE primary END) primary
+      , "sum"(total_units_distributed) total_units_distributed
+      , 0 number_on_primary
+      FROM
+        (orders_with_companyid ocid
+      LEFT JOIN primary_list_master plm ON (("date_trunc"('quarter', ocid.ship_date) = "date_trunc"('quarter', plm.quarter_begin_date)) AND (ocid.drug_name = plm.product)))
+      WHERE (NOT (site_id IN ('194', '10277')))
+      GROUP BY 1, 2, 3
+   ) UNION ALL (
+      SELECT
+        "date_trunc"('quarter', quarter_begin_date) day
+      , null drug_name
+      , 'no' primary
+      , 0 total_units_distributed
+      , "count"(DISTINCT product) number_on_primary
+      FROM
+        primary_list_master plm
+      WHERE ((primary = 'yes') OR (primary = 'Yes'))
+      GROUP BY 1, 2, 3, 4
+   ) ) 
