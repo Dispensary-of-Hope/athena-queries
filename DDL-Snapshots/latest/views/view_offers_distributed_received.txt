@@ -1,0 +1,64 @@
+SELECT DISTINCT
+  day
+, ndc
+, productnamelong
+, priority
+, donor_name
+, sum(available_bottles) available_bottles
+, sum(qty_accepted) qty_accepted
+, sum(received) received
+, sum(distributed) distributed
+, sum(destroyed) destroyed
+FROM
+  ((
+(
+      SELECT DISTINCT
+        TRY_CAST(TRY(date_format(date_parse(offer_date, '%m/%d/%Y'), '%Y-%m-%d %T')) AS timestamp) day
+      , mfg.ndc
+      , TRY_CAST(TRY(date_format(date_parse(offer_date, '%m/%d/%Y'), '%Y-%m-%d %T')) AS timestamp) offer_date
+      , sum(TRY_CAST(available_bottles AS bigint)) available_bottles
+      , sum(TRY_CAST(qty_accepted AS bigint)) qty_accepted
+      , 0 received
+      , 0 distributed
+      , 0 destroyed
+      FROM
+        manufacturer_offers mfg
+      GROUP BY 1, 2
+   ) UNION ALL (
+      SELECT DISTINCT
+        drd.day
+      , product_id ndc
+      , null offer_date
+      , 0 available_bottles
+      , 0 qty_accepted
+      , sum(total_units_received) received
+      , sum(total_units_distributed) distributed
+      , sum(total_units_destroyed) destroyed
+      FROM
+        (distribution_receiving_destruction drd
+      INNER JOIN (
+         SELECT DISTINCT mfg.ndc
+         FROM
+           manufacturer_offers mfg
+      )  mfg_2 ON (drd.product_id = mfg_2.ndc))
+      GROUP BY 1, 2, 3, 4, 5
+   ) )  mfg3
+INNER JOIN (
+   SELECT DISTINCT
+     inv.product_id
+   , inv.priority
+   , inv.productnamelong
+   , (CASE WHEN (inv.donor_name IS NULL) THEN inv2.donor_name ELSE inv.donor_name END) donor_name
+   FROM
+     (view_inventory_master inv
+   LEFT JOIN (
+      SELECT DISTINCT
+        product_id
+      , donor_name
+      FROM
+        view_inventory_master
+      WHERE (donor_name IS NOT NULL)
+   )  inv2 ON (inv.product_id = inv2.product_id))
+)  inv ON (mfg3.ndc = inv.product_id))
+WHERE (day >= TIMESTAMP '2020-01-01 00:00:00.000')
+GROUP BY 1, 2, 3, 4, 5
