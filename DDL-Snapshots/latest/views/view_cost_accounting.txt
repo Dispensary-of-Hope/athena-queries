@@ -1,0 +1,38 @@
+(
+   SELECT DISTINCT
+     fm.site_id
+   , fmd.year
+   , fmd.month
+   , fmd.monthyear
+   , ini.dispensary_name
+   , fmd.companyname
+   , CAST(fmd.netchargeamount AS decimal(10, 2)) netchargeamount
+   , cmd.new_dispensing_entity__c
+   , cmd.joined_network__c
+   , total_units
+   , insulin_lines
+   , insulin
+   , customer_service
+   , distribution
+   , storage
+   , shipping
+   , supplies
+   FROM
+     ((((
+      SELECT
+        EXTRACT(YEAR FROM CAST(CONCAT(SUBSTR(invoicemonth, 1, 4), '-', SUBSTR(invoicemonth, 6, 2), '-01') AS DATE)) year
+      , EXTRACT(MONTH FROM CAST(CONCAT(SUBSTR(invoicemonth, 1, 4), '-', SUBSTR(invoicemonth, 6, 2), '-01') AS DATE)) month
+      , CAST(CONCAT(SUBSTR(invoicemonth, 1, 4), '-', SUBSTR(invoicemonth, 6, 2), '-', '01 00:00:00.000') AS timestamp) monthyear
+      , netchargeamount
+      , companyname
+      , address
+      , city
+      , state
+      FROM
+        fedex_monthly_data
+   )  fmd
+   LEFT JOIN fedex_matching fm ON ((fm.companyname = fmd.companyname) AND (fm.address = fmd.address)))
+   LEFT JOIN view_insulin_vs_non_insulin ini ON ((ini.site_id = fm.site_id) AND (month(ini.ship_date) = month(fmd.monthyear)) AND (year(ini.ship_date) = year(fmd.monthyear))))
+   LEFT JOIN view_cost_accounting_cardinal_unit_rate cmd ON (year(fmd.monthyear) = cmd.fiscal_year))
+   WHERE ((fmd.year > 2022) AND (cmd.site_id IS NOT NULL))
+) 
