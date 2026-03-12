@@ -1,0 +1,26 @@
+SELECT DISTINCT
+  p.productid
+, p_code
+, u_code
+, f_code
+, k_code
+, p.productnamelong
+FROM
+  ((
+   SELECT DISTINCT
+     productid
+   , "array_join"("array_distinct"("array_agg"(p_code)), ', ') p_code
+   , "array_join"("array_distinct"("array_agg"(u_code)), ', ') u_code
+   , "array_join"("array_distinct"("array_agg"(f_code)), ', ') f_code
+   , "array_join"("array_distinct"("array_agg"(k_code)), ', ') k_code
+   FROM
+     product_ingredient_hazardous_waste_code
+   GROUP BY 1
+)  haz
+LEFT JOIN (
+   SELECT DISTINCT
+     productid
+   , productnamelong
+   FROM
+     product
+)  p ON (haz.productid = p.productid))
