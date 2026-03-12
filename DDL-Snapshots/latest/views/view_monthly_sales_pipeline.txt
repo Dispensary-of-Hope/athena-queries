@@ -1,0 +1,147 @@
+WITH
+  pipeline_data AS (
+   SELECT
+     date
+   , in_awareness
+   , in_engaged
+   , in_convert
+   , in_implementing
+   , in_sales_hold
+   , closed in_closed
+   , in_awareness_ly
+   , in_engaged_ly
+   , in_convert_ly
+   , in_implementing_ly
+   , in_sales_hold_ly
+   , closed_last_year in_closed_ly
+   , in_contracting
+   , in_contracting_ly
+   FROM
+     ((
+      SELECT
+        CAST(date AS timestamp) date
+      , in_awareness
+      , in_engaged
+      , in_convert
+      , in_implementing
+      , in_sales_hold
+      , in_contracting
+      , COALESCE("lag"(in_awareness, 12) OVER (ORDER BY date ASC), 0) in_awareness_ly
+      , COALESCE("lag"(in_convert, 12) OVER (ORDER BY date ASC), 0) in_convert_ly
+      , COALESCE("lag"(in_engaged, 12) OVER (ORDER BY date ASC), 0) in_engaged_ly
+      , COALESCE("lag"(in_implementing, 12) OVER (ORDER BY date ASC), 0) in_implementing_ly
+      , COALESCE("lag"(in_sales_hold, 12) OVER (ORDER BY date ASC), 0) in_sales_hold_ly
+      , COALESCE("lag"(in_contracting, 12) OVER (ORDER BY date ASC), 0) in_contracting_ly
+      FROM
+        exp_pipeline_historical
+      ORDER BY date DESC
+   )  exp
+   INNER JOIN (
+      SELECT
+        month
+      , "sum"((CASE WHEN (closedate IS NULL) THEN 0 ELSE 1 END)) closed
+      , "lag"(month, 12) OVER (ORDER BY month ASC) month_last_year
+      , "lag"("sum"((CASE WHEN (closedate IS NULL) THEN 0 ELSE 1 END)), 12) OVER (ORDER BY month ASC) closed_last_year
+      , "array_join"("array_agg"(closedate), ',') closedates
+      FROM
+        (
+         SELECT
+           dt.day
+         , "date_trunc"('month', day) month
+         , closedate
+         , sfo.stagename
+         , sfo.type
+         , sfo.program__c
+         FROM
+           ((
+            SELECT
+              sfo.id
+            , sfo.stagename
+            , sfo.type
+            , sfo.program__c
+            , "date_parse"(closedate, '%m/%d/%Y') closedate
+            FROM
+              (sf_account sfa
+            LEFT JOIN sf_opportunity sfo ON (sfa.id = sfo.accountid))
+            WHERE (((sfo.stagename = 'Active') OR (sfo.stagename = 'Implementing')) AND (sfo.type = 'New Business'))
+         )  sfo
+         RIGHT JOIN (
+            SELECT day
+            FROM
+              date_table
+            WHERE (day <= current_date)
+         )  dt ON (sfo.closedate = dt.day))
+      ) 
+      GROUP BY month
+   )  closed ON (exp.date = closed.month))
+   ORDER BY exp.date DESC
+) 
+, lost_sites AS (
+   SELECT
+     month
+   , COALESCE(sites_lost, 0) sites_lost
+   , COALESCE(total_lost_sub, 0) total_lost_sub
+   FROM
+     ((
+      SELECT
+        retire_date date
+      , "count"(name) sites_lost
+      , "round"("sum"(lost_sub), 2) total_lost_sub
+      FROM
+        (
+         SELECT
+           name
+         , amount
+         , monthly_amount
+         , "date_trunc"('MONTH', retire_date) retire_date
+         , ((CASE WHEN ("month"(retire_date) > 6) THEN (19 - "month"(retire_date)) WHEN ("month"(retire_date) < 6) THEN (6 - "month"(retire_date)) ELSE 0 END) * monthly_amount) lost_sub
+         FROM
+           (
+            SELECT
+              sfo.name
+            , sfo.amount
+            , "round"((CAST(sfo.amount AS decimal) / 12), 2) monthly_amount
+            , "date_parse"(sfo.retire_date__c, '%m/%d/%Y') retire_date
+            FROM
+              (sf_account sfa
+            LEFT JOIN sf_opportunity sfo ON (sfa.id = sfo.accountid))
+            WHERE (((((((sfo.stagename = 'Retired') OR (sfo.stagename = 'Retired/Closed')) AND ((sfo.program__c = 'Central Access') OR (sfo.program__c = 'Instant Access'))) AND (sfa.ehope_type__c <> 'Mission')) AND (sfa.type = 'Retired')) AND (sfo.retire_date__c <> '')) AND ("date_parse"(sfo.retire_date__c, '%m/%d/%Y') > TIMESTAMP '2019-01-01 00:00:00.000'))
+         ) 
+      ) 
+      GROUP BY retire_date
+      ORDER BY date DESC
+   )  lost
+   RIGHT JOIN (
+      SELECT month
+      FROM
+        (
+         SELECT "date_trunc"('Month', day) month
+         FROM
+           date_table
+         WHERE (day <= current_date)
+      ) 
+      GROUP BY month
+   )  dt ON (lost.date = dt.month))
+) 
+SELECT
+  date
+, in_awareness
+, in_engaged
+, in_convert
+, in_implementing
+, in_sales_hold
+, in_closed
+, in_awareness_ly
+, in_engaged_ly
+, in_convert_ly
+, in_implementing_ly
+, in_sales_hold_ly
+, in_closed_ly
+, sites_lost
+, total_lost_sub
+, in_contracting
+, in_contracting_ly
+FROM
+  (pipeline_data pd
+INNER JOIN lost_sites ls ON (pd.date = ls.month))
+ORDER BY pd.date DESC
