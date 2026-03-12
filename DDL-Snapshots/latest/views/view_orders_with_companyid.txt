@@ -1,0 +1,4 @@
+SELECT *
+FROM
+  orders_with_companyid
+ORDER BY ship_date DESC
