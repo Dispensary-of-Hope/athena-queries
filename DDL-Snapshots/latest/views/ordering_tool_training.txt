@@ -1,0 +1,309 @@
+SELECT DISTINCT
+  x.target_list_product
+, (available_bottles * packagesize) doses_offered
+, available_bottles units_offered
+, packagesize
+, (CASE WHEN (priority = 'P1') THEN 1 WHEN (priority = 'P2') THEN 7.5E-1 WHEN (priority = 'P3') THEN 5E-1 END) priority
+, run_inv_total_doses
+, run_inv_available_qty
+, run_inv_on_order_qty
+, updated_amount_to_be_accepted units_to_accept
+, (CASE WHEN (updated_amount_to_be_accepted > available_bottles) THEN (available_bottles * packagesize) ELSE (updated_amount_to_be_accepted * packagesize) END) doses_to_accept
+, dt.daily_throughput
+, daily_throughput_doses
+, date_diff('day', offer_date, exp_date) num_days_between_offer_and_exp
+FROM
+  ((
+   SELECT
+     *
+   , (CASE WHEN ((was_everything_received_distributed = 'YES') AND (could_we_have_accepted_more = 'NO') AND ((item_in_stock_when_we_ran_out_of_this_lot = 'YES') OR (item_in_stock_when_we_ran_out_of_this_lot = 'NO'))) THEN available_bottles WHEN ((was_everything_received_distributed = 'YES') AND (could_we_have_accepted_more = 'YES') AND ((item_in_stock_when_we_ran_out_of_this_lot = 'YES') OR (item_in_stock_when_we_ran_out_of_this_lot = 'NO'))) THEN (CASE WHEN ((TRY_CAST((number_days_between_last_ship_and_exp - 62) AS double) * daily_throughput) > total_units_distributed) THEN (TRY_CAST((number_days_between_last_ship_and_exp - 62) AS double) * daily_throughput) ELSE (total_units_distributed + (total_units_distributed - (TRY_CAST((number_days_between_last_ship_and_exp - 62) AS double) * daily_throughput))) END) WHEN ((was_everything_received_distributed = 'NO') AND ((could_we_have_accepted_more = 'YES') OR (could_we_have_accepted_more = 'NO')) AND ((item_in_stock_when_we_ran_out_of_this_lot = 'YES') OR (item_in_stock_when_we_ran_out_of_this_lot = 'NO'))) THEN total_units_distributed END) updated_amount_to_be_accepted
+   FROM
+     (
+      SELECT
+        x.target_list_product
+      , x.ndc
+      , x.lot
+      , available_bottles
+      , priority
+      , qty_accepted
+      , total_units_received
+      , total_doses_received
+      , total_units_distributed
+      , total_doses_distributed
+      , total_units_destroyed
+      , total_doses_destroyed
+      , run_inv_available_qty
+      , run_inv_on_order_qty
+      , run_inv_total_doses
+      , x.packagesize
+      , run_inv_available_qty_on_last_ship
+      , run_inv_total_doses_on_last_ship
+      , formatted_exp_date
+      , offer_date
+      , days_between_first_and_last_ship
+      , number_of_sites
+      , (CASE WHEN ((days_between_first_and_last_ship IS NOT NULL) AND (days_between_first_and_last_ship <> 0)) THEN (total_units_distributed / days_between_first_and_last_ship) END) daily_throughput
+      , last_ship_date
+      , "date_parse"("split_part"(y.lot_id, ' ', 2), '%m/%d/%Y') exp_date
+      , date_diff('day', last_ship_date, "date_parse"("split_part"(y.lot_id, ' ', 2), '%m/%d/%Y')) number_days_between_last_ship_and_exp
+      , (CASE WHEN ((total_units_received - total_units_distributed) > 0) THEN 'NO' WHEN ((total_units_received - total_units_distributed) <= 0) THEN 'YES' ELSE '' END) was_everything_received_distributed
+      , (CASE WHEN (run_inv_available_qty_on_last_ship > 100) THEN 'YES' WHEN (run_inv_available_qty_on_last_ship < 1) THEN 'NO' ELSE 'NO' END) item_in_stock_when_we_ran_out_of_this_lot
+      , (CASE WHEN (available_bottles > qty_accepted) THEN 'YES' WHEN (available_bottles = qty_accepted) THEN 'NO' ELSE '' END) could_we_have_accepted_more
+      FROM
+        (((((
+         WITH
+           mo AS (
+            SELECT DISTINCT
+              offer_id
+            , lot
+            , date_parse(mo.offer_date, '%m/%d/%Y') offer_date
+            , exp_date
+            , mo.ndc
+            , sum(TRY_CAST(available_bottles AS double)) available_bottles
+            , sum(TRY_CAST(qty_accepted AS double)) qty_accepted
+            FROM
+              manufacturer_offers mo
+            WHERE ((TRY_CAST(qty_accepted AS double) > 0) AND (offer_id <> '99999999-9N') AND (lot <> ''))
+            GROUP BY 1, 2, 3, 4, 5
+         ) 
+         SELECT DISTINCT
+           iq.target_list_product
+         , inv.packagesize
+         , mo.ndc
+         , mo.lot
+         , date_format(date_parse(exp_date, '%m/%d/%Y'), '%Y-%m-%d %H:%i:%s.000') formatted_exp_date
+         , min(receive_date) first_receive_date
+         , min(purchase_order_date) first_po_date
+         , min(offer_date) offer_date
+         , sum(available_bottles) available_bottles
+         , sum(qty_accepted) qty_accepted
+         , sum(total_units) total_units
+         , sum((total_units * inv.packagesize)) total_doses_accepted
+         FROM
+           (((mo
+         INNER JOIN (
+            SELECT DISTINCT
+              target_list_product
+            , ndc
+            FROM
+              iqvia_target_primary
+         )  iq ON (mo.ndc = iq.ndc))
+         INNER JOIN (
+            SELECT
+              order_id
+            , status
+            , receive_date
+            , purchase_order_date
+            , product_id
+            , lot_id
+            , sum(TRY_CAST(total_units AS bigint)) total_units
+            FROM
+              orders_historical_finale_timestamp
+            GROUP BY 1, 2, 3, 4, 5, 6
+         )  ohft ON ((mo.offer_id = ohft.order_id) AND (CAST(ltrim(mo.ndc, '0') AS VARCHAR) = CAST(ltrim(ohft.product_id, '0') AS VARCHAR)) AND (CAST(ltrim(mo.lot, '0') AS VARCHAR) = CAST(LTRIM(SPLIT_PART(lot_id, ' ', 3), '0') AS VARCHAR))))
+         LEFT JOIN (
+            SELECT DISTINCT
+              product_id
+            , packagesize
+            FROM
+              view_inventory_master
+            WHERE (packagesize IS NOT NULL)
+         )  inv ON (mo.ndc = inv.product_id))
+         GROUP BY 1, 2, 3, 4, 5
+      )  x
+      LEFT JOIN (
+         SELECT
+           target_list_product
+         , sum((packagesize * available_qty)) run_inv_total_doses
+         , current_date_in_stock
+         , sum(available_qty) run_inv_available_qty
+         , sum(purchase_order_qty) run_inv_on_order_qty
+         FROM
+           (view_running_inventory vri
+         INNER JOIN (
+            SELECT DISTINCT
+              target_list_product
+            , ndc
+            FROM
+              iqvia_target_primary
+         )  iq ON (vri.product_id = iq.ndc))
+         GROUP BY 1, 3
+      )  run_inv ON ((x.target_list_product = run_inv.target_list_product) AND (x.offer_date = run_inv.current_date_in_stock)))
+      LEFT JOIN (
+         WITH
+           receiving AS (
+            SELECT DISTINCT
+              target_list_product
+            , priority
+            , date_diff('day', min(receive_date), "date_parse"("split_part"(lot_id, ' ', 2), '%m/%d/%Y')) number_days_between_receive_and_exp
+            , min(receive_date) first_receipt_date
+            , "date_parse"("split_part"(lot_id, ' ', 2), '%m/%d/%Y') exp_date
+            , lot_id
+            , ndc
+            , product_id
+            , sum((CASE WHEN ((receive_date IS NOT NULL) AND (NOT (site_id IN ('194', '10277')))) THEN TRY_CAST(total_units AS bigint) END)) total_units_received
+            FROM
+              (orders_historical_finale_timestamp ohft
+            INNER JOIN (
+               SELECT DISTINCT
+                 target_list_product
+               , priority
+               , ndc
+               FROM
+                 iqvia_target_primary
+               WHERE ((NOT (target_list_product IN ('None', 'null'))) AND (priority <> '0') AND (target_list_product <> ''))
+            )  iq ON (ohft.product_id = iq.ndc))
+            WHERE (receive_date >= TIMESTAMP '2021-01-01 00:00:00.000')
+            GROUP BY 1, 2, 5, 6, 7, 8
+         ) 
+,          distribution AS (
+            SELECT DISTINCT
+              target_list_product
+            , ship_date
+            , priority
+            , lot_id
+            , product_id
+            , count(DISTINCT site_id) number_of_sites
+            , sum((CASE WHEN ((ship_date IS NOT NULL) AND (NOT (site_id IN ('194', '10277')))) THEN TRY_CAST(total_units AS bigint) END)) total_units_distributed
+            FROM
+              (orders_historical_finale_timestamp ohft
+            INNER JOIN (
+               SELECT DISTINCT
+                 target_list_product
+               , priority
+               , ndc
+               FROM
+                 iqvia_target_primary
+               WHERE ((NOT (target_list_product IN ('None', 'null'))) AND (priority <> '0') AND (target_list_product <> ''))
+            )  iq ON (ohft.product_id = iq.ndc))
+            WHERE (ship_date >= TIMESTAMP '2021-01-01 00:00:00.000')
+            GROUP BY 1, 2, 3, 4, 5
+         ) 
+,          destruction AS (
+            SELECT DISTINCT
+              target_list_product
+            , ship_date
+            , priority
+            , lot_id
+            , product_id
+            , sum(TRY_CAST(total_units AS bigint)) total_units_destroyed
+            FROM
+              (orders_historical_finale_timestamp ohft
+            INNER JOIN (
+               SELECT DISTINCT
+                 target_list_product
+               , priority
+               , ndc
+               FROM
+                 iqvia_target_primary
+               WHERE ((NOT (target_list_product IN ('None', 'null'))) AND (priority <> '0') AND (target_list_product <> ''))
+            )  iq ON (ohft.product_id = iq.ndc))
+            WHERE ((ship_date >= TIMESTAMP '2021-01-01 00:00:00.000') AND (site_id IN ('10277', '194')))
+            GROUP BY 1, 2, 3, 4, 5
+         ) 
+         SELECT DISTINCT
+           receiving.target_list_product
+         , receiving.priority
+         , receiving.number_days_between_receive_and_exp
+         , receiving.first_receipt_date
+         , receiving.exp_date
+         , receiving.lot_id
+         , receiving.product_id
+         , receiving.total_units_received
+         , (total_units_received * packagesize) total_doses_received
+         , date_diff('day', min(distribution.ship_date), max(distribution.ship_date)) days_between_first_and_last_ship
+         , max(distribution.ship_date) last_ship_date
+         , sum(distribution.number_of_sites) number_of_sites
+         , sum(total_units_distributed) total_units_distributed
+         , sum((total_units_distributed * packagesize)) total_doses_distributed
+         , destruction.total_units_destroyed
+         , (destruction.total_units_destroyed * packagesize) total_doses_destroyed
+         FROM
+           (((receiving
+         LEFT JOIN distribution ON ((receiving.lot_id = distribution.lot_id) AND (receiving.product_id = distribution.product_id)))
+         LEFT JOIN destruction ON ((distribution.lot_id = destruction.lot_id) AND (distribution.product_id = destruction.product_id)))
+         LEFT JOIN (
+            SELECT DISTINCT
+              product_id
+            , packagesize
+            FROM
+              view_inventory_master
+            WHERE (packagesize IS NOT NULL)
+         )  inv ON ((receiving.product_id = inv.product_id) OR (distribution.product_id = inv.product_id) OR (destruction.product_id = inv.product_id)))
+         WHERE (total_units_distributed IS NOT NULL)
+         GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 15, 16
+      )  y ON ((x.ndc = y.product_id) AND (x.lot = trim(BOTH FROM split_part(y.lot_id, ' ', 3)))))
+      LEFT JOIN (
+         SELECT
+           target_list_product
+         , sum((packagesize * available_qty)) run_inv_total_doses_on_last_ship
+         , current_date_in_stock run_inv_last_ship_date
+         , sum(available_qty) run_inv_available_qty_on_last_ship
+         FROM
+           (view_running_inventory vri
+         INNER JOIN (
+            SELECT DISTINCT
+              target_list_product
+            , ndc
+            FROM
+              iqvia_target_primary
+         )  iq ON (vri.product_id = iq.ndc))
+         GROUP BY 1, 3
+      )  run_inv2 ON ((y.target_list_product = run_inv2.target_list_product) AND (y.last_ship_date = run_inv2.run_inv_last_ship_date)))
+      LEFT JOIN (
+         SELECT DISTINCT
+           product_id
+         , lot_id
+         , sum(available_qty) available_qty_currently_in_stock
+         FROM
+           view_inventory_master
+         GROUP BY 1, 2
+      )  inv2 ON ((y.product_id = inv2.product_id) AND (y.lot_id = inv2.lot_id)))
+   ) 
+   WHERE (total_units_received IS NOT NULL)
+)  x
+LEFT JOIN (
+   SELECT
+     target_list_product
+   , round((sum(CAST(total_doses_distributed AS double)) / count(DISTINCT day)), 2) daily_throughput_doses
+   , round((sum(CAST(total_units_distributed AS double)) / count(DISTINCT day)), 2) daily_throughput
+   FROM
+     (
+      SELECT
+        day
+      , iq.target_list_product
+      , packagesize
+      , (packagesize * total_units_distributed) total_doses_distributed
+      , total_units_distributed
+      FROM
+        (((distribution_receiving_destruction drd
+      LEFT JOIN (
+         SELECT DISTINCT
+           productnamelong
+         , product_id
+         , packagesize
+         FROM
+           view_inventory_master
+      )  inv ON (drd.product_id = inv.product_id))
+      LEFT JOIN (
+         SELECT DISTINCT
+           target_list_product
+         , ndc
+         FROM
+           iqvia_target_primary
+      )  iq ON (drd.product_id = iq.ndc))
+      LEFT JOIN (
+         SELECT
+           productnamelong
+         , sum(total_in_stock) total_in_stock
+         , sum(purchase_order_qty) purchase_order_qty
+         , current_date_in_stock
+         FROM
+           view_running_inventory
+         GROUP BY 1, 4
+         ORDER BY 4 ASC
+      )  run_inv ON ((inv.productnamelong = run_inv.productnamelong) AND (drd.day = run_inv.current_date_in_stock)))
+      WHERE ((day >= TIMESTAMP '2021-11-15 00:00:00.000') AND (total_in_stock IS NOT NULL) AND (total_in_stock > 0))
+   ) 
+   GROUP BY 1
+)  dt ON (x.target_list_product = dt.target_list_product))
