@@ -1,0 +1,11 @@
+SELECT DISTINCT
+  vim.productnamelong
+, vim.packagesize
+, vim.product_id ndc
+, dif.donor_id
+, vim.min_exp_date
+, (CASE WHEN (dif.donor_id = '2192') THEN 'Planned' ELSE 'Excess' END) source_type
+FROM
+  (view_inventory_master vim
+LEFT JOIN donor_id_finale dif ON (vim.product_id = dif.product_id))
+WHERE ((vim.available_qty > 0) AND (vim.available_qty IS NOT NULL) AND (vim.donor_id <> '702'))
