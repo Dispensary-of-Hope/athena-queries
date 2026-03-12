@@ -1,0 +1,25 @@
+SELECT
+  mr.productnamelong
+, number_of_requests
+, primary
+, priority
+FROM
+  ((
+   SELECT
+     productnamelong
+   , "count"(productnamelong) number_of_requests
+   FROM
+     medication_requests
+   WHERE ((request_date >= "date_add"('month', -6, current_date)) AND (productnamelong <> ''))
+   GROUP BY 1
+)  mr
+LEFT JOIN (
+   SELECT DISTINCT
+     productnamelong
+   , primary
+   , priority
+   FROM
+     view_inventory_master
+   WHERE (primary = 'yes')
+)  inv ON (mr.productnamelong = inv.productnamelong))
+WHERE ((number_of_requests >= 2) AND (primary = 'yes'))
