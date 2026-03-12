@@ -1,0 +1,34 @@
+SELECT DISTINCT
+  company_id__c
+, name site_name
+, donor_name
+, ocid.site_id
+, ship_date
+, ocid.product_id
+, drug_name
+, shippingstate
+, concat(shippingcity, ', ', shippingstate, ' ', shippingpostalcode) city_state_zip
+, "sum"(TRY_CAST(total_units_distributed AS bigint)) total_units
+FROM
+  ((orders_with_companyid ocid
+LEFT JOIN (
+   SELECT DISTINCT
+     name
+   , id__c
+   , shippingstate
+   , shippingcity
+   , shippingpostalcode
+   FROM
+     sf_account
+)  sf ON (ocid.site_id = sf.id__c))
+LEFT JOIN (
+   SELECT DISTINCT
+     product_id
+   , rd.name donor_name
+   FROM
+     (orders_historical_finale_timestamp ohft
+   LEFT JOIN regular_donors rd ON (ohft.donor_id = rd.donor_id__c))
+   WHERE ((receive_date IS NOT NULL) AND (name IS NOT NULL))
+)  rd ON (ocid.product_id = rd.product_id))
+WHERE ((donor_name <> '') AND (site_id <> '10277'))
+GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9
