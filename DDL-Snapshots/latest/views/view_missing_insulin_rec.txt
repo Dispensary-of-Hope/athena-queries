@@ -1,0 +1,68 @@
+SELECT
+  qn2.site_name
+, qn2.site_id
+, qn2.product
+, qn2.ndc
+, qn2.prev
+, qn2.ordered
+, qn2.dispensed
+, qn2.filled_not_picked
+, qn2.expired
+, qn2.total
+, qn2.match
+, qn2.explanation
+, qn2.day
+, si2.account_manager
+, si2.joined_date
+, qn2.closedate
+, qn2.lastmodifieddate
+FROM
+  ((
+   SELECT DISTINCT
+     ins_program.site_name
+   , ins_program.site_id
+   , qn.product
+   , qn.ndc
+   , qn.prev
+   , qn.ordered
+   , qn.dispensed
+   , qn.filled_not_picked
+   , qn.expired
+   , qn.total
+   , qn.match
+   , qn.explanation
+   , qn.day
+   , si.account_manager
+   , si.joined_date
+   , ins_program.closedate
+   , ins_program.lastmodifieddate
+   FROM
+     (((
+      SELECT DISTINCT
+        sfa.name site_name
+      , "split_part"(sfa.site_id_formatted__c, ' ', 2) site_id
+      , sfo.lastmodifieddate
+      , sfo.closedate
+      FROM
+        (sf_account sfa
+      LEFT JOIN (
+         SELECT DISTINCT
+           accountid
+         , program__c
+         , stagename
+         , "date_parse"(lastmodifieddate, '%m/%d/%Y') lastmodifieddate
+         , date_parse(closedate, '%m/%d/%Y') closedate
+         FROM
+           sf_opportunity
+      )  sfo ON (sfa.id = sfo.accountid))
+      WHERE (((((program__c LIKE 'Insulin%') AND (stagename LIKE 'Ordering%')) AND (sfa.type = 'Active')) AND (sfa.account_record_type_text__c = 'Active Access Site')) AND (sfo.lastmodifieddate < "date_add"('day', -30, "date_trunc"('quarter', current_date))))
+   )  ins_program
+   LEFT JOIN (
+      SELECT *
+      FROM
+        view_quarterly_insulin_rec
+      WHERE (day >= "date_add"('day', -1, date_trunc('quarter', current_date)))
+   )  qn ON (ins_program.site_id = qn.site_id))
+   LEFT JOIN site_info si ON (qn.site_id = si.site_id))
+)  qn2
+LEFT JOIN site_info si2 ON (qn2.site_id = si2.site_id))
