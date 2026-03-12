@@ -1,0 +1,67 @@
+SELECT
+  productnamelong
+, strength
+, deaclassificationid
+, ingredient_name
+, rnk
+, "sum"(national_rx) national_rx
+FROM
+  (
+   SELECT
+     productnamelong
+   , strength
+   , deaclassificationid
+   , ingredient_name
+   , "rank"() OVER (PARTITION BY ingredient_name ORDER BY national_Rx DESC) rnk
+   , national_Rx
+   FROM
+     (
+      SELECT DISTINCT
+        ingredient_name
+      , strength
+      , deaclassificationid
+      , productnamelong
+      , "sum"(national_Rx) national_Rx
+      FROM
+        ((
+         SELECT DISTINCT
+           ndc
+         , "sum"(number_national_prescriptions) national_Rx
+         FROM
+           cms_national_drug_utilization
+         GROUP BY 1
+      )  cms
+      INNER JOIN (
+         SELECT DISTINCT
+           ndc11
+         , "array_join"("array_distinct"("array_agg"(deaclassificationid)), ', ') deaclassificationid
+         , "array_join"("array_distinct"("array_agg"(strength)), ', ') strength
+         , "array_join"("array_distinct"("array_agg"(productnamelong)), ', ') productnamelong
+         , "array_join"("array_distinct"("array_agg"(ingredient_name)), ', ') ingredient_name
+         FROM
+           ((package pkg
+         INNER JOIN (
+            SELECT DISTINCT
+              productid
+            , productnamelong
+            , deaclassificationid
+            FROM
+              product
+         )  p ON (pkg.productid = p.productid))
+         INNER JOIN (
+            SELECT DISTINCT
+              ingredient_name
+            , strength
+            , productid
+            FROM
+              product_strength_route_form
+         )  psrf ON (p.productid = psrf.productid))
+         GROUP BY 1
+      )  x ON (cms.ndc = x.ndc11))
+      GROUP BY 1, 2, 3, 4
+      ORDER BY 4 DESC
+   ) 
+   WHERE (national_rx >= 15000)
+) 
+WHERE ((rnk <= 5) AND (deaclassificationid = '6'))
+GROUP BY 1, 2, 3, 4, 5
