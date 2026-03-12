@@ -1,0 +1,15 @@
+(
+   SELECT
+     EXTRACT(YEAR FROM CAST(CONCAT(SUBSTR(invoicemonth, 1, 4), '-', SUBSTR(invoicemonth, 6, 2), '-01') AS DATE)) year
+   , EXTRACT(MONTH FROM CAST(CONCAT(SUBSTR(invoicemonth, 1, 4), '-', SUBSTR(invoicemonth, 6, 2), '-01') AS DATE)) month
+   , CONCAT(SUBSTR(invoicemonth, 1, 4), '-', LPAD(SUBSTR(invoicemonth, 6, 2), 2, '0')) monthyear
+   , (CASE WHEN (EXTRACT(MONTH FROM CAST(CONCAT(SUBSTR(invoicemonth, 1, 4), '-', SUBSTR(invoicemonth, 6, 2), '-01') AS DATE)) >= 7) THEN (EXTRACT(YEAR FROM CAST(CONCAT(SUBSTR(invoicemonth, 1, 4), '-', SUBSTR(invoicemonth, 6, 2), '-01') AS DATE)) + 1) ELSE EXTRACT(YEAR FROM CAST(CONCAT(SUBSTR(invoicemonth, 1, 4), '-', SUBSTR(invoicemonth, 6, 2), '-01') AS DATE)) END) fiscal_year
+   , fmd.netchargeamount
+   , fmd.companyname dispensary_name
+   , fm.address
+   , fm.city
+   , fm.state
+   FROM
+     (fedex_monthly_data fmd
+   LEFT JOIN fedex_matching fm ON ((fm.companyname = fmd.companyname) AND (fm.address = fmd.address)))
+) 
