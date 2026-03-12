@@ -1,0 +1,17 @@
+SELECT DISTINCT
+  date_trunc('month', ship_date) ship_month
+, shippingstate
+, sum((unit_wac * total_units_distributed)) total_wac
+, sum(total_units_distributed) units_distributed
+FROM
+  (orders_with_companyid ocid
+INNER JOIN (
+   SELECT DISTINCT
+     site_id
+   , shippingstate
+   FROM
+     site_info
+   WHERE (health_system LIKE '%Ascension%')
+)  asc ON (ocid.site_id = asc.site_id))
+WHERE (ship_date >= TIMESTAMP '2024-07-01 00:00:00.000')
+GROUP BY 1, 2
