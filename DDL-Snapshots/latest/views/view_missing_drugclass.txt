@@ -1,0 +1,26 @@
+SELECT
+  x.product_id
+, x.drug_name
+, x.type
+, dcc.main_drug_class drug_class
+FROM
+  ((
+   SELECT
+     ndc product_id
+   , name drug_name
+   , 'BigCommerce' type
+   , drug_class
+   FROM
+     missing_drugclass_bigcommerce
+UNION ALL    SELECT
+     product_id
+   , drug_name
+   , 'Finale' type
+   , (CASE WHEN ((o.drug_class IS NULL) OR (o.drug_class = '')) THEN iq.drug_class ELSE o.drug_class END) drug_class
+   FROM
+     (orders_with_companyid o
+   LEFT JOIN iqvia_target_primary iq ON (o.product_id = iq.ndc))
+   WHERE ((((((o.drug_class IS NULL) OR (o.drug_class = '')) AND (o.ship_date > TIMESTAMP '2021-07-16 00:00:00.000')) AND (NOT (product_id IN ('00000000001', '00000000002')))) AND ((iq.drug_class IS NULL) OR (iq.drug_class = ''))) AND ((product_id IS NOT NULL) AND (product_id <> '')))
+   GROUP BY 1, 2, 3, 4
+)  x
+LEFT JOIN view_elsevier_drugclass_convert dcc ON (x.product_id = dcc.ndc11))
