@@ -1,0 +1,28 @@
+SELECT
+  haz_drugs.ndc11
+, haz_drugs.p_code
+, haz_drugs.u_code
+, haz_drugs.k_code
+, haz_drugs.f_code
+, vot.productnamelong
+, vot.day
+, "sum"(vot.total_units_distributed) total_units_distributed
+, "sum"(vot.total_units_destroyed) total_units_destroyed
+, "sum"(vot.total_units_received) total_units_received
+, "sum"(vot.total_in_stock) total_in_stock
+FROM
+  (view_ordering_tool vot
+INNER JOIN (
+   SELECT DISTINCT
+     p.ndc11
+   , "array_join"("array_distinct"("array_agg"(haz.p_code)), ', ') p_code
+   , "array_join"("array_distinct"("array_agg"(haz.u_code)), ', ') u_code
+   , "array_join"("array_distinct"("array_agg"(haz.k_code)), ', ') k_code
+   , "array_join"("array_distinct"("array_agg"(haz.f_code)), ', ') f_code
+   FROM
+     (product_ingredient_hazardous_waste_code haz
+   LEFT JOIN package p ON (haz.productid = p.productid))
+   WHERE (((((p_code <> '') OR (u_code <> '')) OR (f_code <> '')) OR (k_code <> '')) AND (ndc11 <> ''))
+   GROUP BY 1
+)  haz_drugs ON (haz_drugs.ndc11 = vot.product_id))
+GROUP BY 1, 2, 3, 4, 5, 6, 7
