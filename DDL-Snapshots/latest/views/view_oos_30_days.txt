@@ -1,0 +1,48 @@
+SELECT *
+FROM
+  (
+   SELECT
+     vri.product_id
+   , vim.productnamelong
+   , (CASE WHEN (vim.total_in_stock IS NULL) THEN 0 WHEN (vim.total_in_stock IS NOT NULL) THEN vim.total_in_stock END) total_in_stock
+   , (CASE WHEN (days_OOS IS NULL) THEN "date_diff"('day', TIMESTAMP '2021-10-01 00:00:00.000', current_timestamp) WHEN (days_OOS IS NOT NULL) THEN days_OOS END) days_OOS
+   , (CASE WHEN (max_date_in_stock IS NULL) THEN TIMESTAMP '2022-10-01 00:00:00.000' WHEN (max_date_in_stock IS NOT NULL) THEN max_date_in_stock END) max_date_in_stock
+   FROM
+     (((
+      SELECT DISTINCT product_id
+      FROM
+        view_running_inventory
+      GROUP BY 1
+   )  vri
+   LEFT JOIN (
+      SELECT DISTINCT *
+      FROM
+        (
+         SELECT
+           product_id
+         , "max"(current_date_in_stock) max_date_in_stock
+         , "date_diff"('day', "max"(current_date_in_stock), current_timestamp) days_OOS
+         FROM
+           (
+            SELECT DISTINCT
+              product_id
+            , total_in_stock
+            , current_date_in_stock
+            FROM
+              view_running_inventory
+            WHERE (total_in_stock > 0)
+         ) 
+         GROUP BY 1
+      ) 
+   )  OOS_30_Days ON (vri.product_id = OOS_30_Days.product_id))
+   LEFT JOIN (
+      SELECT DISTINCT
+        product_id
+      , productnamelong
+      , "sum"(total_in_stock) total_in_stock
+      FROM
+        view_inventory_master
+      GROUP BY 1, 2
+   )  vim ON (vri.product_id = vim.product_id))
+) 
+WHERE (((total_in_stock = 0) AND (days_OOS > 29)) AND (NOT (product_id IN ('00000000001', '00000000002'))))
