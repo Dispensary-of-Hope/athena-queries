@@ -1,0 +1,45 @@
+WITH
+  inv AS (
+   SELECT
+     date_trunc('month', current_date_in_stock) month_start
+   , target_list_product
+   , current_date_in_stock
+   , SUM(available_qty) available_qty
+   FROM
+     (view_running_inventory inv
+   LEFT JOIN (
+      SELECT DISTINCT
+        target_list_product
+      , ndc
+      FROM
+        iqvia_target_primary
+   )  iq ON (inv.product_id = iq.ndc))
+   WHERE ((current_date_in_stock >= date_add('month', -18, current_date)) AND (NOT (donor_id IN ('702', '24354'))))
+   GROUP BY 1, 2, 3
+) 
+, Arx AS (
+   SELECT DISTINCT target_list_product
+   FROM
+     iqvia_target_primary
+   WHERE (target_list_product IN ('Acetaminophen 500mg Tablet', 'Albuterol HFA 90mcg Inhaler', 'Amlodipine 10mg Tablet', 'Amlodipine 5mg Tablet', 'Amoxicillin/Clavulanic Acid 875/125mg Tablet', 'Atorvastatin 40mg Tablet', 'Azithromycin 250mg Tablet', 'Cyclobenzaprine 10mg Tablet', 'Doxycycline Hyclate DR 100mg Tablet', 'Fluconazole 150mg Tablet', 'Hydrochlorothiazide 25mg Tablet', 'Metformin 500mg Tablet', 'Metronidazole 500mg Tablet', 'Naproxen 500mg Tablet', 'Omeprazole DR 40mg Capsule', 'Ondansetron 4mg Tablet', 'Ondansetron ODT 4mg Tablet', 'Pantoprazole DR 40mg Tablet', 'Tamsulosin 0.4mg Capsule'))
+) 
+, inv_arx AS (
+   SELECT
+     inv.month_start
+   , inv.target_list_product
+   , inv.current_date_in_stock
+   , inv.available_qty
+   FROM
+     (inv
+   INNER JOIN Arx ON (inv.target_list_product = Arx.target_list_product))
+) 
+SELECT
+  month_start
+, target_list_product
+, COUNT(DISTINCT current_date_in_stock) total_snapshot_days
+, COUNT(DISTINCT (CASE WHEN (available_qty > 0) THEN current_date_in_stock END)) days_in_stock
+, (CAST(COUNT(DISTINCT (CASE WHEN (available_qty > 0) THEN current_date_in_stock END)) AS DOUBLE) / NULLIF(COUNT(DISTINCT current_date_in_stock), 0)) pct_days_in_stock
+, AVG(available_qty) avg_available_qty
+FROM
+  inv_arx
+GROUP BY month_start, target_list_product
