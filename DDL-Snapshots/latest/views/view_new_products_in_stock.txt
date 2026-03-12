@@ -1,0 +1,45 @@
+SELECT *
+FROM
+  (
+   SELECT DISTINCT
+     vim.productnamelong
+   , vim.drug_class
+   , vim.therapeutic_class
+   , "sum"(vim.available_qty) total_in_stock
+   , (CASE WHEN (newly_in_stock.productnamelong IS NOT NULL) THEN 'New in Stock' ELSE null END) Back_in_stock_status
+   , days_in_stock
+   , vim.current_date_in_stock
+   FROM
+     (view_inventory_master vim
+   LEFT JOIN (
+      SELECT DISTINCT
+        productnamelong
+      , stock_status
+      , count_stock_status_day days_in_stock
+      FROM
+        (
+         SELECT DISTINCT
+           productnamelong
+         , (CASE WHEN (total_in_stock = 0) THEN 'OOS' WHEN (total_in_stock > 0) THEN 'In Stock' END) stock_status
+         , "count"(DISTINCT current_date_in_stock) count_stock_status_day
+         FROM
+           (
+            SELECT DISTINCT
+              productnamelong
+            , "sum"(available_qty) total_in_stock
+            , current_date_in_stock
+            FROM
+              view_running_inventory
+            WHERE ((min_exp_date > date_add('month', 6, current_date_in_stock)) AND (current_date_in_stock >= "date_add"('day', -14, current_timestamp)) AND (NOT (donor_id IN ('702', '24354'))))
+            GROUP BY 1, 3
+         ) 
+         GROUP BY 1, 2
+      ) 
+      WHERE ((stock_status = 'In Stock') AND (count_stock_status_day < 10))
+      GROUP BY 1, 2, 3
+   )  newly_in_stock ON (vim.productnamelong = newly_in_stock.productnamelong))
+   WHERE ((((NOT (vim.product_id IN ('00002771559', '00002879959', '00002831501', '00002143480', '00002223680', '00002821501', '00002318280', '00002143380', '00002871501', '00002879759', '00002751001'))) AND (((donor_id <> '702') OR (donor_id IS NULL)) OR ((NOT (donor_id IN ('702', '24354'))) AND (donor_id IS NOT NULL))) AND (available_qty IS NOT NULL)) AND (vim.min_exp_date > date_add('month', 6, current_date))) AND (vim.product_id IN ('59651049901', '65862021901', '58151012593', '58151012577', '58151011088')))
+   GROUP BY 1, 2, 3, 5, 6, 7
+   ORDER BY vim.productnamelong ASC
+) 
+WHERE ((back_in_stock_status IS NOT NULL) AND (total_in_stock >= 100))
