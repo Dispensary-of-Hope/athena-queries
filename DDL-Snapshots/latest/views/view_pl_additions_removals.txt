@@ -1,0 +1,57 @@
+SELECT *
+FROM
+  ((
+   SELECT DISTINCT
+     (CASE WHEN ((max_primary = 'yes') AND ((prev_primary = 'no') OR (prev_primary IS NULL))) THEN current_product END) additions
+   , (CASE WHEN ((prev_primary = 'yes') AND ((max_primary = 'no') OR (max_primary IS NULL))) THEN prev_product END) removals
+   , (CASE WHEN (consistent_primary = 'yes') THEN consistent_products END) consistent_products
+   FROM
+     (((
+      SELECT
+        product prev_product
+      , primary prev_primary
+      FROM
+        (primary_list_master pl
+      INNER JOIN (
+         SELECT "date_add"('quarter', -1, "max"(quarter_begin_date)) prev_quarter_begin_date
+         FROM
+           primary_list_master
+      )  prev_qtr ON (pl.quarter_begin_date = prev_quarter_begin_date))
+   )  x
+   FULL JOIN (
+      SELECT
+        product current_product
+      , primary max_primary
+      FROM
+        (primary_list_master pl
+      INNER JOIN (
+         SELECT "max"(quarter_begin_date) max_quarter_begin_date
+         FROM
+           primary_list_master
+      )  max_qtr ON (pl.quarter_begin_date = max_quarter_begin_date))
+   )  y ON (y.current_product = x.prev_product))
+   FULL JOIN (
+      SELECT DISTINCT
+        consistent_products
+      , 'yes' consistent_primary
+      FROM
+        (consistent_list
+      INNER JOIN (
+         SELECT "max"(quarter_begin_date) max_qtr_begin_date
+         FROM
+           consistent_list
+      )  dt ON (quarter_begin_date = dt.max_qtr_begin_date))
+   )  w ON (x.prev_product = w.consistent_products))
+)  z
+LEFT JOIN (
+   SELECT DISTINCT
+     (CASE WHEN (productnamelong = 'Vitamin D 1.25mg (50,000unit) Capsule') THEN 'Vitamin D 1.25mg Capsule' WHEN (productnamelong = 'Humalog 100unit/mL Solution for Injection') THEN 'Humalog 100unit/ml Solution for Injection' ELSE productnamelong END) productnamelong
+   , "sum"(total_in_stock) total_in_stock
+   , primary
+   , "min"(priority) priority
+   , drug_class
+   , therapeutic_class
+   FROM
+     view_inventory_master
+   GROUP BY 1, 3, 5, 6
+)  inv ON (((z.additions = inv.productnamelong) OR (z.removals = inv.productnamelong)) OR (z.consistent_products = inv.productnamelong)))
