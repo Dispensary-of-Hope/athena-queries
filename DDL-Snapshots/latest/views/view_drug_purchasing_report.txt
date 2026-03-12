@@ -1,0 +1,86 @@
+(
+   SELECT DISTINCT
+     productname
+   , strength
+   , ndc
+   , priority
+   , in_stock
+   , on_order
+   , (CASE WHEN (in_stock = 'Yes') THEN 0 WHEN (in_stock = 'No') THEN num_days_oos END) num_days_oos
+   , purchased_from_mckesson
+   , (CASE WHEN ((purchased_from_mckesson = 'Yes') AND (in_stock = 'Yes')) THEN 'Yes IS' WHEN ((purchased_from_mckesson = 'Yes') AND (in_stock = 'No')) THEN 'Yes OOS' WHEN ((purchased_from_mckesson = 'No') AND (in_stock = 'Yes')) THEN 'No IS' WHEN ((purchased_from_mckesson = 'No') AND (in_stock = 'No')) THEN 'No OOS' END) purchased_from_mckesson_is_oos
+   , (CASE WHEN ((on_order = 'Yes') AND (purchased_from_mckesson = 'Yes')) THEN 'On Order McKesson' WHEN ((on_order = 'Yes') AND (purchased_from_mckesson = 'No')) THEN 'On Order Not McKesson' WHEN ((on_order = 'No') AND (purchased_from_mckesson = 'Yes')) THEN 'Not On Order McKesson' WHEN ((on_order = 'No') AND (purchased_from_mckesson = 'No')) THEN 'Not On Order Not McKesson' ELSE 'No Order' END) on_order_mckesson
+   FROM
+     ((
+      SELECT
+        rin.iqvia_tl_product productname
+      , iq.strength
+      , rin.ndc
+      , rin.priority
+      , (CASE WHEN (SUM(rin.total_in_stock) > 0) THEN 'Yes' ELSE 'No' END) in_stock
+      , rin.donor_id
+      , DATE_DIFF('day', max_day_in_stock, current_date) num_days_oos
+      , (CASE WHEN (donor_id = '702') THEN 'Yes' ELSE 'No' END) purchased_from_mckesson
+      FROM
+        ((((top_40_drugs tfd
+      LEFT JOIN iqvia_target_primary iq ON (tfd.iqvia_tl_product = iq.target_list_product))
+      LEFT JOIN (
+         SELECT
+           inv.productnamelong
+         , inv.product_id
+         , inv.current_date_in_stock
+         , max_day_in_stock
+         , inv.donor_id
+         , "sum"(inv.total_in_stock) total_in_stock
+         FROM
+           ((
+            SELECT *
+            FROM
+              view_inventory_master
+         )  inv
+         LEFT JOIN (
+            SELECT
+              product_id
+            , "max"(current_date_in_stock) max_day_in_stock
+            FROM
+              view_running_inventory
+            WHERE (total_in_stock > 0)
+            GROUP BY 1
+         )  last_in_stock ON (inv.product_id = last_in_stock.product_id))
+         GROUP BY 1, 2, 3, 4, 5
+      )  inv_last_in_stock ON (iq.ndc = inv_last_in_stock.product_id)) rin
+      LEFT JOIN (
+         SELECT DISTINCT
+           ndc
+         , strength
+         FROM
+           iqvia_target_primary
+      )  iq ON (rin.ndc = iq.ndc))
+      INNER JOIN (
+         SELECT DISTINCT top_40_product
+         FROM
+           (
+            SELECT DISTINCT
+              top_40_product
+            , sum(total_in_stock) total_in_stock
+            FROM
+              view_run_inv_top_40
+            GROUP BY 1
+         ) 
+         WHERE ((total_in_stock IS NULL) OR (total_in_stock = 0))
+      )  rin2 ON (rin.top_40_product = rin2.top_40_product))
+      GROUP BY 1, 2, 3, 4, 6, 7
+   )  pt
+   LEFT JOIN (
+      SELECT
+        product_id
+      , donor_id
+      , purchase_order_qty
+      , (CASE WHEN (purchase_order_qty > 0) THEN 'Yes' WHEN (purchase_order_qty <= 0) THEN 'No' WHEN (purchase_order_qty IS NULL) THEN 'No Order' END) on_order
+      FROM
+        view_inventory_master
+      GROUP BY 1, 2, 3
+   )  vim ON ((vim.donor_id = pt.donor_id) AND (vim.product_id = pt.ndc)))
+   WHERE (num_days_oos >= 0)
+   GROUP BY 1, 2, 3, 4, 5, 6, 7, 8
+) 
