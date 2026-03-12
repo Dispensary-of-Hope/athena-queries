@@ -1,0 +1,61 @@
+WITH
+  agg AS (
+   WITH
+     arx AS (
+      SELECT DISTINCT
+        productnamelong
+      , description
+      , id
+      FROM
+        (arx_safety_net_rx_2024_2025 arx
+      LEFT JOIN (
+         SELECT DISTINCT
+           productnamelong
+         , ndc11
+         FROM
+           view_elsevier_drugclass_convert
+      )  dcc ON (arx.ndc = dcc.ndc11))
+      WHERE (productnamelong IS NOT NULL)
+   ) 
+,    tl_name AS (
+      SELECT DISTINCT
+        target_list_product
+      , productnamelong
+      FROM
+        (iqvia_target_primary iq
+      LEFT JOIN (
+         SELECT DISTINCT
+           productnamelong
+         , ndc11
+         FROM
+           view_elsevier_drugclass_convert
+      )  dcc ON (iq.ndc = dcc.ndc11))
+      WHERE ((NOT (target_list_product IN ('None', 'null'))) AND (productnamelong IS NOT NULL))
+   ) 
+   SELECT DISTINCT
+     (CASE WHEN (target_list_product IS NULL) THEN description ELSE target_list_product END) target_list_product
+   , count(DISTINCT id) number_of_arx
+   FROM
+     (arx
+   LEFT JOIN tl_name ON (arx.productnamelong = tl_name.productnamelong))
+   GROUP BY 1
+   ORDER BY 2 DESC
+) 
+, ranked AS (
+   SELECT
+     target_list_product
+   , number_of_arx
+   , RANK() OVER (ORDER BY number_of_arx DESC) arx_rank
+   , COUNT(*) OVER () n_products
+   , MAX(number_of_arx) OVER () max_arx
+   FROM
+     agg
+) 
+SELECT
+  target_list_product
+, number_of_arx
+, arx_rank rank_overall
+, (CAST(number_of_arx AS DOUBLE) / NULLIF(max_arx, 0)) arx_norm_value
+, (CASE WHEN (n_products <= 1) THEN 1E0 ELSE (1E0 - ((arx_rank - 1E0) / NULLIF((n_products - 1E0), 0E0))) END) arx_norm_rank
+FROM
+  ranked
