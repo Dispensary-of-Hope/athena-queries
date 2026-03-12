@@ -1,0 +1,36 @@
+(
+   SELECT DISTINCT
+     ml.date
+   , ml.page
+   , ml.page_views_total
+   , ml.unique_visitors_total
+   , ml.total_followers
+   , ml.new_followers
+   , ml.total_posts
+   , CAST(ml.engagement_rate AS decimal(10, 2)) engagement_rate_percentage
+   , ml.impressions_total
+   , mf.num_submissions
+   , mf.num_partial_submissions
+   , ms.general_contact_submissions
+   , ms.network_expansion_submissions
+   , ms.supply_chain_submissions
+   FROM
+     ((marketing_linkedin ml
+   LEFT JOIN (
+      SELECT DISTINCT
+        date
+      , CAST(CAST(COALESCE(NULLIF(num_submissions, ''), '0') AS decimal) AS integer) num_submissions
+      , CAST(CAST(COALESCE(NULLIF(num_partial_submissions, ''), '0') AS decimal) AS integer) num_partial_submissions
+      FROM
+        marketing_formstack
+   )  mf ON (mf.date = ml.date))
+   LEFT JOIN (
+      SELECT DISTINCT
+        date
+      , CAST(CAST(COALESCE(NULLIF(general_contact_submissions, ''), '0') AS decimal) AS integer) general_contact_submissions
+      , CAST(CAST(COALESCE(NULLIF(network_expansion_submissions, ''), '0') AS decimal) AS integer) network_expansion_submissions
+      , CAST(CAST(COALESCE(NULLIF(supply_chain_submissions, ''), '0') AS decimal) AS integer) supply_chain_submissions
+      FROM
+        marketing_sitewrench
+   )  ms ON (ms.date = ml.date))
+) 
