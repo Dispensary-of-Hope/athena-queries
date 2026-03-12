@@ -1,0 +1,96 @@
+SELECT
+  order_ids
+, site_id
+, site_name
+, order_date
+, priority
+, product_id
+, unit_of_measure
+, drug_name
+, insulin
+, available_qty
+, ship_day
+, account_manager
+, committed_qty
+, last_received
+, received_past_6_months
+, last_received_qty
+, max_ship_qty
+, (committed_qty - max_ship_qty) quantity_more_than_max_allocation
+FROM
+  (
+   SELECT DISTINCT
+     array_join(array_agg(DISTINCT order_id), ', ') order_ids
+   , array_join(array_agg(DISTINCT fco.order_date), ', ') order_date
+   , fco.site_id
+   , site_name
+   , priority
+   , fco.product_id
+   , fco.unit_of_measure
+   , drug_name
+   , insulin
+   , available_qty
+   , ship_day
+   , account_manager
+   , last_received
+   , received_past_6_months
+   , last_received_qty
+   , max_ship_qty
+   , sum(TRY_CAST(total_units_distributed AS bigint)) committed_qty
+   FROM
+     ((((finale_committed_orders fco
+   LEFT JOIN (
+      SELECT DISTINCT
+        product_id
+      , priority
+      , max_ship_qty
+      FROM
+        (view_inventory_master inv
+      LEFT JOIN (
+         SELECT DISTINCT
+           ndc11
+         , CAST(max_ship_qty AS bigint) max_ship_qty
+         FROM
+           dynamo_tl_allocation_updates
+      )  dyn ON (inv.product_id = dyn.ndc11))
+      WHERE (available_qty > 0)
+   )  inv ON (fco.product_id = inv.product_id))
+   LEFT JOIN (
+      SELECT DISTINCT
+        product_id
+      , sum(available_qty) available_qty
+      FROM
+        view_inventory_master
+      GROUP BY 1
+   )  inv2 ON (fco.product_id = inv2.product_id))
+   LEFT JOIN (
+      SELECT DISTINCT
+        site_id
+      , site_name
+      , order_pick_day__c ship_day
+      , account_manager
+      FROM
+        site_info
+   )  si ON (fco.site_id = si.site_id))
+   LEFT JOIN (
+      SELECT DISTINCT
+        ohft.product_id
+      , last_received
+      , SUM((CASE WHEN (receive_date >= date_add('day', -180, current_date)) THEN CAST(total_units AS bigint) END)) received_past_6_months
+      , SUM((CASE WHEN (receive_date = last_received) THEN CAST(total_units AS bigint) END)) last_received_qty
+      FROM
+        (orders_historical_finale_timestamp ohft
+      LEFT JOIN (
+         SELECT DISTINCT
+           product_id
+         , max(receive_date) last_received
+         FROM
+           orders_historical_finale_timestamp
+         GROUP BY 1
+      )  lr ON (ohft.product_id = lr.product_id))
+      GROUP BY 1, 2
+   )  received ON (fco.product_id = received.product_id))
+   WHERE (type = 'Sale')
+   GROUP BY 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+) 
+WHERE (((priority = 'P1') AND (insulin = 'False') AND (committed_qty > max_ship_qty)) OR ((priority IN ('P2', 'P3')) AND (committed_qty > max_ship_qty)) OR (((insulin = 'True') AND (committed_qty > max_ship_qty)) AND (site_id <> '10277')))
