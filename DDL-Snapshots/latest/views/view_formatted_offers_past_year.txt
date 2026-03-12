@@ -1,0 +1,62 @@
+WITH
+  offers AS (
+   SELECT
+     *
+   , TRY_CAST(TRY(date_format(date_parse(offer_date, '%m/%d/%Y'), '%Y-%m-%d %T')) AS timestamp) offer_date2
+   , LTRIM(REPLACE(REPLACE(NDC, '-', ''), ' ', ''), '0') ndc_clean
+   FROM
+     manufacturer_offers
+) 
+, package_lookup AS (
+   SELECT DISTINCT
+     ndc10 ndc_key
+   , ndc11
+   FROM
+     package
+UNION    SELECT DISTINCT
+     ndc11 ndc_key
+   , ndc11
+   FROM
+     package
+) 
+, formatted AS (
+   SELECT
+     o.*
+   , p.ndc11
+   FROM
+     (offers o
+   LEFT JOIN package_lookup p ON (o.ndc_clean = p.ndc_key))
+   WHERE (o.offer_date2 >= TIMESTAMP '2025-01-01 00:00:00.000')
+) 
+SELECT
+  o.NDC original_ndc
+, o.ndc11
+, target_list_product
+, drug_name
+, name_strength_dosage_form
+, gpi_6_name
+, dea_class_code
+, COALESCE(m.gpi_14_name, o.description) product_name
+, SUM(TRY_CAST(available_bottles AS bigint)) amount_offered
+, SUM(TRY_CAST(qty_accepted AS bigint)) amount_accepted
+FROM
+  ((formatted o
+LEFT JOIN (
+   SELECT DISTINCT
+     gpi_14_name
+   , drug_name
+   , concat(drug_name, ' ', strength, ' ', strength_unit_of_measure, ' ', dosageform) name_strength_dosage_form
+   , gpi_6_name
+   , dea_class_code
+   , ndc_upc_hri ndc
+   FROM
+     medispan_trg_file
+)  m ON (o.ndc11 = m.ndc))
+LEFT JOIN (
+   SELECT DISTINCT
+     ndc iq_ndc
+   , target_list_product
+   FROM
+     iqvia_target_primary
+)  iq ON (o.ndc11 = iq.iq_ndc))
+GROUP BY 1, 2, 3, 4, 5, 6, 7, 8
