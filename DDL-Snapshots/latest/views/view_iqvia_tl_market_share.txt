@@ -1,0 +1,56 @@
+WITH
+  iq AS (
+   SELECT
+     target_list_product
+   , manufacturer
+   , brand_generic
+   , donor_status
+   , donor_name
+   , stagename
+   , eaches units_sold
+   FROM
+     view_iqvia_sales
+   WHERE (quarter = 'Q3'' 2025')
+) 
+, lines AS (
+   SELECT
+     target_list_product
+   , array_join(array_sort(array_distinct(array_agg((CASE WHEN (donor_status = 'Active') THEN concat(donor_name, (CASE WHEN (stagename IS NOT NULL) THEN concat(concat(' (', stagename), ')') ELSE '' END)) ELSE null END)))), ', ') active_list
+   , array_join(array_sort(array_distinct(array_agg((CASE WHEN (donor_status = 'Prospect') THEN concat(donor_name, (CASE WHEN (stagename IS NOT NULL) THEN concat(concat(' (', stagename), ')') ELSE '' END)) ELSE null END)))), ', ') prospect_list
+   FROM
+     iq
+   GROUP BY target_list_product
+) 
+, agg AS (
+   SELECT
+     target_list_product
+   , COUNT(DISTINCT (CASE WHEN (brand_generic = 'GENERIC') THEN manufacturer END)) num_generic_mfr
+   , array_join(array_sort(array_distinct(array_agg((CASE WHEN (brand_generic = 'GENERIC') THEN manufacturer END)))), '; ') generic_mfr
+   , COUNT(DISTINCT (CASE WHEN (brand_generic = 'BRAND') THEN manufacturer END)) num_brand_mfr
+   , array_join(array_sort(array_distinct(array_agg((CASE WHEN (brand_generic = 'BRAND') THEN manufacturer END)))), '; ') branded_mfr
+   , COUNT(DISTINCT (CASE WHEN (donor_status = 'Active') THEN donor_name END)) num_active_tp
+   , array_join(array_sort(array_distinct(array_agg((CASE WHEN (donor_status = 'Active') THEN donor_name END)))), '; ') active_tps
+   , SUM(units_sold) total_units
+   , SUM((CASE WHEN (donor_status = 'Active') THEN units_sold ELSE 0 END)) units_active
+   , SUM((CASE WHEN (donor_status IN ('Prospect')) THEN units_sold ELSE 0 END)) units_prospect
+   FROM
+     iq
+   GROUP BY target_list_product
+) 
+SELECT
+  a.target_list_product "Full Drug name"
+, num_generic_mfr "# Generic MFR"
+, generic_mfr "Generic MFR"
+, num_brand_mfr "# Brand MFR"
+, branded_mfr "Branded MFR"
+, num_active_tp "# Active Trading Partner"
+, active_tps "Active Trading Partners"
+, total_units "Market Share IQVIA data"
+, ROUND((units_active / NULLIF(total_units, 0)), 3) "Active Trading Partner Market Share"
+, ROUND((units_prospect / NULLIF(total_units, 0)), 3) "Prospect Trading Partner Market Share"
+, ROUND(GREATEST(0E0, (1E0 - ((units_active + units_prospect) / NULLIF(total_units, 0)))), 3) "% Market Share Not Available"
+, array_join(filter(ARRAY[(CASE WHEN ((l.active_list IS NOT NULL) AND (l.active_list <> '')) THEN concat('Active: ', l.active_list) ELSE null END),(CASE WHEN ((l.prospect_list IS NOT NULL) AND (l.prospect_list <> '')) THEN concat('Prospect: ', l.prospect_list) ELSE null END)], (x) -> ((x IS NOT NULL) AND (x <> ''))), from_utf8(X'0A')) "Donor Strategy"
+FROM
+  (agg a
+INNER JOIN lines l ON (l.target_list_product = a.target_list_product))
+ORDER BY "Full Drug name" ASC
