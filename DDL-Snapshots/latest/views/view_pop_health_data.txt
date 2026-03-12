@@ -1,0 +1,81 @@
+SELECT DISTINCT
+  "split_part"(geo_id, 'US', 2) county_geoid
+, name
+, social_vulnerability_index
+, county
+, county_name
+, prevalence_COPD
+, prevalence_asthma
+, prevalence_CKD
+, prevalence_depression
+, prevalence_diabetes
+, prevalence_high_cholesterol
+, prevalence_high_blood_pressure
+, prevalence_general_health
+, CAST(total_population_e AS double) total_pop
+, CAST(pred3_e AS double) total_cre_3_RF
+, (CAST(pred3_pe AS double) / 100) percentage_cre_3_RF
+, CAST(pred3_pf AS bigint) cre_3_RF_vs_national
+, (CAST(no_veh_pe AS double) / 100) no_veh_pe
+, (CAST(broadband_pe AS double) / 100) broadband_pe
+, (CAST(eng_lvw_pe AS double) / 100) eng_lvw_pe
+, (CAST(hs_grad_pe AS double) / 100) hs_grad_pe
+, (CAST(rural_pop_pe AS double) / 100) rural_pop_pe
+, (CAST(male_pe AS double) / 100) male_pe
+, (CAST(female_pe AS double) / 100) female_pe
+, CAST(median_age_e AS double) median_age
+, (CAST(hispanic_pe AS double) / 100) hispanic_pe
+, (CAST(nh_white_alone_pe AS double) / 100) nh_white_alone_pe
+, (CAST(nh_black_alone_pe AS double) / 100) nh_black_alone_pe
+, county_latitude
+, county_longitude
+FROM
+  (((census_cre_equity_county_data cre
+LEFT JOIN (
+   SELECT DISTINCT
+     county_geoid
+   , county_latitude
+   , county_longitude
+   FROM
+     view_county_zip_crosswalk
+)  czc ON ("split_part"(cre.geo_id, 'US', 2) = czc.county_geoid))
+LEFT JOIN (
+   SELECT DISTINCT
+     st
+   , state
+   , st_abbr
+   , county
+   , fips
+   , CAST(e_totpop AS bigint) total_pop
+   , CAST(rpl_themes AS double) social_vulnerability_index
+   FROM
+     cdc_svi_data
+)  cdc ON (czc.county_geoid = cdc.fips))
+LEFT JOIN (
+   SELECT DISTINCT
+     county_name
+   , stateabbr
+   , locationid
+   , "max"((CASE WHEN (short_question_text = 'Chronic Kidney Disease') THEN age_adjusted_prevalence END)) prevalence_CKD
+   , "max"((CASE WHEN (short_question_text = 'COPD') THEN age_adjusted_prevalence END)) prevalence_COPD
+   , "max"((CASE WHEN (short_question_text = 'Current Asthma') THEN age_adjusted_prevalence END)) prevalence_asthma
+   , "max"((CASE WHEN (short_question_text = 'Depression') THEN age_adjusted_prevalence END)) prevalence_depression
+   , "max"((CASE WHEN (short_question_text = 'Diabetes') THEN age_adjusted_prevalence END)) prevalence_diabetes
+   , "max"((CASE WHEN (short_question_text = 'General Health') THEN age_adjusted_prevalence END)) prevalence_general_health
+   , "max"((CASE WHEN (short_question_text = 'High Blood Pressure') THEN age_adjusted_prevalence END)) prevalence_high_blood_pressure
+   , "max"((CASE WHEN (short_question_text = 'High Cholesterol') THEN age_adjusted_prevalence END)) prevalence_high_cholesterol
+   FROM
+     (
+      SELECT DISTINCT
+        stateabbr
+      , statedesc
+      , locationname county_name
+      , short_question_text
+      , (CAST(data_value AS double) / 100) age_adjusted_prevalence
+      , CAST(totalpopulation AS bigint) totalpopulation
+      , locationid
+      FROM
+        cdc_places_data
+   )  cdc
+   GROUP BY 1, 2, 3
+)  cdc_places ON (cdc.fips = cdc_places.locationid))
