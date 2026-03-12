@@ -1,0 +1,12 @@
+(
+   SELECT DISTINCT
+     (CASE WHEN ((order_id LIKE '%OH%') OR (order_id LIKE '%MPP001%')) THEN 'MPP001' WHEN (order_id LIKE '%MPP002%') THEN 'MPP002' ELSE 'Pilot' END) grant_id
+   , count(order_id) num_orders
+   , SUM(TRY_CAST(total_spent AS DECIMAL(10, 0))) total_spent
+   , gt.grant_total
+   FROM
+     (drug_purchase_program_totals dppt
+   LEFT JOIN grant_totals gt ON (gt.grant_id = (CASE WHEN ((order_id LIKE '%OH%') OR (order_id LIKE '%MPP001%')) THEN 'MPP001' WHEN (order_id LIKE '%MPP002%') THEN 'MPP002' ELSE 'Pilot' END)))
+   WHERE ((dppt.order_id LIKE '%OH%') OR (dppt.order_id LIKE '%MPP001%') OR (dppt.order_id LIKE '%MPP002%') OR (dppt.order_id LIKE '224230712') OR (dppt.order_id LIKE '19699397') OR (dppt.order_id LIKE '0321230744-00') OR (dppt.order_id LIKE '0324230721-00') OR (dppt.order_id LIKE '0404230829-00') OR (dppt.order_id LIKE '0420231205-00') OR (dppt.order_id LIKE '0425231349-00') OR (dppt.order_id LIKE '19841930') OR (dppt.order_id LIKE '19869945') OR (dppt.order_id LIKE 'QO05302023-00'))
+   GROUP BY 1, 4
+) 
