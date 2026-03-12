@@ -1,0 +1,27 @@
+SELECT
+  si2.site_name
+, si2.site_id
+, qn2.fills
+, qn2.encounters
+, qn2.uniquepatients
+, qn2.quarter_end_date
+, si2.account_manager
+, si2.joined_date
+FROM
+  (site_info si2
+LEFT JOIN (
+   SELECT DISTINCT
+     si.site_name
+   , si.site_id
+   , qn.fills
+   , qn.encounters
+   , qn.uniquepatients
+   , qn.quarter_end_date
+   , si.account_manager
+   , si.joined_date
+   FROM
+     (site_info si
+   LEFT JOIN view_quarterly_numbers qn ON (si.site_id = qn.site_id))
+   WHERE ((account_record_type_text__c = 'Active Access Site') AND (quarter_end_date >= "date_add"('day', -90, current_date)))
+)  qn2 ON (si2.site_id = qn2.site_id))
+WHERE (si2.joined_date < date_add('day', -21, date_trunc('quarter', date_trunc('quarter', current_date))))
