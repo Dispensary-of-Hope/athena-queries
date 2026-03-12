@@ -1,0 +1,56 @@
+SELECT
+  quarter.quarter_end_date
+, CAST(quarter.year AS varchar) year
+, quarter.quarter
+, quarter.quarter_30day_scripts
+, quarter.quarter_encounters
+, quarter.quarter_unique_patients
+, year.annual_patients
+, year.last_year_annual_patients
+FROM
+  ((
+   SELECT
+     quarter_end_date
+   , year
+   , quarter
+   , "sum"(fills) quarter_30day_scripts
+   , "sum"(encounters) quarter_encounters
+   , "sum"(uniquepatients) quarter_unique_patients
+   FROM
+     view_quarterly_numbers
+   WHERE (NOT ((quarter_end_date > CAST(current_date AS timestamp)) AND (site <> '')))
+   GROUP BY quarter, quarter_end_date, year
+   ORDER BY quarter_end_date DESC, quarter DESC
+)  quarter
+INNER JOIN (
+   SELECT
+     *
+   , "lag"(annual_patients, 1) OVER (ORDER BY year ASC) last_year_annual_patients
+   FROM
+     (
+      SELECT
+        year
+      , ("avg"(quarter_sum_patients) * 2.5E0) annual_patients
+      FROM
+        (
+         SELECT
+           year
+         , quarter
+         , "sum"(patients) quarter_sum_patients
+         FROM
+           (
+            SELECT
+              quarter
+            , year
+            , fills
+            , uniquepatients patients
+            FROM
+              view_quarterly_numbers
+            WHERE ((NOT (quarter_end_date > CAST(current_date AS timestamp))) AND (site <> ''))
+         ) 
+         GROUP BY quarter, year
+      ) 
+      GROUP BY year
+   ) 
+)  year ON (quarter.year = year.year))
+ORDER BY quarter_end_date DESC
