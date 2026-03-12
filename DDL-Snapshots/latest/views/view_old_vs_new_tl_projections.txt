@@ -1,0 +1,29 @@
+WITH
+  annual_projections AS (
+   SELECT DISTINCT
+     new_proj.target_list_product
+   , old_proj.projected_units old_annual_projection
+   , new_proj.annual_projection_with_buffer new_annual_projection
+   , (CEIL((new_proj.annual_projection_with_buffer / 144)) * 144) new_annual_projection_rounded_for_pallet_size
+   , daily_throughput
+   , number_of_days_in_stock
+   , total_units_distributed
+   , round((((new_proj.annual_projection_with_buffer - CAST(old_proj.projected_units AS double)) / CAST(old_proj.projected_units AS double)) * 100), 2) percent_change
+   FROM
+     (update_tl_projections new_proj
+   LEFT JOIN target_list_projections old_proj ON (new_proj.target_list_product = old_proj.target_list_product))
+   GROUP BY 1, 2, 3, 4, 5, 6, 7
+   ORDER BY 4 DESC
+) 
+SELECT DISTINCT
+  target_list_product
+, old_annual_projection
+, daily_throughput
+, number_of_days_in_stock
+, total_units_distributed
+, CAST(new_annual_projection AS bigint) new_annual_projection
+, CAST(new_annual_projection_rounded_for_pallet_size AS bigint) new_annual_projection_rounded_for_pallet_size
+, percent_change
+FROM
+  annual_projections
+ORDER BY 7 DESC
