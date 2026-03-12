@@ -1,0 +1,28 @@
+SELECT
+  zcta zip_code
+, CAST(TRY_CAST(estimated_total_doh_eligible AS double) AS bigint) estimated_total_doh_eligible
+, county_name
+, state
+, county_state
+FROM
+  (optum_acs_zip_data oazd
+LEFT JOIN (
+   SELECT DISTINCT
+     trim(BOTH FROM "split_part"(namelsad_zcta5_20, 'ZCTA5', 2)) zip_code
+   , "lpad"(geoid_county_20, 5, '0') geoid_county_20
+   , county_name
+   , state
+   , county_state
+   FROM
+     (optum_zip_county_data ozcd
+   INNER JOIN (
+      SELECT DISTINCT
+        state
+      , county_name
+      , concat(county_name, ', ', state) county_state
+      , "lpad"(geoid, 5, '0') geoid
+      FROM
+        optum_county_geodata
+   )  ocg ON (ozcd.geoid_county_20 = ocg.geoid))
+   WHERE (geoid_zcta5_20 <> '')
+)  zip_county_state ON ("lpad"(oazd.zcta, 5, '0') = zip_county_state.zip_code))
