@@ -1,0 +1,7 @@
+SELECT
+  ((CAST(COUNT(DISTINCT (CASE WHEN (total_in_stock > 0) THEN target_list_product END)) AS DOUBLE) / CAST(COUNT(DISTINCT target_list_product) AS DOUBLE)) * 100) percent_p1_in_stock
+, COUNT(DISTINCT (CASE WHEN (total_in_stock > 0) THEN target_list_product END)) in_stock_count
+, COUNT(DISTINCT target_list_product) total_product_count
+FROM
+  view_target_list_products
+WHERE ((priority = 'P1') AND (NOT (target_list_product IN ('None', 'null'))))
