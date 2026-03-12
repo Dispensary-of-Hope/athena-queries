@@ -1,0 +1,27 @@
+WITH
+  quarter_last_year AS (
+   SELECT
+     quarter_end_date
+   , year
+   , quarter
+   , "sum"(fills) quarter_30day_scripts
+   , "sum"(encounters) quarter_encounters
+   , "sum"(uniquepatients) quarter_unique_patients
+   FROM
+     view_quarterly_numbers
+   WHERE (NOT ((quarter_end_date > CAST(current_date AS timestamp)) AND (site <> '')))
+   GROUP BY quarter, quarter_end_date, year
+   ORDER BY quarter_end_date DESC, quarter DESC
+) 
+SELECT
+  quarter.quarter_end_date
+, CAST(quarter.year AS varchar) year
+, quarter.quarter
+, quarter.quarter_30day_scripts
+, COALESCE(last_year_quarter.quarter_30day_scripts, 0) quarter_30day_scripts_ly
+, quarter.quarter_unique_patients
+, COALESCE(last_year_quarter.quarter_unique_patients, 0) unique_patients_ly
+FROM
+  (quarter_last_year quarter
+LEFT JOIN quarter_last_year last_year_quarter ON (((quarter.year - 1) = last_year_quarter.year) AND (quarter.quarter = last_year_quarter.quarter)))
+ORDER BY quarter_end_date DESC
