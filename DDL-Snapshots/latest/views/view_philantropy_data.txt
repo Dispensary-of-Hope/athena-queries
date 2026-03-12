@@ -1,0 +1,11 @@
+SELECT
+  CAST("date_format"("date_parse"(pyh.fiscal_year, '%y'), '%Y') AS int) fiscal_year
+, pyh.ytd_amount phil_ytd_amount
+, CAST(fg.phil_operating_fy_goal AS double) phil_operating_fy_goal
+, CAST(fg.phil_capital_fy_goal AS double) phil_capital_fy_goal
+, pyh.prospects_potential_identified
+, pyh.prospects_pursuing
+, pyh.prospects_declined
+FROM
+  (phil_ytd_historical pyh
+INNER JOIN fy_financial_goals fg ON (CAST(pyh.fiscal_year AS int) = fg.fiscal_year))
