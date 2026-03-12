@@ -1,0 +1,101 @@
+WITH
+  median_iq_ratio AS (
+   SELECT round(approx_percentile(iq_ratio, 5E-1), 5) median_iq_ratio
+   FROM
+     (
+      SELECT
+        proj.target_list_product
+      , (CAST(new_annual_projection_rounded_for_pallet_size AS double) / CAST(iq_eaches AS double)) iq_ratio
+      FROM
+        (view_old_vs_new_tl_projections proj
+      LEFT JOIN (
+         SELECT *
+         FROM
+           (
+            SELECT
+              target_list_product
+            , medicaid_rx iq_eaches
+            FROM
+              view_rank_medicaid_rx
+            WHERE (NOT (target_list_product IN ('null', 'None')))
+         ) 
+      )  iq1 ON (proj.target_list_product = iq1.target_list_product))
+   ) 
+) 
+, remaining_tl_products AS (
+   SELECT DISTINCT
+     iq.target_list_product remaining_tl_product
+   , iq_eaches remaining_product_iq_eaches
+   , (iq_eaches * median_iq_ratio) projected_annual_amount
+   FROM
+     (((iqvia_target_primary iq
+   LEFT JOIN (
+      SELECT DISTINCT target_list_product
+      FROM
+        view_old_vs_new_tl_projections
+UNION ALL       SELECT DISTINCT target_list_product
+      FROM
+        view_update_prev_oos_tl_projections
+   )  iq2 ON (iq.target_list_product = iq2.target_list_product))
+   LEFT JOIN (
+      SELECT *
+      FROM
+        (
+         SELECT
+           target_list_product
+         , medicaid_rx iq_eaches
+         FROM
+           view_rank_medicaid_rx
+         WHERE (NOT (target_list_product IN ('null', 'None')))
+         GROUP BY 1, 2
+      ) 
+   )  iq3 ON (iq.target_list_product = iq3.target_list_product))
+   CROSS JOIN median_iq_ratio m)
+   WHERE ((iq2.target_list_product IS NULL) AND (NOT (iq.target_list_product IN ('None', 'null'))))
+) 
+, avg_percent_change AS (
+   SELECT (avg(percent_change) / 100) avg_percent_change
+   FROM
+     view_old_vs_new_tl_projections
+   WHERE (percent_change > 0)
+) 
+SELECT
+  new_proj.target_list_product
+, recommended_alternative_product
+, alt_annual_projection
+, tl_eaches
+, alt_eaches
+, old_proj.projected_units old_annual_projection
+, (CASE WHEN ((new_proj.target_list_product IS NOT NULL) AND (tl_annual_projection > 20000)) THEN (old_proj.projected_units * (1 + avg_percent_change)) WHEN ((new_proj.target_list_product IS NOT NULL) AND (round((((new_proj.tl_annual_projection - CAST(old_proj.projected_units AS double)) / CAST(old_proj.projected_units AS double)) * 100), 2) < 0)) THEN (old_proj.projected_units * (1 + avg_percent_change)) ELSE tl_annual_projection END) new_annual_projection
+, round((((new_proj.tl_annual_projection - CAST(old_proj.projected_units AS double)) / CAST(old_proj.projected_units AS double)) * 100), 2) percent_change
+FROM
+  ((view_update_prev_oos_tl_projections new_proj
+LEFT JOIN target_list_projections old_proj ON (new_proj.target_list_product = old_proj.target_list_product))
+CROSS JOIN avg_percent_change apc)
+UNION ALL (
+   SELECT DISTINCT
+     remaining_tl_product target_list_product
+   , null recommended_alternative_product
+   , null alt_annual_projection
+   , remaining_product_iq_eaches tl_eaches
+   , null alt_eaches
+   , projected_units old_annual_projection
+   , (CASE WHEN (projected_annual_amount > 20000) THEN (projected_units * (1 + avg_percent_change)) WHEN (round((((projected_annual_amount - CAST(old_proj.projected_units AS double)) / CAST(old_proj.projected_units AS double)) * 100), 2) < 0) THEN (projected_units * (1 + avg_percent_change)) ELSE projected_annual_amount END) new_annual_projection
+   , round((((projected_annual_amount - CAST(old_proj.projected_units AS double)) / CAST(old_proj.projected_units AS double)) * 100), 2) percent_change
+   FROM
+     ((remaining_tl_products r
+   LEFT JOIN target_list_projections old_proj ON (r.remaining_tl_product = old_proj.target_list_product))
+   CROSS JOIN avg_percent_change apc)
+UNION ALL    SELECT DISTINCT
+     target_list_product
+   , null recommended_alternative_product
+   , null alt_annual_projection
+   , null tl_eaches
+   , null alt_eaches
+   , old_annual_projection
+   , new_annual_projection_rounded_for_pallet_size new_annual_projection
+   , percent_change
+   FROM
+     (view_old_vs_new_tl_projections
+   CROSS JOIN avg_percent_change apc)
+) 
