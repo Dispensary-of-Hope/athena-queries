@@ -1,0 +1,70 @@
+(
+   SELECT DISTINCT
+     "date_trunc"('month', dt.day) month
+   , it.company_id__c
+   , it.order_id
+   , it.dispensary_name
+   , it.product_id
+   , it.drug_name
+   , it.total_monthly_units_distributed
+   , it.total_monthly_available_qty
+   , it.total_monthly_purchase_order_qty
+   , it.on_order
+   , it.avg_units_12_months
+   , avg_units_3_months
+   FROM
+     ((
+      SELECT DISTINCT
+        ocid.company_id__c
+      , order_id
+      , sf.name dispensary_name
+      , (CASE WHEN (drug_name LIKE '%(ReliOn)%') THEN trim(BOTH FROM REPLACE(drug_name, '(ReliOn)', '')) WHEN (drug_name LIKE 'Humulin R 100unit/mL Solution for Injection') THEN 'Humulin R 100unit/ml Solution for Injection' WHEN (drug_name LIKE 'Humulin R 100units/ml Solution for Injection') THEN 'Humulin R 100unit/ml Solution for Injection' WHEN (drug_name LIKE 'Humalog 100unit/mL Solution for Injection') THEN 'Humalog 100unit/ml Solution for Injection' WHEN (drug_name LIKE 'Humalog KwikPen 100unit/mL Prefilled Pen Solution for Injection') THEN 'Humalog KwikPen 100unit/ml Pre-Filled Pen Solution for Injection' WHEN (drug_name LIKE 'Humalog KwikPen Mix 75/25 Prefilled Pen 100unit/mL Suspension for Injection') THEN 'Humalog KwikPen Mix 75/25 Pre-Filled Pen Suspension for Injection' WHEN (drug_name LIKE 'Humulin N 100unit/mL Suspension for Injection') THEN 'Humulin N 100unit/ml Suspension for Injection' WHEN (drug_name LIKE 'Basaglar KwikPen 100units/mL Pre-Filled Pen Solution for Injection') THEN 'Basaglar KwikPen Prefilled Pen 100unit/ml Solution for Injection' WHEN (drug_name LIKE 'Trulicity 0.75mg/0.5mL Solution for Injection') THEN 'Trulicity 0.75mg/0.5ml Solution for Injection' WHEN (drug_name LIKE 'Trulicity 1.5mg/0.5mL Solution for Injection') THEN 'Trulicity 1.5mg/0.5ml Solution for Injection' WHEN (drug_name LIKE 'Trulicity 3mg/0.5mL Solution for Injection') THEN 'Trulicity 3mg/0.5ml Solution for Injection' WHEN (drug_name LIKE 'Trulicity 4.5mg/0.5mL Solution for Injection') THEN 'Trulicity 4.5mg/0.5ml Solution for Injection' ELSE trim(BOTH FROM drug_name) END) drug_name
+      , im.product_id
+      , "date_trunc"('month', ship_date) ship_month
+      , sum(total_units_distributed) total_monthly_units_distributed
+      , im.available_qty total_monthly_available_qty
+      , im.purchase_order_qty total_monthly_purchase_order_qty
+      , (CASE WHEN (SUM((CASE WHEN (im.purchase_order_qty > 0) THEN 1 ELSE 0 END)) > 0) THEN 'Yes' ELSE 'No' END) on_order
+      , avg_units_12_months
+      , avg_units_3_months
+      FROM
+        ((((orders_with_companyid ocid
+      LEFT JOIN sf_account sf ON (sf.id__c = ocid.site_id))
+      LEFT JOIN (
+         SELECT DISTINCT
+           product_id
+         , sum(purchase_order_qty) purchase_order_qty
+         , sum(available_qty) available_qty
+         FROM
+           view_inventory_master
+         GROUP BY 1
+      )  im ON (im.product_id = ocid.product_id))
+      LEFT JOIN (
+         SELECT DISTINCT
+           company_id__c
+         , product_id
+         , ("sum"(total_units_distributed) / "count"(DISTINCT "date_trunc"('month', ship_date))) avg_units_12_months
+         FROM
+           orders_with_companyid
+         WHERE ((product_id IN ('00002771559', '00002751001', '00002879959', '00002879759', '00002871501', '00002831501', '00002821501', '00002143380', '00002143480', '00002143480', '00002223680', '00002318280')) AND ("date_trunc"('month', ship_date) BETWEEN "date_trunc"('month', "date_add"('month', -12, current_date)) AND "date_trunc"('month', current_date)))
+         GROUP BY company_id__c, product_id
+         ORDER BY company_id__c ASC, product_id ASC
+      )  avg_12 ON ((ocid.company_id__c = avg_12.company_id__c) AND (ocid.product_id = avg_12.product_id)))
+      LEFT JOIN (
+         SELECT DISTINCT
+           company_id__c
+         , product_id
+         , ("sum"(total_units_distributed) / "count"(DISTINCT "date_trunc"('month', ship_date))) avg_units_3_months
+         FROM
+           orders_with_companyid
+         WHERE ((product_id IN ('00002771559', '00002751001', '00002879959', '00002879759', '00002871501', '00002831501', '00002821501', '00002143380', '00002143480', '00002143480', '00002223680', '00002318280')) AND ("date_trunc"('month', ship_date) BETWEEN "date_trunc"('month', "date_add"('month', -3, current_date)) AND "date_trunc"('month', current_date)))
+         GROUP BY company_id__c, product_id
+         ORDER BY company_id__c ASC, product_id ASC
+      )  avg_3 ON ((ocid.company_id__c = avg_3.company_id__c) AND (ocid.product_id = avg_3.product_id)))
+      WHERE (NOT (ocid.site_id IN ('194', '10277')))
+      GROUP BY 1, 2, 3, 4, 5, 6, 8, 9, 11, 12
+   )  it
+   LEFT JOIN date_table dt ON (it.ship_month = "date_trunc"('month', dt.day)))
+   WHERE ((dt.day >= TIMESTAMP '2020-01-01 00:00:00.000') AND (dt.day <= current_date) AND (it.product_id IN ('00002771559', '00002751001', '00002879959', '00002879759', '00002871501', '00002831501', '00002821501', '00002143380', '00002143480', '00002143480', '00002223680', '00002318280')))
+   ORDER BY month ASC
+) 
