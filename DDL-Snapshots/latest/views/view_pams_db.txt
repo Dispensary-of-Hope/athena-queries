@@ -1,0 +1,20 @@
+SELECT DISTINCT
+  inv.productnamelong
+, priority
+, "sum"(total_in_stock) total_in_stock
+, "sum"(available_qty) available_qty
+, par_level.total_units par_level_units
+, CAST(("sum"(total_in_stock) / par_level.total_units) AS decimal(10, 4)) on_hand_percent_of_par_level
+FROM
+  (view_inventory_master inv
+LEFT JOIN (
+   SELECT DISTINCT
+     productnamelong
+   , "sum"(qty) total_units
+   FROM
+     view_donor_report
+   WHERE ((ship_date >= "date_add"('month', -6, current_timestamp)) AND (receive_date IS NULL))
+   GROUP BY  DISTINCT productnamelong
+)  par_level ON (inv.productnamelong = par_level.productnamelong))
+WHERE ((primary = 'yes') AND (inv.donor_id <> '702'))
+GROUP BY  DISTINCT inv.productnamelong, inv.priority, par_level.total_units
