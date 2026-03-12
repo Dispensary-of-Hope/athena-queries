@@ -1,0 +1,10 @@
+SELECT DISTINCT
+  product_id
+, productnamelong
+, "lpad"(sku, 11, '0') sku
+, "sum"(total_in_stock) total_in_stock
+FROM
+  (view_inventory_master inv
+LEFT JOIN products p ON (inv.product_id = "lpad"(p.sku, 11, '0')))
+WHERE ((total_in_stock > 0) AND (sku IS NULL))
+GROUP BY 1, 2, 3
