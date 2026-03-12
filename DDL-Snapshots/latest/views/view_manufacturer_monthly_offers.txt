@@ -1,0 +1,17 @@
+(
+   SELECT
+     TRY_CAST(TRY("date_format"("date_parse"(offer_date, '%m/%d/%Y'), '%Y-%m-%d %T')) AS timestamp) offer_date
+   , "count"(DISTINCT (CASE WHEN (offer_id = '99999999-9N') THEN mfg_offerdate WHEN (offer_id <> '99999999-9N') THEN offer_id END)) offers_total
+   FROM
+     (
+      SELECT
+        offer_date
+      , manufacturer
+      , offer_id
+      , "concat"(manufacturer, offer_date) mfg_offerdate
+      FROM
+        "database-prod"."manufacturer_offers"
+   ) 
+   GROUP BY 1
+   ORDER BY 1 DESC
+) 
