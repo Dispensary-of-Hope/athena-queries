@@ -1,5 +1,5 @@
 SELECT DISTINCT
-  x.target_list_product
+  x.target_list_product target_list_product
 , (available_bottles * packagesize) doses_offered
 , available_bottles units_offered
 , packagesize
