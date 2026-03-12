@@ -1,0 +1,44 @@
+WITH
+  monthly_snapshot AS (
+   SELECT
+     product_id
+   , TRY_CAST(min_exp_date AS timestamp) min_exp_date
+   , TRY_CAST(available_qty AS bigint) available_qty
+   , priority
+   , current_date_in_stock
+   , DATE_ADD('day', -1, DATE_ADD('month', 1, DATE_TRUNC('month', current_date_in_stock))) month_end
+   FROM
+     view_running_inventory
+   WHERE (available_qty > 0)
+) 
+, last_day_data AS (
+   SELECT *
+   FROM
+     monthly_snapshot
+   WHERE (current_date_in_stock = month_end)
+) 
+, categorized AS (
+   SELECT
+     *
+   , (CASE WHEN (min_exp_date < DATE_ADD('month', 3, month_end)) THEN '<3 months' WHEN (min_exp_date < DATE_ADD('month', 6, month_end)) THEN U&'3\20136 months' WHEN (min_exp_date BETWEEN DATE_ADD('month', 6, month_end) AND DATE_ADD('month', 12, month_end)) THEN U&'6\201312 months' ELSE '>12 months' END) expiry_category
+   FROM
+     last_day_data
+   WHERE (min_exp_date IS NOT NULL)
+) 
+, aggregated AS (
+   SELECT
+     month_end snapshot_date
+   , expiry_category
+   , SUM(available_qty) total_available
+   FROM
+     categorized
+   GROUP BY month_end, expiry_category
+) 
+SELECT
+  snapshot_date
+, expiry_category
+, ROUND(((SUM(total_available) * 1E2) / SUM(SUM(total_available)) OVER (PARTITION BY snapshot_date)), 2) percentage_of_inventory
+FROM
+  aggregated
+GROUP BY snapshot_date, expiry_category
+ORDER BY snapshot_date ASC, (CASE expiry_category WHEN '<3 months' THEN 1 WHEN U&'3\20136 months' THEN 2 WHEN U&'6\201312 months' THEN 3 ELSE 4 END) ASC
