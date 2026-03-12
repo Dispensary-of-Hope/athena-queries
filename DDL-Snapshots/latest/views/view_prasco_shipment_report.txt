@@ -1,0 +1,23 @@
+(
+   SELECT
+     ponumber po_number
+   , shipmentnumber shipment_id
+   , date_parse(orderdate, '%Y-%m-%dT%H:%i:%s') order_date
+   , date_parse(orderdate, '%Y-%m-%dT%H:%i:%s') ship_date
+   , shiptoname dispensary_name
+   , carrier
+   , trackingnumber tracking_number
+   , replace(productcode, '-', '') ndc
+   , productnamelong
+   , quantity qty
+   , lotnumber lot
+   , date_parse(lotexp, '%m/%d/%Y') expiration_date
+   , shiptoaddress1 shippingaddress
+   , shiptoaddress2 shippingaddress2
+   , shiptocity shippingcity
+   , shiptostate shippingstate
+   , shiptozip shippingpostalcode
+   FROM
+     (prasco_shipment
+   LEFT JOIN view_prasco_inventory_report pir ON (ndc = replace(productcode, '-', '')))
+) 
