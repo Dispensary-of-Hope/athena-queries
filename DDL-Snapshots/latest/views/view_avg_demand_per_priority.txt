@@ -1,0 +1,34 @@
+WITH
+  avg_sites_per_priority AS (
+   SELECT DISTINCT
+     ocid.product_id
+   , priority
+   , sum(total_units_distributed) total_units
+   , count(DISTINCT site_id) number_of_sites
+   FROM
+     (orders_with_companyid ocid
+   LEFT JOIN (
+      SELECT DISTINCT
+        product_id
+      , max(priority) priority
+      FROM
+        view_inventory_master
+      GROUP BY 1
+   )  inv ON (ocid.product_id = inv.product_id))
+   WHERE ((ship_date >= TIMESTAMP '2024-10-01 00:00:00.000') AND (NOT (site_id IN ('194', '10277'))))
+   GROUP BY 1, 2
+) 
+SELECT DISTINCT
+  priority
+, avg(total_units) avg_units
+, avg(number_of_sites) avg_sites
+, (avg(CAST(number_of_sites AS double)) / 310) percent_of_sites
+FROM
+  (avg_sites_per_priority a
+CROSS JOIN (
+   SELECT approx_percentile(number_of_sites, 5E-1) p25
+   FROM
+     avg_sites_per_priority
+)  t)
+WHERE (a.number_of_sites > t.p25)
+GROUP BY 1
