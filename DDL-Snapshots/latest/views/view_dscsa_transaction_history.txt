@@ -1,0 +1,68 @@
+(
+   SELECT DISTINCT
+     order_id
+   , buyer_name site_name
+   , company_id__c
+   , '1-TI' transaction_type
+   , order_date
+   , ship_date transaction_date
+   , ship_date ship_date
+   , drug_name
+   , product_id
+   , lot_id
+   , exp_date
+   , direct_purchase
+   , seller_name shipped_from_name
+   , seller_address shipped_from_address
+   , buyer_name shipped_to_name
+   , buyer_address shipped_to_address
+   , sum(total_units_distributed) quantity
+   FROM
+     view_dscsa_traceability_report
+   GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+) UNION ALL (
+   SELECT DISTINCT
+     order_id
+   , buyer_name site_name
+   , company_id__c
+   , '2-TH' transaction_type
+   , receive_date order_date
+   , receive_date transaction_date
+   , ship_date ship_date
+   , drug_name
+   , product_id
+   , lot_id
+   , exp_date
+   , direct_purchase
+   , donor_name shipped_from_name
+   , donor_shipping_address shipped_from_address
+   , seller_name shipped_to_name
+   , seller_address shipped_to_address
+   , sum(total_units_distributed) quantity
+   FROM
+     view_dscsa_traceability_report
+   GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+) UNION ALL (
+   SELECT DISTINCT
+     order_id
+   , buyer_name site_name
+   , company_id__c
+   , '3-TH' transaction_type
+   , null order_date
+   , null transaction_date
+   , ship_date ship_date
+   , drug_name
+   , product_id
+   , lot_id
+   , exp_date
+   , direct_purchase
+   , manufacturer shipped_from_name
+   , gs1_mfg_address shipped_from_address
+   , donor_name shipped_to_name
+   , donor_shipping_address shipped_to_address
+   , sum(total_units_distributed) quantity
+   FROM
+     view_dscsa_traceability_report
+   WHERE (direct_purchase = 'Yes')
+   GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
+) 
