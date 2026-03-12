@@ -1,0 +1,22 @@
+(
+   SELECT
+     oid.ship_date
+   , (CASE WHEN (MONTH(oid.ship_date) >= 7) THEN (YEAR(oid.ship_date) + 1) ELSE YEAR(oid.ship_date) END) fiscal_year
+   , "year"(oid.ship_date) year
+   , "month"(oid.ship_date) month
+   , oid.site_id
+   , "lower"(sf.name) dispensary_name
+   , sf.new_dispensing_entity__c
+   , sf.joined_network__c
+   , total_units
+   , insulin
+   , (CASE WHEN (insulin = 'True') THEN sum(CAST(oid.total_units AS integer)) END) insulin_units
+   , (CASE WHEN (insulin = 'False') THEN sum(CAST(oid.total_units AS integer)) END) non_insulin_units
+   , count(oid.product_id) insulin_lines
+   FROM
+     ("database-prod"."orders_historical_finale_date" oid
+   LEFT JOIN sf_account sf ON (sf.id__c = oid.site_id))
+   WHERE ((sf.id__c <> '') AND (account_record_type_text__c = 'Active Access Site') AND (oid.site_id <> '10277') AND (year(oid.ship_date) > 2021) AND (insulin <> ''))
+   GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+   ORDER BY 1 DESC
+) 
