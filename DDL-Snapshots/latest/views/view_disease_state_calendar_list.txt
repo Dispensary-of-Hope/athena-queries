@@ -1,0 +1,10 @@
+SELECT
+  month
+, observance
+, source
+, relevant_associations
+, key_messages
+, key_message_source
+, key_message_source_link
+FROM
+  disease_state_calendar_list
