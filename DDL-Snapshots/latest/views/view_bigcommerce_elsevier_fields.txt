@@ -1,0 +1,160 @@
+WITH
+  vbef AS (
+   SELECT DISTINCT
+     packagedescription
+   , max(epro.productnamelong) productnamelong
+   , drug_class
+   , mechanism_of_action
+   , ndc10
+   , pk.ndc11
+   , gtin12
+   , gtin14
+   , concat(CAST(innerpackagecount AS varchar), ' ', ipu.unitname) inner_package
+   , max(gs_form) gs_form
+   , array_join(array_agg(CAST(storageconcept AS varchar) ORDER BY storageconcept ASC), ' || ') storageconcept
+   , (CASE WHEN (wacpackageprice IS NULL) THEN round(unit_wac, 2) ELSE round(wacpackageprice, 2) END) unit_wac
+   , unit_of_measure
+   , ls.rx_otc_status
+   , ebgs.statusname
+   , awp.packageprice unit_awp
+   , waceffectivedate
+   FROM
+     (((((((((package pk
+   LEFT JOIN (
+      SELECT DISTINCT
+        productid
+      , array_join(array_agg(CAST(storageconcept AS varchar) ORDER BY storageconcept ASC), ' || ') storageconcept
+      FROM
+        (product_storage ps
+      LEFT JOIN storage s ON (ps.storageid = s.storageid))
+      GROUP BY 1
+   )  s ON (pk.productid = s.productid))
+   LEFT JOIN (
+      SELECT DISTINCT
+        productid
+      , gs_form
+      FROM
+        product_strength_route_form
+   )  psrf ON (pk.productid = psrf.productid))
+   LEFT JOIN product epro ON (pk.productid = epro.productid))
+   LEFT JOIN (
+      SELECT DISTINCT
+        legendstatusid
+      , statusname rx_otc_status
+      FROM
+        legend_status
+   )  ls ON (epro.legendstatusid = ls.legendstatusid))
+   LEFT JOIN brand_generic_status ebgs ON (epro.brandgenericstatusid = ebgs.brandgenericstatusid))
+   LEFT JOIN (
+      SELECT DISTINCT
+        ndc11
+      , drug_class
+      , mechanism_of_action
+      , max(packageprice) unit_wac
+      , unit_of_measure
+      FROM
+        view_elsevier_drugclass_convert
+      WHERE ((ndc11 IS NOT NULL) AND (ndc11 <> ''))
+      GROUP BY 1, 2, 3, 5
+   )  elsevier ON (pk.ndc11 = elsevier.ndc11))
+   LEFT JOIN inner_package_unit ipu ON (pk.innerpackageunitid = ipu.innerpackageunitid))
+   LEFT JOIN (
+      SELECT *
+      FROM
+        price_year
+      WHERE ((pricetypeid = '1') AND (enddate IS NULL))
+   )  awp ON (pk.packageid = awp.packageid))
+   LEFT JOIN (
+      SELECT DISTINCT
+        ndc_upc_hri
+      , TRY(CAST(date_parse(NULLIF(trim(BOTH FROM CAST(waceffectivedate AS varchar)), ''), '%Y%m%d') AS timestamp)) waceffectivedate
+      , TRY_CAST(wacpackageprice AS double) wacpackageprice
+      FROM
+        medispan_trg_file med
+      WHERE ((wacpackageprice IS NOT NULL) AND (wacpackageprice <> ''))
+   )  medispan_trg_data ON (pk.ndc11 = medispan_trg_data.ndc_upc_hri))
+   WHERE ((pk.ndc11 IS NOT NULL) AND (pk.ndc11 <> '') AND (offmarket IS NULL) AND (elsevier.drug_class IS NOT NULL) AND (elsevier.drug_class <> '') AND (gtin14 <> '') AND (unit_wac IS NOT NULL))
+   GROUP BY 1, 3, 4, 5, 6, 7, 8, 9, 12, 13, 14, 15, 16, 17
+) 
+, dupes AS (
+   SELECT *
+   FROM
+     (
+      SELECT
+        ndc11
+      , count(ndc11) count_of_ndc11
+      FROM
+        vbef
+      GROUP BY 1
+   )  dupes
+   WHERE (count_of_ndc11 > 1)
+) 
+, elsevier_data AS (
+   SELECT
+     vbef.ndc11
+   , packagedescription
+   , productnamelong
+   , drug_class
+   , mechanism_of_action
+   , ndc10
+   , gtin12
+   , gtin14
+   , inner_package
+   , gs_form
+   , storageconcept
+   , unit_wac
+   , unit_awp
+   , unit_of_measure
+   , rx_otc_status
+   , statusname
+   , waceffectivedate
+   FROM
+     (vbef
+   LEFT JOIN dupes ON (vbef.ndc11 = dupes.ndc11))
+   WHERE (dupes.ndc11 IS NULL)
+) 
+SELECT *
+FROM
+  elsevier_data
+UNION ALL SELECT DISTINCT
+  ndc_upc_hri ndc11
+, item_description packagedescription
+, concat(drug_name, ' ', strength, strength_unit_of_measure, ' ', routeofadministration, ' ', dosageform) productnamelong
+, drug_class
+, null mechanism_of_action
+, null ndc10
+, null gtin12
+, null gtin14
+, null inner_package
+, null gs_form
+, null storageconcept
+, TRY_CAST(wacpackageprice AS double) unit_wac
+, null unit_awp
+, null unit_of_measure
+, null rx_otc_status
+, null statusname
+, TRY(CAST(date_parse(NULLIF(trim(BOTH FROM CAST(waceffectivedate AS varchar)), ''), '%Y%m%d') AS timestamp)) waceffectivedate
+FROM
+  ((medispan_trg_file med
+LEFT JOIN (
+   SELECT DISTINCT
+     gpi_6_name
+   , max(drug_class) drug_class
+   FROM
+     (medispan_trg_file m
+   LEFT JOIN (
+      SELECT DISTINCT
+        ndc11
+      , drug_class
+      FROM
+        view_elsevier_drugclass_convert
+   )  dcc ON (m.ndc_upc_hri = dcc.ndc11))
+   WHERE ((drug_class IS NOT NULL) AND (drug_class <> ''))
+   GROUP BY 1
+)  medispan_to_elsevier_drug_class ON (med.gpi_6_name = medispan_to_elsevier_drug_class.gpi_6_name))
+LEFT JOIN (
+   SELECT DISTINCT ndc11
+   FROM
+     elsevier_data
+)  e ON (med.ndc_upc_hri = e.ndc11))
+WHERE ((ndc11 IS NULL) AND (wacpackageprice IS NOT NULL) AND (wacpackageprice <> ''))
