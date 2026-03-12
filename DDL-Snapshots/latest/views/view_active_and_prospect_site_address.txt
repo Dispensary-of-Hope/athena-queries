@@ -1,0 +1,14 @@
+SELECT
+  name
+, type
+, shippingcity
+, shippingstate
+, shippingpostalcode
+, "replace"(shippingstreet, '"', '') shippingstreet
+, "concat"("replace"(shippingstreet, '"', ''), ', ', shippingcity, ', ', shippingstate, ' ', shippingpostalcode) shippingaddress
+, account_record_type_text__c
+, new_dispensing_entity__c
+, id__c
+FROM
+  sf_account sf
+WHERE (((account_record_type_text__c LIKE '%Access Site%') AND (type IN ('Active', 'Prospect'))) AND (new_dispensing_entity__c <> ''))
