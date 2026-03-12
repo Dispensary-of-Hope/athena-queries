@@ -1,0 +1,34 @@
+WITH
+  distribution AS (
+   SELECT
+     year(date_add('month', 6, ship_date)) fiscal_year
+   , sum((total_units_distributed * unit_wac)) wac_distributed
+   FROM
+     orders_with_companyid
+   WHERE (ship_date >= TIMESTAMP '2022-07-01 00:00:00.000')
+   GROUP BY 1
+   ORDER BY 1 ASC
+) 
+, inv_wac AS (
+   SELECT DISTINCT
+     current_date_in_stock
+   , sum((unit_wac * total_in_stock)) wac_in_stock
+   FROM
+     view_running_inventory
+   WHERE (current_date_in_stock >= TIMESTAMP '2022-07-01 00:00:00.000')
+   GROUP BY 1
+) 
+, fiscal_inv AS (
+   SELECT
+     year(date_add('month', 6, current_date_in_stock)) fiscal_year
+   , avg(wac_in_stock) avg_wac_in_stock
+   FROM
+     inv_wac
+   GROUP BY 1
+) 
+SELECT DISTINCT
+  distribution.fiscal_year
+, (wac_distributed / avg_wac_in_stock) gross_inventory_turnover_ratio
+FROM
+  (distribution
+LEFT JOIN fiscal_inv ON (distribution.fiscal_year = fiscal_inv.fiscal_year))
