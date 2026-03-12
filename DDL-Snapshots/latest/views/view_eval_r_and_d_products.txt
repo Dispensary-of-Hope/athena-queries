@@ -1,0 +1,54 @@
+WITH
+  eval_r_and_d AS (
+   SELECT DISTINCT
+     min_day_in_stock
+   , inv.productnamelong
+   , inv.priority
+   , SUM(total_units_received) units_received
+   , SUM(total_units_distributed) units_distributed
+   , SUM(total_units_destroyed) units_destroyed
+   , number_of_days_in_stock
+   FROM
+     ((distribution_receiving_destruction drd
+   INNER JOIN (
+      SELECT DISTINCT
+        product_id
+      , productnamelong
+      , MAX(priority) priority
+      FROM
+        view_inventory_master
+      WHERE (priority = 'P4')
+      GROUP BY 1, 2
+   )  inv ON (drd.product_id = inv.product_id))
+   INNER JOIN (
+      SELECT DISTINCT
+        MIN(current_date_in_stock) min_day_in_stock
+      , COUNT(DISTINCT current_date_in_stock) number_of_days_in_stock
+      , productnamelong
+      , SUM(available_qty) available_qty
+      FROM
+        view_running_inventory
+      WHERE ((priority = 'P4') AND (available_qty > 0) AND (current_date_in_stock >= DATE_ADD('year', -2, current_date)))
+      GROUP BY 3
+   )  run_inv ON (inv.productnamelong = run_inv.productnamelong))
+   WHERE (day >= DATE_ADD('year', -2, current_date))
+   GROUP BY 1, 2, 3, 7
+) 
+SELECT
+  min_day_in_stock
+, productnamelong
+, priority
+, units_received
+, units_distributed
+, units_destroyed
+, number_of_days_in_stock
+, ROUND((CAST(units_distributed AS DOUBLE) / NULLIF(CAST(number_of_days_in_stock AS DOUBLE), 0)), 3) throughput_per_day
+, ROUND((CAST(units_distributed AS DOUBLE) / NULLIF(CAST(units_received AS DOUBLE), 0)), 3) turnover_ratio
+, ROUND((CAST(units_destroyed AS DOUBLE) / NULLIF(CAST(units_received AS DOUBLE), 0)), 3) loss_rate
+, (CASE WHEN (((CAST(units_distributed AS DOUBLE) / NULLIF(CAST(number_of_days_in_stock AS DOUBLE), 0)) < 2.5E-1) OR ((CAST(units_distributed AS DOUBLE) / NULLIF(CAST(units_received AS DOUBLE), 0)) < 2.5E-1) OR ((CAST(units_destroyed AS DOUBLE) / NULLIF(CAST(units_received AS DOUBLE), 0)) > 5E-1)) THEN 'Unsuccessful' WHEN (((CAST(units_distributed AS DOUBLE) / NULLIF(CAST(number_of_days_in_stock AS DOUBLE), 0)) BETWEEN 2.5E-1 AND 1) OR ((CAST(units_distributed AS DOUBLE) / NULLIF(CAST(units_received AS DOUBLE), 0)) BETWEEN 2.5E-1 AND 5E-1)) THEN 'Marginal' ELSE 'Successful' END) outcome
+, (CASE WHEN (((CAST(units_distributed AS DOUBLE) / NULLIF(CAST(number_of_days_in_stock AS DOUBLE), 0)) < 2.5E-1) OR ((CAST(units_distributed AS DOUBLE) / NULLIF(CAST(units_received AS DOUBLE), 0)) < 2.5E-1) OR ((CAST(units_destroyed AS DOUBLE) / NULLIF(CAST(units_received AS DOUBLE), 0)) > 5E-1)) THEN 'Unsuccessful' ELSE 'Successful' END) success_flag
+, trim(BOTH ';' FROM CONCAT((CASE WHEN ((CAST(units_distributed AS DOUBLE) / NULLIF(CAST(number_of_days_in_stock AS DOUBLE), 0)) < 2.5E-1) THEN 'low throughput (<0.25/day); ' ELSE '' END), (CASE WHEN ((CAST(units_distributed AS DOUBLE) / NULLIF(CAST(units_received AS DOUBLE), 0)) < 2.5E-1) THEN 'low turnover (<25% of received); ' ELSE '' END), (CASE WHEN ((CAST(units_destroyed AS DOUBLE) / NULLIF(CAST(units_received AS DOUBLE), 0)) > 5E-1) THEN 'high loss/expiry (>50%); ' ELSE '' END), (CASE WHEN (((CAST(units_distributed AS DOUBLE) / NULLIF(CAST(number_of_days_in_stock AS DOUBLE), 0)) BETWEEN 2.5E-1 AND 1) OR ((CAST(units_distributed AS DOUBLE) / NULLIF(CAST(units_received AS DOUBLE), 0)) BETWEEN 2.5E-1 AND 5E-1)) THEN 'marginal movement; ' ELSE '' END))) outcome_reason
+FROM
+  eval_r_and_d
+WHERE ((units_received >= 144) AND (number_of_days_in_stock >= 180) AND (units_received >= (units_distributed + units_destroyed)))
+ORDER BY outcome ASC, throughput_per_day DESC
