@@ -1,0 +1,69 @@
+WITH
+  drd2 AS (
+   SELECT
+     productnamelong
+   , min(day) min_ship_date
+   , max(day) max_ship_date
+   , sum(total_units_distributed) total_units_distributed
+   , sum(total_units_received) total_units_received
+   , count(DISTINCT day) number_of_days_ordered
+   , round((sum(CAST(total_units_distributed AS double)) / CAST(count(DISTINCT day) AS double)), 2) average_daily_usage
+   FROM
+     ((distribution_receiving_destruction drd
+   INNER JOIN (
+      SELECT DISTINCT
+        productnamelong
+      , product_id
+      FROM
+        view_inventory_master
+      WHERE ((priority = 'P4') AND (available_qty > 0))
+      GROUP BY 1, 2
+   )  inv1 ON (drd.product_id = inv1.product_id))
+   LEFT JOIN (
+      SELECT DISTINCT product_id
+      FROM
+        view_inventory_master
+      WHERE (donor_id = '702')
+   )  inv ON (drd.product_id = inv.product_id))
+   WHERE ((day >= TIMESTAMP '2024-09-30 00:00:00.000') AND ((inv.product_id IS NULL) OR (inv.product_id = '')))
+   GROUP BY 1
+   ORDER BY 1 ASC
+) 
+, vri2 AS (
+   SELECT DISTINCT
+     productnamelong
+   , sum((CASE WHEN (current_date_in_stock = TIMESTAMP '2024-10-01 00:00:00.000') THEN total_in_stock END)) begin_date_stock_count
+   , sum((CASE WHEN (current_date_in_stock = TIMESTAMP '2025-09-30 00:00:00.000') THEN total_in_stock END)) end_date_stock_count
+   , count(DISTINCT current_date_in_stock) number_of_days_in_stock
+   FROM
+     (
+      SELECT DISTINCT
+        productnamelong
+      , sum(available_qty) total_in_stock
+      , current_date_in_stock
+      FROM
+        view_running_inventory vri
+      WHERE ((current_date_in_stock >= TIMESTAMP '2024-10-01 00:00:00.000') AND (donor_id <> '702'))
+      GROUP BY 1, 3
+      ORDER BY 1 ASC
+   ) 
+   WHERE (total_in_stock > 0)
+   GROUP BY 1
+) 
+SELECT DISTINCT
+  drd2.productnamelong
+, min_ship_date
+, max_ship_date
+, (max(CAST(total_units_distributed AS double)) / max(CAST(number_of_days_in_stock AS double))) daily_throughput
+, round(((max(CAST(total_units_distributed AS double)) / max(CAST(number_of_days_in_stock AS double))) * 261), 0) annual_projection
+, (round(((max(CAST(total_units_distributed AS double)) / max(CAST(number_of_days_in_stock AS double))) * 261), 0) * 1.2E0) annual_projection_with_buffer
+, begin_date_stock_count
+, end_date_stock_count
+, total_units_distributed
+, total_units_received
+, (CASE WHEN (begin_date_stock_count IS NULL) THEN total_units_received ELSE (begin_date_stock_count + total_units_received) END) total_stock
+, number_of_days_in_stock
+FROM
+  (drd2
+LEFT JOIN vri2 ON (drd2.productnamelong = vri2.productnamelong))
+GROUP BY 1, 2, 3, 7, 8, 9, 10, 12
