@@ -1,0 +1,36 @@
+WITH
+  base_data AS (
+   SELECT
+     current_date_in_stock
+   , date_diff('day', current_date_in_stock, min_exp_date) days_until_expiration
+   , sum(available_qty) available_qty
+   , count(DISTINCT product_id) number_of_ndcs
+   FROM
+     (view_running_inventory run
+   INNER JOIN (
+      SELECT DISTINCT MAX(current_date_in_stock) OVER (PARTITION BY DATE_TRUNC('month', current_date_in_stock)) month_end
+      FROM
+        view_running_inventory
+   )  month_end ON (run.current_date_in_stock = month_end.month_end))
+   WHERE ((min_exp_date IS NOT NULL) AND (available_qty <> 0))
+   GROUP BY 1, 2
+) 
+, bucketed AS (
+   SELECT
+     current_date_in_stock
+   , (CASE WHEN (days_until_expiration < 90) THEN '< 3 months' WHEN (days_until_expiration < 180) THEN '3-6 months' WHEN (days_until_expiration < 365) THEN '6-12 months' WHEN (days_until_expiration < 730) THEN '12-24 months' ELSE '> 24 months' END) expiration_range
+   , available_qty
+   , number_of_ndcs
+   FROM
+     base_data
+) 
+SELECT
+  current_date_in_stock
+, expiration_range
+, SUM(available_qty) available_qty
+, SUM(number_of_ndcs) number_of_ndcs
+, ROUND(((1E2 * SUM(available_qty)) / SUM(SUM(available_qty)) OVER (PARTITION BY current_date_in_stock)), 2) pct_of_total_qty
+FROM
+  bucketed
+GROUP BY current_date_in_stock, expiration_range
+ORDER BY current_date_in_stock ASC, expiration_range ASC
