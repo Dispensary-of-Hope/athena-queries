@@ -1,0 +1,57 @@
+SELECT
+  inv.productnamelong
+, inv.min_exp_date
+, inv.product_id
+, inv.priority
+, inv.packagesize
+, (CASE WHEN (inv.product_id = '00245007111') THEN '100 ea' ELSE inv.unit_of_measure END) unit_of_measure
+, (CASE WHEN ((inv.drug_class IS NULL) OR (inv.drug_class = '')) THEN dcc.main_drug_class ELSE inv.drug_class END) drug_class
+, (CASE WHEN (inv.productnamelong = 'Dimethyl Fumarate 240mg Delayed-Release Capsule') THEN 'Immunomodulating Agents' WHEN (inv.productnamelong LIKE 'Midodrine%') THEN 'Cardiac Therapy ' WHEN (inv.productnamelong = 'Calendula First Aid Topical Gel') THEN 'Vitamin and Mineral Supplements' WHEN ((inv.therapeutic_class IS NULL) OR (inv.therapeutic_class = '')) THEN dcc.therapeutic_class ELSE inv.therapeutic_class END) therapeutic_class
+, inv.current_date_in_stock
+, max_ship_qty
+, (CASE WHEN (bigcommerce_max_qty = '0') THEN 'TRUE' ELSE 'FALSE' END) hidden_in_eHope
+, (CASE WHEN (donor_id = '702') THEN 'TRUE' ELSE 'FALSE' END) purchased_product
+, sales_velocity
+, sales_last_7_days
+, sales_last_30_days
+, "sum"(inv.available_qty) quantity
+FROM
+  ((((view_inventory_master inv
+LEFT JOIN (
+   SELECT DISTINCT
+     productnamelong
+   , max(main_drug_class) main_drug_class
+   , max(therapeutic_class) therapeutic_class
+   FROM
+     view_elsevier_drugclass_convert
+   WHERE ((productnamelong IS NOT NULL) AND ((therapeutic_class IS NOT NULL) OR (therapeutic_class <> '')) AND ((main_drug_class IS NOT NULL) OR (main_drug_class <> '')))
+   GROUP BY 1
+)  dcc ON (inv.productnamelong = dcc.productnamelong))
+LEFT JOIN (
+   SELECT DISTINCT
+     ndc11
+   , max_ship_qty
+   FROM
+     dynamo_tl_allocation_updates
+)  dyn ON (inv.product_id = dyn.ndc11))
+LEFT JOIN (
+   SELECT
+     REPLACE(ndc, '-') product_id
+   , bigcommerce_max_qty
+   FROM
+     bigcommerce_max_qty
+   WHERE (bigcommerce_max_qty = '0')
+)  bc ON (inv.product_id = bc.product_id))
+LEFT JOIN (
+   SELECT
+     product_id
+   , sum((CASE WHEN (ship_date >= date_add('day', -7, current_date)) THEN total_units_distributed ELSE 0 END)) sales_last_7_days
+   , sum((CASE WHEN (ship_date >= date_add('day', -30, current_date)) THEN total_units_distributed ELSE 0 END)) sales_last_30_days
+   , (sum((CASE WHEN (ship_date >= date_add('day', -30, current_date)) THEN total_units_distributed ELSE 0 END)) / 3E1) sales_velocity
+   FROM
+     orders_with_companyid
+   WHERE (NOT (site_id IN ('194', '10277')))
+   GROUP BY product_id
+)  fsv ON (inv.product_id = fsv.product_id))
+WHERE ((NOT (inv.product_id IN ('', '00000000000', '99999999999', '59467067901'))) AND (inv.available_qty > 0))
+GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
