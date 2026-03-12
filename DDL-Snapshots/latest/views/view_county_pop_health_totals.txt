@@ -1,0 +1,23 @@
+SELECT DISTINCT
+  county_state
+, state
+, "max"(total_population) total_population
+, "max"(social_vulnerability_index) social_vulnerability_index
+, ("max"(prevalence_copd) * "max"(total_population)) prevalence_copd
+, ("max"(prevalence_asthma) * "max"(total_population)) prevalence_asthma
+, ("max"(prevalence_depression) * "max"(total_population)) prevalence_depression
+, ("max"(prevalence_diabetes) * "max"(total_population)) prevalence_diabetes
+, ("max"(prevalence_high_blood_pressure) * "max"(total_population)) prevalence_high_blood_pressure
+, ("max"(prevalence_high_cholesterol) * "max"(total_population)) prevalence_high_cholesterol
+, "max"(estimated_total_doh_eligible_population) estimated_total_doh_eligible_population
+, ("max"(hispanic_pe) * "max"(total_population)) hispanic_pe
+, ("max"(nh_white_alone_pe) * "max"(total_population)) nh_white_alone_pe
+, ("max"(nh_black_alone_pe) * "max"(total_population)) nh_black_alone_pe
+, "max"(median_age) median_age
+, ("max"(broadband_pe) * "max"(total_population)) broadband_pe
+, ("max"(eng_lvw_pe) * "max"(total_population)) eng_lvw_pe
+, ("max"(rural_pop_pe) * "max"(total_population)) rural_pop_pe
+FROM
+  view_acs_pop_facility_data
+WHERE (county_state IS NOT NULL)
+GROUP BY 1, 2
