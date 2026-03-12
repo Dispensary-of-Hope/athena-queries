@@ -1,0 +1,33 @@
+SELECT DISTINCT
+  company_id__c
+, name site_name
+, uniquepatients
+, fills
+, ocid.site_id
+, "date_trunc"('quarter', ship_date) ship_quarter
+, ocid.product_id
+, drug_name
+, "sum"(TRY_CAST(total_units_distributed AS bigint)) total_units
+, "round"(("sum"(TRY_CAST(total_units_distributed AS double)) / NULLIF(fills, 0)), 2) proportion_of_units_to_fills
+, "round"(("sum"(TRY_CAST(total_units_distributed AS double)) / NULLIF(uniquepatients, 0)), 2) proportion_of_units_to_unique_patients
+FROM
+  ((orders_with_companyid ocid
+LEFT JOIN (
+   SELECT DISTINCT
+     name
+   , id__c
+   FROM
+     sf_account
+)  sf ON (ocid.site_id = sf.id__c))
+LEFT JOIN (
+   SELECT DISTINCT
+     site_id
+   , uniquepatients
+   , fills
+   , "date_trunc"('month', quarter_end_date) quarter_end_date
+   FROM
+     view_quarterly_numbers
+)  qn ON (("date_trunc"('quarter', ship_date) = "date_trunc"('quarter', quarter_end_date)) AND (ocid.site_id = qn.site_id)))
+WHERE (((ocid.product_id IN ('00002771559', '00002751001', '00002879959', '00002879759', '00002871501', '00002831501', '00002821501', '00002143380', '00002143480', '00002143480', '00002223680', '00002318280')) AND (NOT (ocid.site_id IN ('194', '10277')))) AND (ship_date >= TIMESTAMP '2022-01-01 00:00:00.000'))
+GROUP BY 1, 2, 3, 4, 5, 6, 7, 8
+ORDER BY 3 ASC, 2 ASC, 4 ASC
