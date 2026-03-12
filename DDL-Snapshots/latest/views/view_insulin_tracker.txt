@@ -1,0 +1,49 @@
+(
+   SELECT DISTINCT
+     "date_trunc"('month', dt.day) month
+   , it.company_id__c
+   , it.dispensary_name
+   , it.drug_name
+   , it.total_monthly_units
+   FROM
+     ((
+      SELECT DISTINCT
+        ocid.company_id__c
+      , sf.name dispensary_name
+      , (CASE WHEN (drug_name LIKE '%(ReliOn)%') THEN "trim"("replace"(drug_name, '(ReliOn)', '')) WHEN (drug_name LIKE 'Humulin R 100units/mL Solution for Injection') THEN "trim"("replace"(drug_name, 'Humulin R 100units/mL Solution for Injection', 'Humulin R 100units/ml Solution for Injection')) ELSE "trim"(drug_name) END) drug_name
+      , "date_trunc"('month', ship_date) ship_month
+      , "sum"(TRY_CAST(total_units_distributed AS double)) total_monthly_units
+      FROM
+        (orders_with_companyid ocid
+      LEFT JOIN sf_account sf ON (sf.id__c = ocid.site_id))
+      WHERE ((ocid.insulin IN ('True', 'true', 'TRUE')) AND (NOT (ocid.company_id__c LIKE '')))
+      GROUP BY 1, 2, 3, 4
+   )  it
+   LEFT JOIN date_table dt ON (it.ship_month = "date_trunc"('month', dt.day)))
+   WHERE ((dt.day >= TIMESTAMP '2019-01-01 00:00:00.000') AND (dt.day <= current_date))
+   ORDER BY month ASC
+) UNION ALL (
+   SELECT DISTINCT
+     "date_trunc"('month', dt.day) month
+   , it.company_id__c
+   , it.dispensary_name
+   , it.drug_name
+   , 0 total_monthly_units
+   FROM
+     ((
+      SELECT DISTINCT
+        ocid.company_id__c
+      , sf.name dispensary_name
+      , (CASE WHEN (drug_name LIKE '%(ReliOn)%') THEN "trim"("replace"(drug_name, '(ReliOn)', '')) WHEN (drug_name LIKE 'Humulin R 100units/mL Solution for Injection') THEN "trim"("replace"(drug_name, 'Humulin R 100units/mL Solution for Injection', 'Humulin R 100units/ml Solution for Injection')) ELSE "trim"(drug_name) END) drug_name
+      , "date_trunc"('month', ship_date) ship_month
+      , "sum"(TRY_CAST(total_units_distributed AS double)) total_monthly_units
+      FROM
+        (orders_with_companyid ocid
+      LEFT JOIN sf_account sf ON (sf.id__c = ocid.site_id))
+      WHERE ((ocid.insulin IN ('True', 'true', 'TRUE')) AND (NOT (ocid.company_id__c LIKE '')))
+      GROUP BY 1, 2, 3, 4
+   )  it
+   CROSS JOIN date_table dt)
+   WHERE ((dt.day >= TIMESTAMP '2019-01-01 00:00:00.000') AND (dt.day <= current_date))
+   ORDER BY month ASC
+) 
