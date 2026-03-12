@@ -1,0 +1,32 @@
+WITH
+  quarterly_data AS (
+   SELECT
+     date_add('month', 6, date_trunc('quarter', date_add('month', -6, receive_date))) receive_date
+   , (CASE WHEN (month(receive_date) IN (7, 8, 9)) THEN 'Q1' WHEN (month(receive_date) IN (10, 11, 12)) THEN 'Q2' WHEN (month(receive_date) IN (1, 2, 3)) THEN 'Q3' WHEN (month(receive_date) IN (4, 5, 6)) THEN 'Q4' END) quarter
+   , SUM(CAST(total_units AS DOUBLE)) total_units_received
+   , SUM((CAST(total_units AS DOUBLE) * packagesize)) total_doses
+   FROM
+     (orders_historical_finale_timestamp ohft
+   LEFT JOIN (
+      SELECT DISTINCT
+        product_id
+      , priority
+      , packagesize
+      FROM
+        view_inventory_master
+      WHERE (priority IN ('P1', 'P2', 'P3', 'P4'))
+   )  inv ON (ohft.product_id = inv.product_id))
+   WHERE ((receive_date IS NOT NULL) AND ((ohft.order_id IN ('20241015-1E', '20241014-1E', '20241021-1P', '20241105-1P', '20250108-1E', '20250110-1P', '20250128-1T', '20250220-2T', '20250313-2T', '20241101-1E', '20241206-1E', '20240121-1E', '20250523-1T', '20250505-1T', '20250516-1T', '20250121-1E')) OR (ohft.order_id LIKE '%T')))
+   GROUP BY 1, 2
+) 
+SELECT
+  curr.receive_date
+, curr.quarter
+, curr.total_units_received
+, prev.total_units_received previous_quarter_units
+, curr.total_doses
+, prev.total_doses previous_quarter_doses
+FROM
+  (quarterly_data curr
+LEFT JOIN quarterly_data prev ON (curr.receive_date = date_add('quarter', 1, prev.receive_date)))
+ORDER BY curr.receive_date ASC
