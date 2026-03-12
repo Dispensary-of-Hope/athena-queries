@@ -1,0 +1,45 @@
+SELECT
+  inv.productnamelong
+, inv.min_exp_date
+, inv.product_id
+, inv.packagesize
+, (CASE WHEN (inv.product_id = '00245007111') THEN '100 ea' ELSE inv.unit_of_measure END) unit_of_measure
+, (CASE WHEN ((inv.drug_class IS NULL) OR (inv.drug_class = '')) THEN dcc.main_drug_class ELSE inv.drug_class END) drug_class
+, (CASE WHEN (inv.productnamelong = 'Dimethyl Fumarate 240mg Delayed-Release Capsule') THEN 'Immunomodulating Agents' WHEN (inv.productnamelong LIKE 'Midodrine%') THEN 'Cardiac Therapy ' WHEN (inv.productnamelong = 'Calendula First Aid Topical Gel') THEN 'Vitamin and Mineral Supplements' WHEN ((inv.therapeutic_class IS NULL) OR (inv.therapeutic_class = '')) THEN dcc.therapeutic_class ELSE inv.therapeutic_class END) therapeutic_class
+, inv.current_date_in_stock
+, max_ship_qty
+, major_class iqvia_major_class
+, minor_class iqvia_minor_class
+, "sum"(inv.available_qty) quantity
+FROM
+  ((((view_inventory_master inv
+LEFT JOIN (
+   SELECT DISTINCT
+     productnamelong
+   , max(main_drug_class) main_drug_class
+   , max(therapeutic_class) therapeutic_class
+   FROM
+     view_elsevier_drugclass_convert
+   WHERE ((productnamelong IS NOT NULL) AND ((therapeutic_class IS NOT NULL) OR (therapeutic_class <> '')) AND ((main_drug_class IS NOT NULL) OR (main_drug_class <> '')))
+   GROUP BY 1
+)  dcc ON (inv.productnamelong = dcc.productnamelong))
+LEFT JOIN (
+   SELECT *
+   FROM
+     iqvia_drug_class
+)  iq ON (inv.product_id = iq.product_id))
+LEFT JOIN (
+   SELECT DISTINCT
+     ndc11
+   , max_ship_qty
+   FROM
+     dynamo_tl_allocation_updates
+)  dyn ON (inv.product_id = dyn.ndc11))
+LEFT JOIN (
+   SELECT REPLACE(ndc, '-') product_id
+   FROM
+     bigcommerce_max_qty
+   WHERE (bigcommerce_max_qty = '0')
+)  bc ON (inv.product_id = bc.product_id))
+WHERE ((NOT (inv.product_id IN ('', '00000000000', '99999999999', '59467067901'))) AND (bc.product_id IS NULL) AND (inv.available_qty > 0) AND (NOT (inv.donor_id IN ('702', '24354'))) AND (max_ship_qty IS NOT NULL))
+GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
