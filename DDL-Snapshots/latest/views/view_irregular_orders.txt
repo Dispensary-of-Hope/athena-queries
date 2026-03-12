@@ -1,0 +1,36 @@
+SELECT DISTINCT
+  vim.productnamelong drug_name
+, vim.total_in_stock total_in_stock
+, vim.primary
+, vim.priority
+, si.site_name dispensary_name
+, "sum"(owc.order_qty) order_qty
+, owc.order_date
+, owc.ship_date
+, "sum"(owc.total_units_distributed) ship_qty
+, owc.status
+, (TRY_CAST(vim.total_in_stock AS decimal(10, 3)) / TRY_CAST(par_level.total_units AS decimal(10, 3))) on_hand_prcnt_of_par
+FROM
+  ((((
+   SELECT DISTINCT
+     productnamelong
+   , "sum"(total_in_stock) total_in_stock
+   , primary
+   , priority
+   FROM
+     view_inventory_master
+   GROUP BY 1, 3, 4
+)  vim
+LEFT JOIN orders_with_companyid owc ON (vim.productnamelong = owc.drug_name))
+LEFT JOIN site_info si ON (owc.site_id = si.site_id))
+LEFT JOIN (
+   SELECT DISTINCT
+     productnamelong
+   , "sum"(qty) total_units
+   FROM
+     view_donor_report
+   WHERE ((ship_date >= "date_add"('month', -6, current_timestamp)) AND (receive_date IS NULL))
+   GROUP BY productnamelong
+)  par_level ON (vim.productnamelong = par_level.productnamelong))
+WHERE (((owc.product_id <> '') AND (owc.product_id IS NOT NULL)) AND (NOT (owc.site_id IN ('194', '10277'))))
+GROUP BY 1, 2, 3, 4, 5, 7, 8, 10, 11
