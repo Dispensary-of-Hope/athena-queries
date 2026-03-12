@@ -1,0 +1,19 @@
+(
+   SELECT
+     (CASE WHEN (MONTH(CAST(date_parse(invoice_date, '%m/%d/%Y') AS timestamp)) >= 7) THEN (YEAR(CAST(date_parse(invoice_date, '%m/%d/%Y') AS timestamp)) + 1) ELSE YEAR(CAST(date_parse(invoice_date, '%m/%d/%Y') AS timestamp)) END) fiscal_year
+   , category
+   , (SUM(CAST(replace(replace(IF((total_price = 'N/A'), '0', total_price), '$', ''), ',', '') AS decimal(10, 3))) / AVG(insulin_units)) unit_rate
+   FROM
+     ("database-prod"."cardinal_monthly_data" cmd
+   LEFT JOIN (
+      SELECT DISTINCT
+        (CASE WHEN (MONTH(oid.ship_date) >= 7) THEN (YEAR(oid.ship_date) + 1) ELSE YEAR(oid.ship_date) END) fiscal_year
+      , SUM(CAST(total_units AS integer)) insulin_units
+      FROM
+        "database-prod"."orders_historical_finale_date" oid
+      WHERE (oid.insulin = 'True')
+      GROUP BY 1
+      ORDER BY 1 DESC
+   )  ins ON (ins.fiscal_year = (CASE WHEN (MONTH(CAST(date_parse(invoice_date, '%m/%d/%Y') AS timestamp)) >= 7) THEN (YEAR(CAST(date_parse(invoice_date, '%m/%d/%Y') AS timestamp)) + 1) ELSE YEAR(CAST(date_parse(invoice_date, '%m/%d/%Y') AS timestamp)) END)))
+   GROUP BY 1, 2
+) 
