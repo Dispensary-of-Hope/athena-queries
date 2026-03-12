@@ -1,0 +1,35 @@
+SELECT
+  ndc11
+, manual
+, productnamelong
+, drug_class
+, therapeutic_class
+, packagesize
+, unit_wac
+, total_in_stock
+, available_qty
+, PO_units
+FROM
+  ((
+   SELECT DISTINCT
+     "replace"(ndc11, '-', '') ndc11
+   , manual
+   , "sum"(quantity_on_hand_units) total_in_stock
+   , "sum"(available_to_promise_units) available_qty
+   , "sum"(purchase_order_quantity) PO_units
+   FROM
+     finale_inventory
+   WHERE ((manual IS NOT NULL) AND (manual <> ''))
+   GROUP BY 1, 2
+)  fin
+LEFT JOIN (
+   SELECT DISTINCT
+     productnamelong
+   , drug_class
+   , therapeutic_class
+   , packagesize
+   , unit_wac
+   , product_id
+   FROM
+     view_inventory_master
+)  inv ON (fin.ndc11 = inv.product_id))
