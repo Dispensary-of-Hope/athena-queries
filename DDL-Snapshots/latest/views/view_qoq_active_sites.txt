@@ -1,0 +1,31 @@
+SELECT
+  quarter
+, "count"(site_name) number_of_active_sites
+FROM
+  (
+   SELECT
+     quarter
+   , site_name
+   , retire_date
+   , joined_date
+   , (CASE WHEN ((retire_date IS NULL) AND (quarter > joined_date)) THEN 'Active' WHEN ((quarter > joined_date) AND (quarter < retire_date)) THEN 'Active' WHEN ((quarter > retire_date) OR (quarter < joined_date)) THEN 'Retired' WHEN ((retire_date IS NULL) AND (joined_date IS NULL)) THEN 'Retired' END) active_status
+   FROM
+     (
+      SELECT DISTINCT
+        site_name
+      , retire_date
+      , joined_date
+      , quarter
+      FROM
+        (view_retire_join_date
+      CROSS JOIN (
+         SELECT DISTINCT "date_trunc"('quarter', day) quarter
+         FROM
+           date_table dt
+         WHERE ((day >= "date_add"('day', -990, "date_trunc"('quarter', current_date))) AND (day <= current_date))
+         ORDER BY 1 ASC
+      ) )
+   ) 
+) 
+WHERE (active_status = 'Active')
+GROUP BY 1
