@@ -1,0 +1,11 @@
+SELECT DISTINCT
+  county_state
+, "count"(DISTINCT site_id) number_of_doh_sites
+, "count"(DISTINCT health_system) number_of_health_systems
+, "max"(estimated_total_doh_eligible_population) total_eligible_population
+, "sum"(estimated_annual_up) estimated_annual_up
+, "sum"(total_fills) annual_fills
+, "max"(total_percent_uninsured_below_300_fpl) percent_uninsured_below_300_fpl
+FROM
+  view_county_site_crosswalk
+GROUP BY 1
