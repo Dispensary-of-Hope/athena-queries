@@ -1,0 +1,59 @@
+SELECT DISTINCT
+  company_id__c
+, name site_name
+, uniquepatients
+, fills
+, ocid.site_id
+, avg_units_12_months
+, avg_units_overall
+, "date_trunc"('month', ship_date) ship_month
+, ocid.product_id
+, drug_name
+, shippingstate
+, concat(shippingcity, ', ', shippingstate, ' ', shippingpostalcode) city_state_zip
+, "sum"(TRY_CAST(total_units_distributed AS bigint)) total_units
+FROM
+  ((((orders_with_companyid ocid
+LEFT JOIN (
+   SELECT DISTINCT
+     name
+   , id__c
+   , shippingstate
+   , shippingcity
+   , shippingpostalcode
+   FROM
+     sf_account
+)  sf ON (ocid.site_id = sf.id__c))
+LEFT JOIN (
+   SELECT DISTINCT
+     site_id
+   , product_id
+   , ("sum"(total_units_distributed) / "count"(DISTINCT "date_trunc"('month', ship_date))) avg_units_12_months
+   FROM
+     orders_with_companyid
+   WHERE ((product_id IN ('00002771559', '00002751001', '00002879959', '00002879759', '00002871501', '00002831501', '00002821501', '00002143380', '00002143480', '00002143480', '00002223680', '00002318280')) AND ("date_trunc"('month', ship_date) BETWEEN "date_trunc"('month', "date_add"('month', -12, current_date)) AND "date_trunc"('month', current_date)))
+   GROUP BY site_id, product_id
+   ORDER BY site_id ASC, product_id ASC
+)  avg_units ON ((ocid.site_id = avg_units.site_id) AND (ocid.product_id = avg_units.product_id)))
+LEFT JOIN (
+   SELECT DISTINCT
+     product_id
+   , ("sum"(total_units_distributed) / "count"(DISTINCT "date_trunc"('month', ship_date))) avg_units_overall
+   FROM
+     orders_with_companyid
+   WHERE ((product_id IN ('00002771559', '00002751001', '00002879959', '00002879759', '00002871501', '00002831501', '00002821501', '00002143380', '00002143480', '00002143480', '00002223680', '00002318280')) AND (ship_date >= TIMESTAMP '2022-01-01 00:00:00.000'))
+   GROUP BY 1
+   ORDER BY 1 ASC
+)  avg_units_overall ON (ocid.product_id = avg_units_overall.product_id))
+LEFT JOIN (
+   SELECT DISTINCT
+     site_id
+   , uniquepatients
+   , fills
+   , "date_trunc"('month', quarter_end_date) quarter_end_date
+   FROM
+     view_quarterly_numbers
+)  qn ON (("date_trunc"('quarter', ship_date) = "date_trunc"('quarter', quarter_end_date)) AND (ocid.site_id = qn.site_id)))
+WHERE (((ocid.product_id IN ('00002771559', '00002751001', '00002879959', '00002879759', '00002871501', '00002831501', '00002821501', '00002143380', '00002143480', '00002143480', '00002223680', '00002318280')) AND (NOT (ocid.site_id IN ('194', '10277')))) AND (ship_date >= TIMESTAMP '2020-01-01 00:00:00.000'))
+GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
+ORDER BY 3 ASC, 2 ASC, 4 ASC
