@@ -1,0 +1,61 @@
+(
+   SELECT
+     sfa.site_name
+   , null fills_since_inception
+   , null sum_uniquepatients_since_inception
+   , "sum"(qn.fills) fills_first_year
+   , "sum"(CAST(qn.uniquepatients AS decimal(10, 2))) sum_uniquepatients_first_year
+   , "count"(DISTINCT qn.quarter_end_date) count_quarter_end_date
+   , null day
+   , qn2.first_qn_reporting_day
+   , shippingstate
+   FROM
+     ((view_quarterly_numbers qn
+   LEFT JOIN (
+      SELECT DISTINCT
+        name site_name
+      , shippingstate
+      , "split_part"(site_id_formatted__c, ' ', 2) site_id
+      FROM
+        sf_account
+   )  sfa ON (qn.site_id = sfa.site_id))
+   LEFT JOIN (
+      SELECT
+        site_name
+      , (CASE WHEN ("min"(dt.day) >= TIMESTAMP '2015-01-01 00:00:00.000') THEN "min"(dt.day) ELSE TIMESTAMP '2015-01-01 00:00:00.000' END) first_qn_reporting_day
+      FROM
+        ((view_quarterly_numbers qn
+      INNER JOIN date_table dt ON (qn.quarter_end_date = dt.day))
+      LEFT JOIN (
+         SELECT DISTINCT
+           sfa.name site_name
+         , "split_part"(sfa.site_id_formatted__c, ' ', 2) site_id
+         FROM
+           sf_account sfa
+      )  sf ON (qn.site_id = sf.site_id))
+      GROUP BY 1
+   )  qn2 ON (sfa.site_name = qn2.site_name))
+   WHERE ((qn.quarter_end_date <= "date_add"('day', 365, qn2.first_qn_reporting_day)) AND (qn.quarter_end_date >= TIMESTAMP '2015-01-01 00:00:00.000'))
+   GROUP BY 1, 2, 3, 7, 8, 9
+) UNION ALL SELECT
+  site_name
+, "sum"(qn.fills) fills_since_inception
+, "sum"(CAST(qn.uniquepatients AS decimal(10, 2))) sum_uniquepatients_since_inception
+, null fills_first_year
+, null sum_uniquepatients_first_year
+, "count"(DISTINCT qn.quarter_end_date) count_quarter_end_date
+, "min"(dt.day) day
+, null first_qn_reporting_day
+, shippingstate
+FROM
+  ((view_quarterly_numbers qn
+INNER JOIN date_table dt ON (qn.quarter_end_date = dt.day))
+LEFT JOIN (
+   SELECT DISTINCT
+     sfa.name site_name
+   , shippingstate
+   , "split_part"(sfa.site_id_formatted__c, ' ', 2) site_id
+   FROM
+     sf_account sfa
+)  sf ON (qn.site_id = sf.site_id))
+GROUP BY 1, 4, 5, 8, 9
