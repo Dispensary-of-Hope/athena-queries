@@ -1,0 +1,37 @@
+SELECT DISTINCT
+  dscl.month
+, dscd.observance
+, target_list_product
+, name mfg_name
+FROM
+  ((disease_state_calendar_drugs dscd
+LEFT JOIN (
+   SELECT DISTINCT
+     target_list_product
+   , name
+   FROM
+     ((orders_historical_finale_timestamp ohft
+   LEFT JOIN (
+      SELECT DISTINCT
+        name
+      , donor_id__c
+      FROM
+        sf_account
+      WHERE ((donor_id__c IS NOT NULL) AND (donor_id__c <> ''))
+   )  sf ON (ohft.donor_id = sf.donor_id__c))
+   LEFT JOIN (
+      SELECT DISTINCT
+        target_list_product
+      , ndc
+      FROM
+        iqvia_target_primary
+   )  iq ON (ohft.product_id = iq.ndc))
+   WHERE (((receive_date > "date_add"('year', -2, current_date)) AND (name IS NOT NULL)) AND (NOT (target_list_product IN ('None', 'null'))))
+)  meds_received ON (dscd.productnamelong = meds_received.target_list_product))
+LEFT JOIN (
+   SELECT DISTINCT
+     month
+   , observance
+   FROM
+     view_disease_state_calendar_list
+)  dscl ON (dscd.observance = dscl.observance))
