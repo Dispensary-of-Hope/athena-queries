@@ -1,0 +1,38 @@
+(
+   SELECT
+     qn.fills
+   , qn.encounters
+   , qn.uniquepatients
+   , qn.quarter
+   , qn.year
+   , sf.name site
+   , (CASE WHEN (qn.siteid = '11115') THEN '11600' WHEN (qn.siteid = '10499') THEN '11509' WHEN (qn.siteid = '10482') THEN '11450' ELSE qn.siteid END) site_id
+   , TRY_CAST(qn.quarter_end_date AS timestamp) quarter_end_date
+   , dt.day
+   , (CASE WHEN (sf.company_id__c = '1697609') THEN '7169801' WHEN (sf.company_id__c = '170856') THEN '3417547' WHEN (sf.company_id__c = '45268') THEN '3608367' ELSE sf.company_id__c END) company_id
+   , concat(concat(sfu.firstname, ' '), sfu.lastname) account_manager
+   FROM
+     (((quarterly_numbers_aurora qn
+   INNER JOIN date_table dt ON (TRY_CAST(qn.quarter_end_date AS timestamp) = dt.day))
+   LEFT JOIN sf_account sf ON ((CASE WHEN (qn.siteid = '11115') THEN '11600' WHEN (qn.siteid = '10499') THEN '11509' WHEN (qn.siteid = '10482') THEN '11450' ELSE qn.siteid END) = sf.id__c))
+   LEFT JOIN sf_user sfu ON (sfu.id = sf.ownerid))
+) UNION ALL (
+   SELECT DISTINCT
+     fills
+   , encounters
+   , uniquepatients
+   , qn.quarter
+   , qn.year
+   , 'DoH Test Account' site
+   , '10471' site_id
+   , TRY_CAST(qn.quarter_end_date AS timestamp)
+   , day
+   , '36118' company_id
+   , concat(concat(sfu.firstname, ' '), sfu.lastname) account_manager
+   FROM
+     (((quarterly_numbers_aurora qn
+   INNER JOIN date_table dt ON (TRY_CAST(qn.quarter_end_date AS timestamp) = dt.day))
+   LEFT JOIN sf_account sf ON ((CASE WHEN (qn.siteid = '11115') THEN '11600' WHEN (qn.siteid = '10499') THEN '11509' WHEN (qn.siteid = '10482') THEN '11450' ELSE qn.siteid END) = sf.id__c))
+   LEFT JOIN sf_user sfu ON (sfu.id = sf.ownerid))
+   WHERE (sf.id__c = '10495')
+) 
