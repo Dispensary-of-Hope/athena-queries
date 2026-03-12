@@ -1,0 +1,28 @@
+SELECT *
+FROM
+  (
+   SELECT DISTINCT
+     fmdc.productnamelong
+   , fmdc.product_id
+   , (CASE WHEN (dcc.drug_class IS NOT NULL) THEN dcc.drug_class ELSE iq.drug_class END) drug_class
+   FROM
+     ((view_finale_missing_drug_class fmdc
+   LEFT JOIN (
+      SELECT DISTINCT
+        productnamelong
+      , max(main_drug_class) drug_class
+      FROM
+        view_elsevier_drugclass_convert
+      WHERE ((drug_class <> '') AND (drug_class IS NOT NULL))
+      GROUP BY 1
+   )  dcc ON (fmdc.productnamelong = dcc.productnamelong))
+   LEFT JOIN (
+      SELECT DISTINCT
+        product_sum
+      , drug_class
+      , ndc
+      FROM
+        iqvia_target_primary
+   )  iq ON (fmdc.product_id = iq.ndc))
+) 
+WHERE (drug_class <> '')
