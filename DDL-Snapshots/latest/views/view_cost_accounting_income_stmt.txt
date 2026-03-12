@@ -1,0 +1,30 @@
+(
+   SELECT
+     date_parse(date, '%m/%d/%Y') date
+   , CAST(ROUND(CAST((CASE WHEN (contract_services_revenue = '') THEN '0' ELSE contract_services_revenue END) AS DOUBLE)) AS INTEGER) contract_services_revenue
+   , CAST(ROUND(CAST((CASE WHEN (contract_serv_revenue = '') THEN '0' ELSE contract_serv_revenue END) AS DOUBLE)) AS INTEGER) contract_serv_revenue
+   , CAST(ROUND(CAST((CASE WHEN (foundation_ic_trnsf = '') THEN '0' ELSE foundation_ic_trnsf END) AS DOUBLE)) AS INTEGER) foundation_ic_trnsf
+   , CAST(ROUND(CAST((CASE WHEN (foundation_transfers_revenue = '') THEN '0' ELSE foundation_transfers_revenue END) AS DOUBLE)) AS INTEGER) foundation_transfers_revenue
+   , CAST(ROUND(CAST((CASE WHEN (operatgrevtercompbetweenhms = '') THEN '0' ELSE operatgrevtercompbetweenhms END) AS DOUBLE)) AS INTEGER) operatgrevtercompbetweenhms
+   , CAST(ROUND(CAST((CASE WHEN (ic_revenue_shared_services = '') THEN '0' ELSE ic_revenue_shared_services END) AS DOUBLE)) AS INTEGER) ic_revenue_shared_services
+   , CAST(ROUND(CAST((CASE WHEN (other_miscellaneous_revenue = '') THEN '0' ELSE other_miscellaneous_revenue END) AS DOUBLE)) AS INTEGER) other_miscellaneous_revenue
+   , CAST(ROUND(CAST((CASE WHEN (totals_other_revenue = '') THEN '0' ELSE totals_other_revenue END) AS DOUBLE)) AS INTEGER) totals_other_revenue
+   , CAST(ROUND(CAST((CASE WHEN (totals_operating_revenues = '') THEN '0' ELSE totals_operating_revenues END) AS DOUBLE)) AS INTEGER) totals_operating_revenues
+   , CAST(ROUND(CAST((CASE WHEN (totals_operating_expenses = '') THEN '0' ELSE totals_operating_expenses END) AS DOUBLE)) AS INTEGER) totals_operating_expenses
+   , CAST(ROUND(CAST((CASE WHEN (salary_and_wages = '') THEN '0' ELSE salary_and_wages END) AS DOUBLE)) AS INTEGER) salary_and_wages
+   , CAST(ROUND(CAST((CASE WHEN (employee_benefits = '') THEN '0' ELSE employee_benefits END) AS DOUBLE)) AS INTEGER) employee_benefits
+   , CAST(ROUND(CAST((CASE WHEN (purchased_services = '') THEN '0' ELSE purchased_services END) AS DOUBLE)) AS INTEGER) purchased_services
+   , CAST(ROUND(CAST((CASE WHEN (professional_fees = '') THEN '0' ELSE professional_fees END) AS DOUBLE)) AS INTEGER) professional_fees
+   , CAST(ROUND(CAST((CASE WHEN (supplies_expense = '') THEN '0' ELSE supplies_expense END) AS DOUBLE)) AS INTEGER) supplies_expense
+   , CAST(ROUND(CAST((CASE WHEN (insurance_expense = '') THEN '0' ELSE insurance_expense END) AS DOUBLE)) AS INTEGER) insurance_expense
+   , CAST(ROUND(CAST((CASE WHEN (bad_dept_expense = '') THEN '0' ELSE bad_dept_expense END) AS DOUBLE)) AS INTEGER) bad_dept_expense
+   , CAST(ROUND(CAST((CASE WHEN (minor_equipment = '') THEN '0' ELSE minor_equipment END) AS DOUBLE)) AS INTEGER) minor_equipment
+   , CAST(ROUND(CAST((CASE WHEN (utilities = '') THEN '0' ELSE utilities END) AS DOUBLE)) AS INTEGER) utilities
+   , CAST(ROUND(CAST((CASE WHEN (rent = '') THEN '0' ELSE rent END) AS DOUBLE)) AS INTEGER) rent
+   , CAST(ROUND(CAST((CASE WHEN (travel_seminars_education = '') THEN '0' ELSE travel_seminars_education END) AS DOUBLE)) AS INTEGER) travel_seminars_education
+   , CAST(ROUND(CAST((CASE WHEN (public_relations = '') THEN '0' ELSE public_relations END) AS DOUBLE)) AS INTEGER) public_relations
+   , CAST(ROUND(CAST((CASE WHEN (other_expense = '') THEN '0' ELSE other_expense END) AS DOUBLE)) AS INTEGER) other_expense
+   , CAST(ROUND(CAST((CASE WHEN (depreciation_expense = '') THEN '0' ELSE depreciation_expense END) AS DOUBLE)) AS INTEGER) depreciation_expense
+   FROM
+     "database-prod"."cost_accounting_income_stmt"
+) 
