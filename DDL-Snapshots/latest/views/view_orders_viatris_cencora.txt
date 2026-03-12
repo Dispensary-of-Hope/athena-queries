@@ -1,0 +1,36 @@
+(
+   SELECT
+     ohft.order_id
+   , ohft.type
+   , ohft.receive_date
+   , ohft.purchase_order_date
+   , ohft.product_id
+   , im.productnamelong
+   , im.priority
+   , im.total_in_stock
+   , TRY_CAST(ohft.total_units AS bigint) total_units
+   , (CASE WHEN (order_id IN ('20231220-4E', '20230929-1E', '20240401-2E')) THEN '55311' ELSE donor_id END) donor_id
+   , ohft.donor_name
+   , DATE_PARSE(REGEXP_EXTRACT(ohft.lot_id, '[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}'), '%m/%d/%Y') expiration_date
+   , "split_part"(ohft.lot_id, ' ', 3) lot_id
+   FROM
+     ((
+      SELECT
+        *
+      , (CASE WHEN ((order_id IN ('20231220-4E', '20230929-1E', '20240401-2E')) OR (donor_id = '55311')) THEN 'Cencora' WHEN ((NOT (order_id IN ('20231220-4E', '20230929-1E', '20240401-2E'))) AND (donor_id = '2192')) THEN 'Viatris' ELSE donor_code END) donor_name
+      FROM
+        orders_historical_finale_timestamp
+   )  ohft
+   LEFT JOIN (
+      SELECT
+        productnamelong
+      , product_id
+      , priority
+      , total_in_stock
+      FROM
+        view_inventory_master
+   )  im ON (im.product_id = ohft.product_id))
+   WHERE ((type = 'Purchase') AND (Donor_id IN ('2192', '55311', '55312')) AND (ohft.receive_date IS NOT NULL))
+   GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13
+   ORDER BY ohft.receive_date DESC
+) 
