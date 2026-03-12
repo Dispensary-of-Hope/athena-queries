@@ -1,0 +1,67 @@
+SELECT
+  inv.month_end month
+, inv."Non-Cold Chain Units"
+, inv."Non-Cold Chain WAC"
+, inv."Cold Chain Units"
+, inv."Cold Chain WAC"
+, inv."Quarantined Units"
+, inv."Quarantined WAC"
+, inv."Total Units"
+, inv."Total WAC"
+, act."Destructed WAC"
+, act."Destructed Units"
+, act."Received WAC"
+, act."Received Units"
+, act."Non-Ascension Distributed WAC"
+, act."Non-Ascension Distributed Units"
+, act."Ascension Distributed WAC"
+, act."Ascension Distributed Units"
+, act."Total Distributed WAC"
+, act."Total Distributed Units"
+FROM
+  ((
+   SELECT
+     month_end
+   , CAST(SUM((CASE WHEN ((cold_vs_non_cold_chain = 'Non Cold Chain') AND (sublocation_description = 'Regular Stock')) THEN total_in_stock END)) AS BIGINT) "Non-Cold Chain Units"
+   , CAST(ROUND(SUM((CASE WHEN ((cold_vs_non_cold_chain = 'Non Cold Chain') AND (sublocation_description = 'Regular Stock')) THEN total_wac END)), 2) AS DECIMAL(18, 2)) "Non-Cold Chain WAC"
+   , CAST(SUM((CASE WHEN ((cold_vs_non_cold_chain = 'Cold Chain') AND (sublocation_description = 'Regular Stock')) THEN total_in_stock END)) AS BIGINT) "Cold Chain Units"
+   , CAST(ROUND(SUM((CASE WHEN ((cold_vs_non_cold_chain = 'Cold Chain') AND (sublocation_description = 'Regular Stock')) THEN total_wac END)), 2) AS DECIMAL(18, 2)) "Cold Chain WAC"
+   , CAST(SUM((CASE WHEN (sublocation_description IN ('Quarantined for Destruction', 'Waiting to be moved to Quarantine for destruction')) THEN total_in_stock END)) AS BIGINT) "Quarantined Units"
+   , CAST(ROUND(SUM((CASE WHEN (sublocation_description IN ('Quarantined for Destruction', 'Waiting to be moved to Quarantine for destruction')) THEN total_wac END)), 2) AS DECIMAL(18, 2)) "Quarantined WAC"
+   , CAST(SUM(total_in_stock) AS BIGINT) "Total Units"
+   , CAST(ROUND(SUM(total_wac), 2) AS DECIMAL(18, 2)) "Total WAC"
+   FROM
+     (
+      SELECT
+        current_date_in_stock
+      , cold_vs_non_cold_chain
+      , sublocation_description
+      , SUM(total_wac) total_wac
+      , SUM(total_in_stock) total_in_stock
+      , MAX(current_date_in_stock) OVER (PARTITION BY DATE_TRUNC('month', current_date_in_stock)) month_end
+      FROM
+        view_total_wac_on_hand
+      GROUP BY current_date_in_stock, sublocation_description, cold_vs_non_cold_chain
+   ) 
+   WHERE ((current_date_in_stock = month_end) AND (month_end >= TIMESTAMP '2024-07-01 00:00:00.000'))
+   GROUP BY month_end
+)  inv
+LEFT JOIN (
+   SELECT
+     month
+   , CAST(ROUND(SUM(wac_destroyed), 2) AS DECIMAL(18, 2)) "Destructed WAC"
+   , CAST(SUM(units_destroyed) AS BIGINT) "Destructed Units"
+   , CAST(ROUND(SUM(wac_received), 2) AS DECIMAL(18, 2)) "Received WAC"
+   , CAST(SUM(units_received) AS BIGINT) "Received Units"
+   , CAST(ROUND(SUM(wac_distributed_non_ascension), 2) AS DECIMAL(18, 2)) "Non-Ascension Distributed WAC"
+   , CAST(SUM(units_distributed_non_ascension) AS BIGINT) "Non-Ascension Distributed Units"
+   , CAST(ROUND(SUM(wac_distributed_ascension), 2) AS DECIMAL(18, 2)) "Ascension Distributed WAC"
+   , CAST(SUM(units_distributed_ascension) AS BIGINT) "Ascension Distributed Units"
+   , CAST(ROUND(SUM((wac_distributed_ascension + wac_distributed_non_ascension)), 2) AS DECIMAL(18, 2)) "Total Distributed WAC"
+   , CAST(SUM((units_distributed_ascension + units_distributed_non_ascension)) AS BIGINT) "Total Distributed Units"
+   FROM
+     view_wac_dashboard_summary
+   WHERE (month >= TIMESTAMP '2024-07-01 00:00:00.000')
+   GROUP BY month
+)  act ON (DATE_TRUNC('month', inv.month_end) = DATE_TRUNC('month', act.month)))
+ORDER BY inv.month_end DESC
