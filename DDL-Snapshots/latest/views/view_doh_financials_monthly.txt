@@ -1,0 +1,162 @@
+WITH
+  total_revenue AS (
+(
+      SELECT
+        fiscal_year
+      , CAST("date_format"("date_parse"(month_year, '%y-%b'), '%Y-%m-%d') AS timestamp) month_year
+      , CAST(actual_this_month AS int) total_operating_revenue
+      FROM
+        cfytd_revenue
+      WHERE (account = 'TotalOperatingRevenues')
+   ) UNION (
+      SELECT
+        fiscal_year
+      , CAST("date_format"("date_parse"(month_year, '%y-%b'), '%Y-%m-%d') AS timestamp) month_year
+      , CAST(actual_this_month AS int) total_operating_revenue
+      FROM
+        revenue_historical
+      WHERE (account = 'TotalOperatingRevenues')
+   )    ORDER BY month_year DESC
+) 
+, total_expenses AS (
+(
+      SELECT
+        fiscal_year
+      , CAST("date_format"("date_parse"(month_year, '%y-%b'), '%Y-%m-%d') AS timestamp) month_year
+      , CAST(actual_this_month AS int) total_operating_expenses
+      FROM
+        cfytd_expenses
+      WHERE (account = 'TotalOperatingExpenses')
+   ) UNION (
+      SELECT
+        fiscal_year
+      , CAST("date_format"("date_parse"(month_year, '%y-%b'), '%Y-%m-%d') AS timestamp) month_year
+      , CAST(actual_this_month AS int) total_operating_expenses
+      FROM
+        expenses_historical
+      WHERE (account = 'TotalOperatingExpenses')
+   ) ) 
+, revenue_breakdown AS (
+   SELECT
+     fiscal_year
+   , CAST(month_year AS timestamp) month_year
+   , "sum"((CASE WHEN ((account = 'ContractServRevenue') OR (account = 'ICRevenueSharedServices-502010')) THEN CAST(actual_this_month AS int) ELSE 0 END)) earned_income_revenue
+   , "sum"((CASE WHEN (account = 'OperatgRevterCompBetweenHMs-502005') THEN CAST(actual_this_month AS int) ELSE 0 END)) grants_revenue
+   , "sum"((CASE WHEN (account = 'FoundationICTrnsf-500100') THEN CAST(actual_this_month AS int) ELSE 0 END)) philantropy_revenue
+   FROM
+     (
+(
+         SELECT
+           fiscal_year
+         , "date_format"("date_parse"(month_year, '%y-%b'), '%Y-%m-%d') month_year
+         , actual_this_month
+         , account
+         FROM
+           cfytd_revenue
+      ) UNION (
+         SELECT
+           fiscal_year
+         , "date_format"("date_parse"(month_year, '%y-%b'), '%Y-%m-%d') month_year
+         , actual_this_month
+         , account
+         FROM
+           revenue_historical
+      )    ) 
+   GROUP BY fiscal_year, month_year
+) 
+, monthly_renewals AS (
+   SELECT
+     CAST("date_format"("date_parse"(DATE, '%Y-%m'), '%Y-%m-%d') AS timestamp) month_year
+   , fiscal_year
+   , "sum"(sub_amount) renewal_amount
+   FROM
+     (
+      SELECT
+        "date_format"(DATE, '%Y-%m') date
+      , (CASE WHEN ("month"(DATE) > 6) THEN ("year"(DATE) + 1) WHEN ("month"(DATE) <= 6) THEN "year"(DATE) END) fiscal_year
+      , sub_amount
+      FROM
+        (
+         SELECT
+           CAST("date_format"("date_parse"(implementation_start_date__c, '%m/%d/%Y'), '%Y-%m-%d') AS timestamp) date
+         , CAST(amount AS double) sub_amount
+         FROM
+           ((
+            SELECT
+              accountid
+            , implementation_start_date__c
+            , name
+            , TYPE
+            , stagename
+            , amount
+            FROM
+              sf_opportunity
+            WHERE (((TYPE = 'Renewal') AND (((((((stagename = 'Renewed/Closed') OR (stagename = 'Transfer')) OR (stagename = 'Active')) OR (stagename = 'Closed')) OR (stagename = 'Inactive')) OR (stagename = 'Retired/Closed')) OR (stagename = 'Retired'))) AND ((program__c = 'Central Access Program') OR (program__c = 'Instant Access')))
+         )  sfo
+         RIGHT JOIN sf_account sfa ON (sfo.accountid = sfa.id))
+         WHERE (ehope_type__c <> 'Mission')
+      ) 
+   ) 
+   GROUP BY DATE, fiscal_year
+) 
+, monthly_new_business AS (
+   SELECT
+     CAST("date_format"("date_parse"(DATE, '%Y-%m'), '%Y-%m-%d') AS timestamp) month_year
+   , fiscal_year
+   , "sum"(sub_amount) new_business_amount
+   FROM
+     (
+      SELECT
+        name
+      , "date_format"(DATE, '%Y-%m') date
+      , stagename
+      , sub_amount
+      , (CASE WHEN ("month"(DATE) > 6) THEN ("year"(DATE) + 1) WHEN ("month"(DATE) <= 6) THEN "year"(DATE) END) fiscal_year
+      FROM
+        (
+         SELECT
+           name
+         , CAST("date_format"("date_parse"(closedate, '%m/%d/%Y'), '%Y-%m-%d') AS timestamp) date
+         , stagename
+         , "sum"(CAST(amount AS double)) sub_amount
+         FROM
+           (
+            SELECT
+              sfo.closedate
+            , sfo.name
+            , sfo.TYPE
+            , sfo.stagename
+            , sfo.amount
+            FROM
+              (sf_opportunity sfo
+            RIGHT JOIN sf_account sfa ON (sfo.accountid = sfa.id))
+            WHERE (((((sfo.amount <> '') AND (sfo.TYPE = 'New Business')) AND (sfa.ehope_type__c <> 'Mission')) AND ((sfo.program__c = 'Central Access Program') OR (sfo.program__c = 'Instant Access'))) AND (((((((((stagename = 'Renewed/Closed') OR (stagename = 'Transfer')) OR (stagename = 'Active')) OR (stagename = 'Closed')) OR (stagename = 'Inactive')) OR (stagename = 'Retired/Closed')) OR (stagename = 'Retired')) OR (stagename = 'Implementing')) OR (stagename = '')))
+         ) 
+         GROUP BY name, TYPE, stagename, closedate
+      ) 
+   ) 
+   GROUP BY DATE, fiscal_year
+) 
+SELECT
+  tr.month_year
+, CAST("date_format"("date_parse"(tr.fiscal_year, '%y'), '%Y') AS int) fiscal_year
+, tr.total_operating_revenue
+, rb.earned_income_revenue
+, rb.philantropy_revenue
+, rb.grants_revenue
+, COALESCE(mr.renewal_amount, 0) renewal_amount
+, COALESCE(nb.new_business_amount, 0) new_business_amount
+, tx.total_operating_expenses
+, COALESCE(fg.earned_income_fy_goal, 0E0) earned_income_fy_goal
+, COALESCE(fg.new_business_fy_goal, 0E0) new_business_fy_goal
+, COALESCE(fg.phil_operating_fy_goal, 0E0) phil_operating_fy_goal
+, COALESCE(fg.phil_capital_fy_goal, 0E0) phil_capital_fy_goal
+, COALESCE(fg.budget_total_expenses_fy_goal, 0E0) budget_total_expenses_fy_goal
+FROM
+  (((((total_revenue tr
+LEFT JOIN revenue_breakdown rb ON (tr.month_year = rb.month_year))
+LEFT JOIN monthly_renewals mr ON (tr.month_year = mr.month_year))
+LEFT JOIN monthly_new_business nb ON (tr.month_year = nb.month_year))
+LEFT JOIN total_expenses tx ON (tr.month_year = tx.month_year))
+LEFT JOIN fy_financial_goals fg ON (CAST(rb.fiscal_year AS int) = fg.fiscal_year))
+ORDER BY tr.month_year DESC
