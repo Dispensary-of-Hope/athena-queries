@@ -1,0 +1,24 @@
+  `tl_date` string COMMENT 'from deserializer', 
+  `productnamelong` string COMMENT 'from deserializer', 
+  `priority` string COMMENT 'from deserializer', 
+  `tier` string COMMENT 'from deserializer', 
+  `audit_trail_update` string COMMENT 'from deserializer', 
+  `reason` string COMMENT 'from deserializer', 
+  `audit_trail_date` string COMMENT 'from deserializer', 
+  `date_added_to_tl` string COMMENT 'from deserializer')
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.OpenCSVSerde' 
+WITH SERDEPROPERTIES ( 
+  'escapeChar'='\n', 
+  'quoteChar'='\"', 
+  'separatorChar'=',') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://iqviatables/TL-Audit-Trail'
+TBLPROPERTIES (
+  'has_encrypted_data'='false', 
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1669094965')

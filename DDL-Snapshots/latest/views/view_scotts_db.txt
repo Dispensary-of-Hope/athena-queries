@@ -1,0 +1,48 @@
+SELECT *
+FROM
+  scotts_db_1
+UNION ALL (
+   SELECT
+     'TL not in stock' category
+   , sum(TL_Not_in_stock.unique_products) unique_products
+   , TL_Not_in_stock.priority
+   FROM
+     (
+(
+(
+            SELECT
+              sum(unique_products) unique_products
+            , priority
+            FROM
+              scotts_db_1
+            WHERE (category = 'TL Product Total')
+            GROUP BY priority
+         ) UNION ALL (
+            SELECT
+              (-1 * sum(unique_products)) unique_products
+            , priority
+            FROM
+              scotts_db_1
+            WHERE (category IN ('Flex Products', 'Primary Products'))
+            GROUP BY priority
+         )       )    )  TL_Not_in_Stock
+   GROUP BY tl_not_in_stock.priority
+) UNION ALL (
+   SELECT
+     'TL in stock' category
+   , sum(TL_in_stock.unique_products) unique_products
+   , TL_in_stock.priority
+   FROM
+     (
+(
+(
+            SELECT
+              sum(unique_products) unique_products
+            , priority
+            FROM
+              scotts_db_1
+            WHERE (category IN ('Flex Products', 'Primary Products'))
+            GROUP BY priority
+         )       )    )  TL_in_Stock
+   GROUP BY tl_in_stock.priority
+) 

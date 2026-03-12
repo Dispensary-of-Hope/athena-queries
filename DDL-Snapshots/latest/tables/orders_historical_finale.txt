@@ -1,0 +1,36 @@
+  `order_id` string COMMENT 'from deserializer', 
+  `type` string COMMENT 'from deserializer', 
+  `status` string COMMENT 'from deserializer', 
+  `ship_date` string COMMENT 'from deserializer', 
+  `receive_date` string COMMENT 'from deserializer', 
+  `purchase_order_date` string COMMENT 'from deserializer', 
+  `product_id` string COMMENT 'from deserializer', 
+  `lot_id` string COMMENT 'from deserializer', 
+  `total_units` string COMMENT 'from deserializer', 
+  `site_id` string COMMENT 'from deserializer', 
+  `donor_id` string COMMENT 'from deserializer', 
+  `salesforceid` string COMMENT 'from deserializer', 
+  `insulin` string COMMENT 'from deserializer', 
+  `drug_id` string COMMENT 'from deserializer', 
+  `donor_code` string COMMENT 'from deserializer', 
+  `dispensary_name` string COMMENT 'from deserializer', 
+  `drug_name` string COMMENT 'from deserializer', 
+  `strength` string COMMENT 'from deserializer', 
+  `unit_measure_pkg` string COMMENT 'from deserializer', 
+  `donor_lot` string COMMENT 'from deserializer', 
+  `expire_dt` string COMMENT 'from deserializer')
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.OpenCSVSerde' 
+WITH SERDEPROPERTIES ( 
+  'escapeChar'='\n', 
+  'quoteChar'='\"', 
+  'separatorChar'=',') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://finale-reports-bucket-prod/Finale Overwrite'
+TBLPROPERTIES (
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1773322515')

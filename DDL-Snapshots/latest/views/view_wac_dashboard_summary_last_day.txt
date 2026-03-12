@@ -1,0 +1,109 @@
+WITH
+  wac_on_hand_ranked AS (
+   SELECT
+     current_date_in_stock
+   , cold_vs_non_cold_chain
+   , SUM(total_wac) total_wac
+   , SUM(total_doses_in_stock) total_doses_in_stock
+   , SUM(total_in_stock) total_in_stock
+   , DATE_TRUNC('month', current_date_in_stock) month
+   , DATE_ADD('day', -1, DATE_ADD('month', 1, DATE_TRUNC('month', current_date_in_stock))) month_end
+   FROM
+     view_total_wac_on_hand
+   GROUP BY current_date_in_stock, cold_vs_non_cold_chain, DATE_TRUNC('month', current_date_in_stock)
+) 
+, wac_on_hand AS (
+   SELECT
+     month
+   , month_end month_end
+   , cold_vs_non_cold_chain
+   , SUM(total_wac) total_wac_in_stock
+   , SUM(total_doses_in_stock) total_doses_in_stock
+   , SUM(total_in_stock) total_units_in_stock
+   FROM
+     wac_on_hand_ranked
+   WHERE (current_date_in_stock = month_end)
+   GROUP BY month, month_end, cold_vs_non_cold_chain
+) 
+, wac_received AS (
+   SELECT
+     date_trunc('month', month_year) month
+   , SUM(units) units_received
+   , SUM(doses_received) doses_received
+   , SUM(wac) wac_received
+   , cold_vs_non_cold_chain
+   FROM
+     view_total_wac_received
+   GROUP BY 1, 5
+) 
+, wac_distributed_ascension AS (
+   SELECT
+     date_trunc('month', month_year) month
+   , SUM(units) units_distributed_ascension
+   , SUM(doses_distributed) doses_distributed_ascension
+   , SUM(wac) wac_distributed_ascension
+   , cold_vs_non_cold_chain
+   FROM
+     view_total_wac_distributed_ascension
+   GROUP BY 1, 5
+) 
+, wac_destroyed AS (
+   SELECT
+     date_trunc('month', month_year) month
+   , SUM(units) units_destroyed
+   , SUM(doses_destroyed) doses_destroyed
+   , SUM(total_wac) wac_destroyed
+   , cold_vs_non_cold_chain
+   FROM
+     view_total_wac_destroyed
+   GROUP BY 1, 5
+) 
+, wac_distributed_non_ascension AS (
+   SELECT
+     date_trunc('month', ship_date) month
+   , SUM(total_units_distributed) units_distributed_non_ascension
+   , SUM((total_units_distributed * inv.packagesize)) doses_distributed_non_ascension
+   , SUM((total_units_distributed * unit_wac)) wac_distributed_non_ascension
+   , (CASE WHEN (insulin = 'True') THEN 'Cold Chain' ELSE 'Non Cold Chain' END) cold_vs_non_cold_chain
+   FROM
+     ((orders_with_companyid ocid
+   LEFT JOIN (
+      SELECT DISTINCT site_id
+      FROM
+        site_info
+      WHERE (health_system LIKE 'Ascension Health')
+   )  si ON (si.site_id = ocid.site_id))
+   LEFT JOIN (
+      SELECT DISTINCT
+        product_id
+      , packagesize
+      FROM
+        view_inventory_master
+   )  inv ON (ocid.product_id = inv.product_id))
+   WHERE ((si.site_id IS NULL) AND (NOT (ocid.site_id IN ('194', '10277'))))
+   GROUP BY 1, 5
+) 
+SELECT
+  woh.month_end month
+, woh.total_wac_in_stock
+, woh.total_doses_in_stock
+, woh.total_units_in_stock
+, wr.units_received
+, wr.doses_received
+, wr.wac_received
+, wda.units_distributed_ascension
+, wda.doses_distributed_ascension
+, wda.wac_distributed_ascension
+, wd.units_destroyed
+, wd.doses_destroyed
+, wd.wac_destroyed
+, woh.cold_vs_non_cold_chain
+, wdna.wac_distributed_non_ascension
+, wdna.units_distributed_non_ascension
+, wdna.doses_distributed_non_ascension
+FROM
+  ((((wac_on_hand woh
+LEFT JOIN wac_received wr ON ((woh.month = wr.month) AND (woh.cold_vs_non_cold_chain = wr.cold_vs_non_cold_chain)))
+LEFT JOIN wac_distributed_ascension wda ON ((woh.month = wda.month) AND (woh.cold_vs_non_cold_chain = wda.cold_vs_non_cold_chain)))
+LEFT JOIN wac_destroyed wd ON ((woh.month = wd.month) AND (woh.cold_vs_non_cold_chain = wd.cold_vs_non_cold_chain)))
+LEFT JOIN wac_distributed_non_ascension wdna ON ((woh.month = wdna.month) AND (woh.cold_vs_non_cold_chain = wdna.cold_vs_non_cold_chain)))

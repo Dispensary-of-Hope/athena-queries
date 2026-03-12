@@ -1,0 +1,23 @@
+(
+   SELECT
+     ship_date month_year
+   , ocid.product_id
+   , drug_name
+   , SUM(total_units_distributed) units
+   , SUM((total_units_distributed * inv.packagesize)) doses_destroyed
+   , SUM((total_units_distributed * inv.unit_wac)) total_wac
+   , (CASE WHEN (insulin = 'True') THEN 'Cold Chain' ELSE 'Non Cold Chain' END) cold_vs_non_cold_chain
+   FROM
+     (orders_with_companyid ocid
+   LEFT JOIN (
+      SELECT DISTINCT
+        inv.product_id
+      , packagesize
+      , inv.unit_wac
+      FROM
+        view_inventory_master inv
+   )  inv ON (ocid.product_id = inv.product_id))
+   WHERE (site_id = '10277')
+   GROUP BY 1, 2, 3, 7
+   ORDER BY 1 DESC
+) 

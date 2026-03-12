@@ -1,0 +1,49 @@
+WITH
+  agg AS (
+   SELECT
+     tl.target_list_product
+   , SUM(CAST(mndu.number_of_rx AS BIGINT)) medicaid_rx
+   FROM
+     ((medicaid_national_drug_utilization mndu
+   LEFT JOIN (
+      SELECT DISTINCT
+        productnamelong
+      , ndc11
+      FROM
+        elsevier_1
+   )  dcc ON (mndu.ndc = dcc.ndc11))
+   INNER JOIN (
+      SELECT DISTINCT
+        target_list_product
+      , productnamelong
+      FROM
+        (iqvia_target_primary iq
+      INNER JOIN (
+         SELECT DISTINCT
+           ndc11
+         , productnamelong
+         FROM
+           elsevier_1
+      )  e ON (iq.ndc = e.ndc11))
+      WHERE (NOT (target_list_product IN ('None', 'null')))
+   )  tl ON (dcc.productnamelong = tl.productnamelong))
+   GROUP BY 1
+) 
+, ranked AS (
+   SELECT
+     target_list_product
+   , medicaid_rx
+   , RANK() OVER (ORDER BY medicaid_rx DESC) medicaid_rank
+   , COUNT(*) OVER () n_products
+   , MAX(medicaid_rx) OVER () max_medicaid_rx
+   FROM
+     agg
+) 
+SELECT
+  target_list_product
+, medicaid_rx
+, medicaid_rank rank_overall
+, (CAST(medicaid_rx AS DOUBLE) / NULLIF(max_medicaid_rx, 0)) medicaid_norm_value
+, (CASE WHEN (n_products <= 1) THEN 1E0 ELSE (1E0 - ((medicaid_rank - 1E0) / NULLIF((n_products - 1E0), 0E0))) END) medicaid_norm_rank
+FROM
+  ranked

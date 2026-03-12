@@ -1,0 +1,18 @@
+(
+   SELECT
+     purchase_order_date
+   , pro.excess_orders_placed
+   , pro.planned_orders_placed
+   , (pro.excess_orders_placed + pro.planned_orders_placed) total_orders_placed
+   FROM
+     (
+      SELECT
+        purchase_order_date
+      , "count"(DISTINCT (CASE WHEN (order_id LIKE '%E%') THEN order_id END)) excess_orders_placed
+      , "count"(DISTINCT (CASE WHEN (order_id LIKE '%P%') THEN order_id END)) planned_orders_placed
+      FROM
+        orders_historical_finale_timestamp
+      WHERE (type = 'Purchase')
+      GROUP BY purchase_order_date
+   )  pro
+) 

@@ -1,0 +1,47 @@
+WITH
+  base AS (
+   SELECT
+     iq.target_list_product
+   , med.ndc_upc_hri
+   , med.package_size
+   , med.itemstatusflag
+   FROM
+     ((medispan_trg_file med
+   INNER JOIN (
+      SELECT DISTINCT
+        ndc
+      , target_list_product
+      , priority
+      FROM
+        iqvia_target_primary
+      WHERE (priority IN ('P1', 'P2', 'P3'))
+   )  iq ON (med.ndc_upc_hri = iq.ndc))
+   INNER JOIN target_list_projections proj ON (iq.target_list_product = proj.target_list_product))
+   WHERE ((med.itemstatusflag IN ('A', 'O')) AND (med.unitdose <> 'X'))
+) 
+, pkg_counts AS (
+   SELECT
+     target_list_product
+   , package_size
+   , COUNT(DISTINCT ndc_upc_hri) ndc_count
+   FROM
+     base
+   GROUP BY target_list_product, package_size
+) 
+, ranked AS (
+   SELECT
+     b.target_list_product
+   , b.ndc_upc_hri
+   , b.package_size
+   , ROW_NUMBER() OVER (PARTITION BY b.target_list_product ORDER BY (CASE WHEN (b.package_size = '90') THEN 1 ELSE 0 END) DESC, pc.ndc_count DESC, (CASE WHEN (b.itemstatusflag = 'A') THEN 1 ELSE 0 END) DESC, b.ndc_upc_hri ASC) rn
+   FROM
+     (base b
+   INNER JOIN pkg_counts pc ON ((b.target_list_product = pc.target_list_product) AND (b.package_size = pc.package_size)))
+) 
+SELECT
+  target_list_product
+, package_size
+, ndc_upc_hri selected_ndc
+FROM
+  ranked
+WHERE (rn = 1)

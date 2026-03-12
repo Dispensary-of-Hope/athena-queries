@@ -1,0 +1,29 @@
+  `zip_code` string COMMENT 'from deserializer', 
+  `geo_id` string COMMENT 'from deserializer', 
+  `total_population` string COMMENT 'from deserializer', 
+  `total_uninsured` string COMMENT 'from deserializer', 
+  `percent_uninsured` string COMMENT 'from deserializer', 
+  `total_below_138_fpl` string COMMENT 'from deserializer', 
+  `uninsured_below_138_fpl` string COMMENT 'from deserializer', 
+  `percent_uninsured_below_138_fpl` string COMMENT 'from deserializer', 
+  `total_138_399_fpl` string COMMENT 'from deserializer', 
+  `uninsured_138_399_fpl` string COMMENT 'from deserializer', 
+  `percent_uninsured_138_399_fpl` string COMMENT 'from deserializer', 
+  `zcta` string COMMENT 'from deserializer', 
+  `estimated_total_doh_eligible` string COMMENT 'from deserializer')
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.OpenCSVSerde' 
+WITH SERDEPROPERTIES ( 
+  'escapeChar'='\n', 
+  'quoteChar'='\"', 
+  'separatorChar'=',') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://optum-tool-automation/census-data/acs-5-yr-estimates-zip-code'
+TBLPROPERTIES (
+  'has_encrypted_data'='false', 
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1751512933')

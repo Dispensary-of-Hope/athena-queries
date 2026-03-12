@@ -1,0 +1,49 @@
+WITH
+  agg AS (
+   SELECT
+     tl.target_list_product
+   , count(rxrecidx) meps_rx
+   FROM
+     ((meps_prescribed_medicines_file meps
+   LEFT JOIN (
+      SELECT DISTINCT
+        productnamelong
+      , ndc11
+      FROM
+        elsevier_1
+   )  dcc ON (meps.rxndc = dcc.ndc11))
+   INNER JOIN (
+      SELECT DISTINCT
+        target_list_product
+      , productnamelong
+      FROM
+        (iqvia_target_primary iq
+      INNER JOIN (
+         SELECT DISTINCT
+           ndc11
+         , productnamelong
+         FROM
+           elsevier_1
+      )  e ON (iq.ndc = e.ndc11))
+      WHERE (NOT (target_list_product IN ('None', 'null')))
+   )  tl ON (dcc.productnamelong = tl.productnamelong))
+   GROUP BY 1
+) 
+, ranked AS (
+   SELECT
+     target_list_product
+   , meps_rx
+   , RANK() OVER (ORDER BY meps_rx DESC) meps_rank
+   , COUNT(*) OVER () n_products
+   , MAX(meps_rx) OVER () max_meps_rx
+   FROM
+     agg
+) 
+SELECT
+  target_list_product
+, meps_rx
+, meps_rank rank_overall
+, (CAST(meps_rx AS DOUBLE) / NULLIF(max_meps_rx, 0)) meps_norm_value
+, (CASE WHEN (n_products <= 1) THEN 1E0 ELSE (1E0 - ((meps_rank - 1E0) / NULLIF((n_products - 1E0), 0E0))) END) meps_norm_rank
+FROM
+  ranked

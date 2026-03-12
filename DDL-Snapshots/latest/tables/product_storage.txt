@@ -1,0 +1,25 @@
+  `productid` string, 
+  `storageid` string)
+ROW FORMAT DELIMITED 
+  FIELDS TERMINATED BY '|' 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://elsevier-exports/exports-folder/product-storage/'
+TBLPROPERTIES (
+  'CrawlerSchemaDeserializerVersion'='1.0', 
+  'CrawlerSchemaSerializerVersion'='1.0', 
+  'UPDATED_BY_CRAWLER'='database-prod-elsevier-crawler', 
+  'areColumnsQuoted'='false', 
+  'averageRecordSize'='10', 
+  'classification'='csv', 
+  'columnsOrdered'='true', 
+  'compressionType'='none', 
+  'delimiter'='|', 
+  'objectCount'='1', 
+  'recordCount'='169218', 
+  'sizeKey'='1692187', 
+  'skip.header.line.count'='1', 
+  'typeOfData'='file')

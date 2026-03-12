@@ -1,0 +1,17 @@
+SELECT
+  iq.target_list_product
+, (CASE WHEN (MAX((CASE WHEN (inv."primary" = 'yes') THEN 1 ELSE 0 END)) = 1) THEN 'Consistent through end of Q2'' FY2026' WHEN (COUNT(inv.product_id) > 0) THEN 'In stock with inconsistent supply' ELSE 'Not in stock' END) primary_status
+, projected_units annual_demand_units
+FROM
+  ((iqvia_target_primary iq
+LEFT JOIN (
+   SELECT DISTINCT
+     product_id
+   , "primary"
+   FROM
+     view_inventory_master
+   WHERE (available_qty > 0)
+)  inv ON (iq.ndc = inv.product_id))
+LEFT JOIN target_list_projections tlp ON (iq.target_list_product = tlp.target_list_product))
+WHERE ((iq.target_list_product IS NOT NULL) AND (NOT (iq.target_list_product IN ('None', 'null'))))
+GROUP BY 1, 3

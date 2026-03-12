@@ -1,0 +1,58 @@
+  `geo_id` string COMMENT 'from deserializer', 
+  `female_no_partner_w_child_pe` string COMMENT 'from deserializer', 
+  `popuni` string COMMENT 'from deserializer', 
+  `pred0_e` string COMMENT 'from deserializer', 
+  `pred0_pe` string COMMENT 'from deserializer', 
+  `pred12_e` string COMMENT 'from deserializer', 
+  `pred12_pe` string COMMENT 'from deserializer', 
+  `pred3_e` string COMMENT 'from deserializer', 
+  `pred3_pe` string COMMENT 'from deserializer', 
+  `total_population_e` string COMMENT 'from deserializer', 
+  `housing_units_e` string COMMENT 'from deserializer', 
+  `hispanic_pe` string COMMENT 'from deserializer', 
+  `nh_white_alone_pe` string COMMENT 'from deserializer', 
+  `nh_black_alone_pe` string COMMENT 'from deserializer', 
+  `nh_aian_alone_pe` string COMMENT 'from deserializer', 
+  `nh_asian_alone_pe` string COMMENT 'from deserializer', 
+  `nh_nhpi_alone_pe` string COMMENT 'from deserializer', 
+  `nh_sor_alone_pe` string COMMENT 'from deserializer', 
+  `female_pe` string COMMENT 'from deserializer', 
+  `male_no_partner_w_child_pe` string COMMENT 'from deserializer', 
+  `male_pe` string COMMENT 'from deserializer', 
+  `civ_vet_pe` string COMMENT 'from deserializer', 
+  `gini_ind_inequality_e` string COMMENT 'from deserializer', 
+  `rural_pop_pe` string COMMENT 'from deserializer', 
+  `median_age_e` string COMMENT 'from deserializer', 
+  `65_plus_pe` string COMMENT 'from deserializer', 
+  `disabled_pe` string COMMENT 'from deserializer', 
+  `blw_pov_lvl_pe` string COMMENT 'from deserializer', 
+  `name` string COMMENT 'from deserializer', 
+  `nh_two_or_more_pe` string COMMENT 'from deserializer', 
+  `crowd_occ_pe` string COMMENT 'from deserializer', 
+  `hs_grad_pe` string COMMENT 'from deserializer', 
+  `eng_lvw_pe` string COMMENT 'from deserializer', 
+  `wrk_ft_yr_pe` string COMMENT 'from deserializer', 
+  `no_health_ins_pe` string COMMENT 'from deserializer', 
+  `broadband_pe` string COMMENT 'from deserializer', 
+  `no_veh_pe` string COMMENT 'from deserializer', 
+  `ho_vac_pe` string COMMENT 'from deserializer', 
+  `rent_vac_pe` string COMMENT 'from deserializer', 
+  `pred0_pf` string COMMENT 'from deserializer', 
+  `pred12_pf` string COMMENT 'from deserializer', 
+  `pred3_pf` string COMMENT 'from deserializer')
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.OpenCSVSerde' 
+WITH SERDEPROPERTIES ( 
+  'escapeChar'='\n', 
+  'quoteChar'='\"', 
+  'separatorChar'=',') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://optum-tool-automation/census-data/CRE_Equity_County_Data'
+TBLPROPERTIES (
+  'has_encrypted_data'='false', 
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1659712935')

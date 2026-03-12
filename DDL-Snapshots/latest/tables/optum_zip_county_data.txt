@@ -1,0 +1,34 @@
+  `oid_zcta5_20` string COMMENT 'from deserializer', 
+  `geoid_zcta5_20` string COMMENT 'from deserializer', 
+  `namelsad_zcta5_20` string COMMENT 'from deserializer', 
+  `arealand_zcta5_20` string COMMENT 'from deserializer', 
+  `areawater_zcta5_20` string COMMENT 'from deserializer', 
+  `mtfcc_zcta5_20` string COMMENT 'from deserializer', 
+  `classfp_zcta5_20` string COMMENT 'from deserializer', 
+  `funcstat_zcta5_20` string COMMENT 'from deserializer', 
+  `oid_county_20` string COMMENT 'from deserializer', 
+  `geoid_county_20` string COMMENT 'from deserializer', 
+  `namelsad_county_20` string COMMENT 'from deserializer', 
+  `arealand_county_20` string COMMENT 'from deserializer', 
+  `areawater_county_20` string COMMENT 'from deserializer', 
+  `mtfcc_county_20` string COMMENT 'from deserializer', 
+  `classfp_county_20` string COMMENT 'from deserializer', 
+  `funcstat_county_20` string COMMENT 'from deserializer', 
+  `arealand_part` string COMMENT 'from deserializer', 
+  `areawater_part` string COMMENT 'from deserializer')
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.OpenCSVSerde' 
+WITH SERDEPROPERTIES ( 
+  'escapeChar'='\n', 
+  'quoteChar'='\"', 
+  'separatorChar'=',') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://optum-tool-automation/census-data/zip_code_to_county_data'
+TBLPROPERTIES (
+  'has_encrypted_data'='false', 
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1659388975')

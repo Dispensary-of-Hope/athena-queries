@@ -1,0 +1,31 @@
+  `utilization_type` string COMMENT 'from deserializer', 
+  `state` string COMMENT 'from deserializer', 
+  `ndc` string COMMENT 'from deserializer', 
+  `labeler_code` string COMMENT 'from deserializer', 
+  `product_code` string COMMENT 'from deserializer', 
+  `package_size` string COMMENT 'from deserializer', 
+  `year` string COMMENT 'from deserializer', 
+  `quarter` string COMMENT 'from deserializer', 
+  `suppression_used` string COMMENT 'from deserializer', 
+  `product_name` string COMMENT 'from deserializer', 
+  `units_reimbursed` string COMMENT 'from deserializer', 
+  `number_of_rx` string COMMENT 'from deserializer', 
+  `total_amount_reimbursed` string COMMENT 'from deserializer', 
+  `medicaid_amount_reimbursed` string COMMENT 'from deserializer', 
+  `non_medicaid_amount_reimbursed` string COMMENT 'from deserializer')
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.OpenCSVSerde' 
+WITH SERDEPROPERTIES ( 
+  'escapeChar'='\n', 
+  'quoteChar'='\"', 
+  'separatorChar'=',') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://iqviatables/target-list-data-sources/medicaid-national-drug-utilization'
+TBLPROPERTIES (
+  'has_encrypted_data'='false', 
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1751998752')

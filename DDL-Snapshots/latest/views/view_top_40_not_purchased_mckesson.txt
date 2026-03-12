@@ -1,0 +1,19 @@
+(
+   SELECT DISTINCT
+     top_40_product
+   , iqvia_tl_product
+   , productnamelong
+   , current_date_in_stock
+   , max_day_in_stock
+   , rin.ndc
+   , rin.priority
+   , iq.strength
+   FROM
+     ("database-prod"."view_run_inv_top_40" rin
+   LEFT JOIN iqvia_target_primary iq ON (rin.iqvia_tl_product = iq.target_list_product))
+   WHERE ((current_date_in_stock IS NOT NULL) AND (rin.ndc IN (SELECT DISTINCT product_id
+FROM
+  orders_with_companyid
+WHERE (donor_id <> '702')
+)))
+) 

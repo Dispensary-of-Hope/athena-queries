@@ -1,0 +1,20 @@
+WITH
+  total_doses AS (
+   SELECT DISTINCT
+     current_date_in_stock
+   , productnamelong
+   , product_id
+   , sum(total_in_stock) total_units_in_stock
+   , sum((total_in_stock * packagesize)) total_doses_in_stock
+   FROM
+     view_running_inventory
+   GROUP BY 1, 2, 3
+) 
+SELECT DISTINCT
+  current_date_in_stock stock_date
+, sum(total_units_in_stock) total_units_in_stock
+, CAST(SUM(total_doses_in_stock) AS DECIMAL(38, 0)) total_doses_in_stock
+FROM
+  total_doses
+GROUP BY 1
+ORDER BY 1 DESC

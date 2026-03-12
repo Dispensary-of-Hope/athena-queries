@@ -1,0 +1,28 @@
+  `packageid` string, 
+  `pricetypeid` string, 
+  `packageprice` double, 
+  `begindate` timestamp, 
+  `enddate` timestamp, 
+  `casecount` bigint, 
+  `caseprice` double, 
+  `unitprice` double, 
+  `pricechangereasonid` string, 
+  `packagepriceerrataid` string, 
+  `packagesize` double)
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe' 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
+LOCATION
+  's3://lambdarefreshresults/tables/73f37219-83ac-4e76-a2e3-4673520937b6'
+TBLPROPERTIES (
+  'auto.purge'='false', 
+  'has_encrypted_data'='false', 
+  'numFiles'='-1', 
+  'parquet.compression'='GZIP', 
+  'totalSize'='-1', 
+  'transactional'='false', 
+  'trino_query_id'='20260310_090030_00007_6kgm6', 
+  'trino_version'='0.215-24526-g02c3358')

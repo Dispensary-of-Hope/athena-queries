@@ -1,0 +1,27 @@
+WITH
+  agg AS (
+   SELECT
+     target_list_product
+   , (daily_throughput * 261) estimated_annual_throughput
+   FROM
+     update_tl_projections
+) 
+, ranked AS (
+   SELECT
+     target_list_product
+   , estimated_annual_throughput
+   , RANK() OVER (ORDER BY estimated_annual_throughput DESC) estimated_annual_throughput_rank
+   , COUNT(*) OVER () n_products
+   , MAX(estimated_annual_throughput) OVER () max_estimated_annual_throughput
+   FROM
+     agg
+) 
+SELECT
+  target_list_product
+, estimated_annual_throughput
+, estimated_annual_throughput_rank rank_overall
+, (CAST(estimated_annual_throughput AS DOUBLE) / NULLIF(max_estimated_annual_throughput, 0)) doh_norm_value
+, (CASE WHEN (n_products <= 1) THEN 1E0 ELSE (1E0 - ((estimated_annual_throughput_rank - 1E0) / NULLIF((n_products - 1E0), 0E0))) END) doh_norm_rank
+FROM
+  ranked
+WHERE (NOT (target_list_product IN ('null', 'None')))

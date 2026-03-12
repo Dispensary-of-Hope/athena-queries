@@ -1,0 +1,18 @@
+SELECT DISTINCT
+  sf.site_id
+, sf.site_name
+, ocid.order_date
+, ocid.ship_date
+, ocid.product_id ndc11
+, ocid.drug_name
+, ocid.packagesize
+, ocid.unit_of_measure
+, ocid.drug_class
+, sum(ocid.total_units_distributed) ship_qty
+, ocid.unit_wac
+, sum("round"((ocid.unit_wac * ocid.total_units_distributed), 2)) wac_total
+FROM
+  (orders_with_companyid ocid
+INNER JOIN site_info sf ON (sf.site_id = ocid.site_id))
+WHERE (sf.health_system LIKE 'Ascension Health%')
+GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 11

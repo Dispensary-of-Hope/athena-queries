@@ -1,0 +1,32 @@
+  `ponumber` string COMMENT 'from deserializer', 
+  `shipmentnumber` string COMMENT 'from deserializer', 
+  `orderdate` string COMMENT 'from deserializer', 
+  `shipdate` string COMMENT 'from deserializer', 
+  `shiptoname` string COMMENT 'from deserializer', 
+  `carrier` string COMMENT 'from deserializer', 
+  `trackingnumber` string COMMENT 'from deserializer', 
+  `productcode` string COMMENT 'from deserializer', 
+  `productname` string COMMENT 'from deserializer', 
+  `quantity` string COMMENT 'from deserializer', 
+  `lotnumber` string COMMENT 'from deserializer', 
+  `lotexp` string COMMENT 'from deserializer', 
+  `shiptoaddress1` string COMMENT 'from deserializer', 
+  `shiptoaddress2` string COMMENT 'from deserializer', 
+  `shiptocity` string COMMENT 'from deserializer', 
+  `shiptostate` string COMMENT 'from deserializer', 
+  `shiptozip` string COMMENT 'from deserializer')
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.OpenCSVSerde' 
+WITH SERDEPROPERTIES ( 
+  'separatorChar'=',') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://sftp-doh-com/prasco/shipment-status'
+TBLPROPERTIES (
+  'classification'='csv', 
+  'has_encrypted_data'='false', 
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1723575709')

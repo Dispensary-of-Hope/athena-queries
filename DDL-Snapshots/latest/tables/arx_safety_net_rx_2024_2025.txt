@@ -1,0 +1,21 @@
+  `id` string COMMENT 'from deserializer', 
+  `description` string COMMENT 'from deserializer', 
+  `ndc` string COMMENT 'from deserializer', 
+  `dispensed_qty` string COMMENT 'from deserializer', 
+  `days_supply` string COMMENT 'from deserializer')
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.OpenCSVSerde' 
+WITH SERDEPROPERTIES ( 
+  'escapeChar'='\n', 
+  'quoteChar'='\"', 
+  'separatorChar'=',') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://iqviatables/target-list-data-sources/arx_safety_net_data'
+TBLPROPERTIES (
+  'has_encrypted_data'='false', 
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1760321615')

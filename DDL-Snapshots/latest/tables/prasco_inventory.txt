@@ -1,0 +1,27 @@
+  `datarundate` string COMMENT 'from deserializer', 
+  `ndc` string COMMENT 'from deserializer', 
+  `itemdesc1` string COMMENT 'from deserializer', 
+  `itemdesc2` string COMMENT 'from deserializer', 
+  `lotnumber` string COMMENT 'from deserializer', 
+  `productexpirationdate` string COMMENT 'from deserializer', 
+  `receiveddate` string COMMENT 'from deserializer', 
+  `received` string COMMENT 'from deserializer', 
+  `onhand` string COMMENT 'from deserializer', 
+  `onhold` string COMMENT 'from deserializer', 
+  `available` string COMMENT 'from deserializer', 
+  `committed` string COMMENT 'from deserializer')
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.OpenCSVSerde' 
+WITH SERDEPROPERTIES ( 
+  'separatorChar'=',') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://sftp-doh-com/prasco/inventory-status'
+TBLPROPERTIES (
+  'classification'='csv', 
+  'has_encrypted_data'='false', 
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1723481402')

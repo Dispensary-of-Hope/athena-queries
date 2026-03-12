@@ -1,0 +1,64 @@
+WITH
+  tl_in_stock AS (
+   SELECT DISTINCT target_list_product
+   FROM
+     (view_inventory_master inv
+   LEFT JOIN (
+      SELECT DISTINCT
+        target_list_product
+      , ndc
+      FROM
+        iqvia_target_primary
+   )  iq ON (inv.product_id = iq.ndc))
+   WHERE ((available_qty > 0) AND (inv.priority IN ('P1', 'P2', 'P3')))
+) 
+, pk AS (
+   SELECT *
+   FROM
+     (((package pk
+   INNER JOIN product p ON (pk.productid = p.productid))
+   LEFT JOIN product_generic_name_stub gen ON (p.productid = gen.productid))
+   LEFT JOIN (
+      SELECT
+        pbns.productid
+      , ARRAY_JOIN(SLICE(ARRAY_AGG(bns.brandednamestub ORDER BY bns.brandednamestub ASC), 1, 2), ', ') concatenated_branded_names
+      FROM
+        (product_branded_name_stub pbns
+      LEFT JOIN branded_name_stub bns ON (pbns.brandednamestubid = bns.brandednamestubid))
+      GROUP BY pbns.productid
+   )  bns2 ON (p.productid = bns2.productid))
+) 
+SELECT DISTINCT
+  iq.target_list_product
+, max(concatenated_branded_names) concatenated_branded_names
+, max(genericnamelong) genericnamelong
+, max(major_class) iqvia_major_class
+, max(minor_class) iqvia_minor_class
+FROM
+  ((((iqvia_target_primary iq
+LEFT JOIN tl_in_stock tl ON (iq.target_list_product = tl.target_list_product))
+INNER JOIN (
+   SELECT DISTINCT
+     product_id
+   , productnamelong
+   , major_class
+   , minor_class
+   , brand_generic
+   FROM
+     (iqvia_drug_class iq
+   INNER JOIN (
+      SELECT DISTINCT
+        ndc11
+      , productnamelong
+      FROM
+        view_elsevier_drugclass_convert
+   )  dcc ON (iq.product_id = dcc.ndc11))
+)  iq2 ON (iq.ndc = iq2.product_id))
+LEFT JOIN pk ON (iq.ndc = pk.ndc11))
+LEFT JOIN (
+   SELECT DISTINCT productnamelong
+   FROM
+     available_inv_athena_ehr_app
+)  inv ON (iq2.productnamelong = inv.productnamelong))
+WHERE (((tl.target_list_product IS NULL) AND (NOT (iq.target_list_product IN ('None', 'null', '')))) AND (inv.productnamelong IS NULL))
+GROUP BY 1

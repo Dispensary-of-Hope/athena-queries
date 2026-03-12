@@ -1,0 +1,32 @@
+  `consistent_xgboost` string COMMENT 'from deserializer', 
+  `consistent_old_process` string COMMENT 'from deserializer', 
+  `row_index` string COMMENT 'from deserializer', 
+  `days_since_first_qtr` string COMMENT 'from deserializer', 
+  `product` string COMMENT 'from deserializer', 
+  `offer_qty_accept_prev_qtr` string COMMENT 'from deserializer', 
+  `number_of_pkg_sizes` string COMMENT 'from deserializer', 
+  `lilly_consistent` string COMMENT 'from deserializer', 
+  `total_in_stock` string COMMENT 'from deserializer', 
+  `on_hand_percent_of_par` string COMMENT 'from deserializer', 
+  `avg_days_until_expiration` string COMMENT 'from deserializer', 
+  `days_since_last_receipt` string COMMENT 'from deserializer', 
+  `po_units` string COMMENT 'from deserializer', 
+  `min_exp_inv_greater_than_max` string COMMENT 'from deserializer', 
+  `max_exp_inv_greater_than_min` string COMMENT 'from deserializer', 
+  `priority_weight` string COMMENT 'from deserializer', 
+  `model_run_date` string COMMENT 'from deserializer')
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.OpenCSVSerde' 
+WITH SERDEPROPERTIES ( 
+  'escapeChar'='\n', 
+  'quoteChar'='\"', 
+  'separatorChar'=',') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://sagemaker-primary-list/primaryresults'
+TBLPROPERTIES (
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1773309666')

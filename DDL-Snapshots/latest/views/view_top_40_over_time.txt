@@ -1,0 +1,28 @@
+SELECT DISTINCT
+  top_40_product
+, iqvia_tl_product
+, top_40.productnamelong
+, system_class
+, disease_state
+, moa
+, month_in_stock
+, (CASE WHEN (avg_in_stock > 0) THEN 'yes' ELSE 'no' END) in_stock
+FROM
+  (view_top_40_products top_40
+LEFT JOIN (
+   SELECT DISTINCT
+     productnamelong
+   , "date_trunc"('month', current_date_in_stock) month_in_stock
+   , ("sum"(available_qty) / "count"(current_date_in_stock)) avg_in_stock
+   FROM
+     (
+      SELECT DISTINCT
+        productnamelong
+      , current_date_in_stock
+      , "sum"(available_qty) available_qty
+      FROM
+        view_running_inventory
+      GROUP BY 1, 2
+   ) 
+   GROUP BY 1, 2
+)  run_inv ON (top_40.productnamelong = run_inv.productnamelong))

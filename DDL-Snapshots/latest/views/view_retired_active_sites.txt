@@ -1,0 +1,123 @@
+(
+   SELECT DISTINCT
+     sf.health_system
+   , sf.site_name
+   , sf.ehope_type__c
+   , sf.joined_date
+   , sf.shippingstate
+   , sf.site_id
+   , dt.day
+   , null order_id
+   , null product_id
+   , null total_units_distributed
+   , hdwt.drug_class
+   , null packagesize
+   , null unit_wac
+   , "sum"(hdwt.total_wac) total_wac
+   , "sum"(hdwt.total_doses) total_doses
+   , null fills
+   , null encounters
+   , null uniquepatients
+   , "date_add"('day', 365, sf.joined_date) one_yr_after_joined
+   , null quarter_end_date
+   FROM
+     ((historical_doses_wac_timestamp hdwt
+   INNER JOIN date_table dt ON (hdwt.ship_date = dt.day))
+   LEFT JOIN site_info sf ON (hdwt.site_id = sf.site_id))
+   WHERE (sf.company_id__c <> '')
+   GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 16, 17, 18, 19, 20
+) UNION ALL (
+   SELECT DISTINCT
+     sf.health_system
+   , sf.site_name
+   , sf.ehope_type__c
+   , sf.joined_date
+   , sf.shippingstatecode shippingstate
+   , sf.site_id
+   , dt.day
+   , ocid.order_id
+   , ocid.product_id
+   , "sum"(ocid.total_units_distributed) total_units_distributed
+   , ocid.drug_class
+   , pkg.packagesize
+   , ocid.unit_wac
+   , "sum"((ocid.unit_wac * ocid.total_units_distributed)) total_wac
+   , (pkg.packagesize * ocid.total_units_distributed) total_doses
+   , null fills
+   , null encounters
+   , null uniquepatients
+   , "date_add"('day', 365, sf.joined_date) one_yr_after_joined
+   , null quarter_end_date
+   FROM
+     ((((
+      SELECT
+        order_id
+      , otp.type
+      , status
+      , TRY_CAST(TRY("date_format"("date_parse"(order_date, '%m/%d/%Y'), '%Y-%m-%d %T')) AS timestamp) order_date
+      , TRY_CAST(TRY("date_format"("date_parse"(ship_date, '%m/%d/%Y'), '%Y-%m-%d %T')) AS timestamp) ship_date
+      , product_id
+      , site_id
+      , donor_id
+      , salesforceid
+      , drug_name
+      , unit_of_measure
+      , inner_package
+      , TRY_CAST(unit_wac AS double) unit_wac
+      , TRY_CAST(total_units_distributed AS bigint) total_units_distributed
+      , manufacturer
+      , lot_id
+      , "trim"(drug_class) drug_class
+      , insulin
+      , lot_number
+      , donor_code
+      , TRY_CAST(order_qty AS bigint) order_qty
+      , dispensary_name
+      , strength
+      , donor_lot
+      , TRY_CAST(TRY("date_format"("date_parse"(expire_dt, '%m/%d/%Y'), '%Y-%m-%d %T')) AS timestamp) expire_dt
+      , generic
+      , TRY_CAST(unit_awp AS double) unit_awp
+      , TRY_CAST(packagesize AS double) packagesize
+      FROM
+        (orders_2015_to_present otp
+      LEFT JOIN sf_account sf ON (otp.salesforceid = sf.salesforce_id__c))
+   )  ocid
+   LEFT JOIN (
+      SELECT DISTINCT
+        product_id ndc11
+      , packagesize
+      FROM
+        view_inventory_master
+   )  pkg ON (ocid.product_id = pkg.ndc11))
+   INNER JOIN date_table dt ON (ocid.ship_date = dt.day))
+   LEFT JOIN retired_and_active_sites sf ON (ocid.site_id = sf.site_id))
+   WHERE (ship_date >= TIMESTAMP '2019-01-01 00:00:00.000')
+   GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 12, 13, 15, 16, 17, 18
+) UNION ALL (
+   SELECT
+     sf.health_system
+   , sf.site_name
+   , sf.ehope_type__c
+   , sf.joined_date
+   , sf.shippingstatecode shippingstate
+   , sf.site_id
+   , dt.day
+   , null order_id
+   , null product_id
+   , null total_units_distributed
+   , null drug_class
+   , null packagesize
+   , null unit_wac
+   , null total_wac
+   , null total_doses
+   , qn.fills
+   , qn.encounters
+   , qn.uniquepatients
+   , "date_add"('day', 365, sf.joined_date) one_yr_after_joined
+   , qn.quarter_end_date
+   FROM
+     ((view_quarterly_numbers qn
+   INNER JOIN date_table dt ON (qn.quarter_end_date = dt.day))
+   LEFT JOIN retired_and_active_sites sf ON (qn.site_id = sf.site_id))
+) 

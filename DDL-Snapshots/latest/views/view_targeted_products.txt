@@ -1,0 +1,55 @@
+WITH
+  inv_agg AS (
+   SELECT
+     product_id
+   , donor_id
+   , priority
+   , SUM(total_in_stock) total_in_stock
+   , MIN(min_exp_date) min_exp_date
+   FROM
+     view_inventory_master
+   WHERE (priority IN ('P1', 'P2', 'P3', 'P4'))
+   GROUP BY product_id, donor_id, priority
+) 
+, targeted_data AS (
+   SELECT
+     receive_date
+   , (CASE WHEN (MONTH(receive_date) BETWEEN 1 AND 3) THEN 'Q1' WHEN (MONTH(receive_date) BETWEEN 4 AND 6) THEN 'Q2' WHEN (MONTH(receive_date) BETWEEN 7 AND 9) THEN 'Q3' ELSE 'Q4' END) quarter
+   , donor_name
+   , ohft.donor_id
+   , order_id
+   , productnamelong
+   , priority
+   , ohft.product_id
+   , SUM(CAST(total_units AS DOUBLE)) total_targeted_units_received
+   , SUM((CAST(total_units AS DOUBLE) * packagesize)) total_targeted_doses
+   FROM
+     (orders_historical_finale_timestamp ohft
+   LEFT JOIN (
+      SELECT DISTINCT
+        product_id
+      , priority
+      , productnamelong
+      , donor_name
+      , donor_id
+      , packagesize
+      FROM
+        view_inventory_master inv
+      WHERE (priority IN ('P1', 'P2', 'P3', 'P4'))
+   )  inv_basic ON ((ohft.product_id = inv_basic.product_id) AND (ohft.donor_id = inv_basic.donor_id)))
+   WHERE ((receive_date IS NOT NULL) AND ((ohft.order_id IN ('20241015-1E', '20241014-1E', '20241021-1P', '20241105-1P', '20250108-1E', '20250110-1P', '20250128-1T', '20250220-2T', '20250313-2T', '20241101-1E', '20241206-1E', '20240121-1E', '20250523-1T', '20250505-1T', '20250516-1T', '20250121-1E')) OR (ohft.order_id LIKE '%T')))
+   GROUP BY 1, 2, 3, 4, 5, 6, 7, 8
+) 
+SELECT
+  td.*
+, ia.total_in_stock
+, ia.min_exp_date
+, sum(CAST(s.sales AS DOUBLE)) estimated_units_sold_by_mfr
+, sum((1E-2 * CAST(s.sales AS DOUBLE))) annual_doh_demand
+, sum(((1E-2 * CAST(s.sales AS DOUBLE)) / 4)) quarterly_doh_demand
+, (CASE WHEN ((s.sales IS NOT NULL) AND (CAST(s.sales AS DOUBLE) > 0)) THEN ((1E-2 * CAST(s.sales AS DOUBLE)) / (CAST(s.sales AS DOUBLE) * 4)) ELSE null END) doh_percent_ask_of_mfr
+FROM
+  ((targeted_data td
+LEFT JOIN inv_agg ia ON ((td.product_id = ia.product_id) AND (td.donor_id = ia.donor_id) AND (td.priority = ia.priority)))
+LEFT JOIN iqvia_sales s ON ((td.product_id = s.ndc) AND (DATE_TRUNC('month', td.receive_date) = DATE_TRUNC('month', CAST(s.month AS timestamp)))))
+GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 16

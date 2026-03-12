@@ -1,0 +1,27 @@
+SELECT DISTINCT
+  tpfm.target_list_product
+, arx_priority
+, priority
+, quarterly_demand
+, num_active_prospect_tp
+, major_class
+, (CASE WHEN (daily_throughput IS NOT NULL) THEN daily_throughput ELSE ((quarterly_demand * 4) / 261) END) estimated_daily_throughput
+, available_qty
+FROM
+  (((top_p1_fast_movers tpfm
+LEFT JOIN view_tl_stock_and_demand tlsd ON (tpfm.target_list_product = tlsd.target_list_product))
+LEFT JOIN (
+   SELECT DISTINCT
+     target_list_product
+   , daily_throughput
+   FROM
+     update_tl_projections
+)  proj ON (tpfm.target_list_product = proj.target_list_product))
+LEFT JOIN (
+   SELECT DISTINCT
+     target_list_product
+   , num_active_prospect_tp
+   , major_class
+   FROM
+     view_suggested_changes_to_tl
+)  tp ON (tpfm.target_list_product = tp.target_list_product))

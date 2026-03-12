@@ -1,0 +1,41 @@
+(
+   SELECT
+     ldis.productnamelong
+   , ldis.product_id
+   , ldis.current_date_in_stock last_day_in_stock
+   , lsd.last_ship_date
+   , "sum"(vri.total_in_stock) total_last_day_in_stock
+   FROM
+     (((
+      SELECT DISTINCT
+        "max"(current_date_in_stock) current_date_in_stock
+      , productnamelong
+      , product_id
+      FROM
+        view_running_inventory
+      WHERE (total_in_stock > 0)
+      GROUP BY 2, 3
+   )  ldis
+   LEFT JOIN (
+      SELECT
+        "sum"(total_in_stock) total_in_stock
+      , current_date_in_stock
+      , product_id
+      , productnamelong
+      , donor_id
+      FROM
+        view_running_inventory
+      GROUP BY 2, 3, 4, 5
+   )  vri ON ((ldis.product_id = vri.product_id) AND (ldis.current_date_in_stock = vri.current_date_in_stock)))
+   LEFT JOIN (
+      SELECT DISTINCT
+        product_id
+      , "max"(ship_date) last_ship_date
+      FROM
+        orders_with_companyid ocid
+      WHERE (NOT (ocid.site_id IN ('10277', '194')))
+      GROUP BY 1
+   )  lsd ON (ldis.product_id = lsd.product_id))
+   WHERE (vri.donor_id <> '702')
+   GROUP BY 1, 2, 3, 4
+) 

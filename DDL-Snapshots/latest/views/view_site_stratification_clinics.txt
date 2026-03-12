@@ -1,0 +1,44 @@
+SELECT
+  "date_parse"(year_month, '%Y-%m') year_month
+, month_long_name
+, year
+, quarter
+, site_name
+, monthly_qty_shipped
+, monthly_orders
+, monthly_wac_distributed
+, account_manager
+, salesforce_id__c
+, ehope_type__c
+, shippingstatecode
+, total_qty_shipped
+, total_orders
+, wac_distributed
+, total_patients
+, joined_date
+, earliest_ship_date
+, latest_ship_date
+, months_in_network
+, orders_per_month
+, wac_per_month
+, shipped_per_month
+, patients_per_month
+, new_dispensing_entity__c
+, purchased_medicine__c
+, no_mail_order
+, no_refills
+, no_open_door
+, not_accepting_new_patients
+, no_pharmacy_os
+, no_attestation
+, has_pap_assistance
+, adopted_medicaid_expansion
+, no_pharmacy
+, no_insulin
+, has_340b
+, less_than_2_years_active
+, wac_utilization
+, patient_distribution
+, weighted_score
+FROM
+  "database-prod"."site_stratification_clinics"

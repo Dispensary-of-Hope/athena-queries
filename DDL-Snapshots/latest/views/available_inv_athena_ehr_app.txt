@@ -1,0 +1,39 @@
+SELECT DISTINCT
+  (CASE WHEN ((statusname = 'Generic') AND (brand_generic = 'BRANDED GENERIC')) THEN CONCAT(inv.productnamelong, ' [', genericnamelong, ']') WHEN (statusname = 'Generic') THEN inv.productnamelong WHEN (statusname = 'Brand') THEN CONCAT(inv.productnamelong, ' [', genericnamelong, ']') ELSE inv.productnamelong END) productnamelong
+, max(concatenated_branded_names) concatenated_branded_names
+, genericnamelong
+, iqvia_major_class
+, iqvia_minor_class
+FROM
+  (((view_available_inventory inv
+LEFT JOIN (
+   SELECT *
+   FROM
+     (((package pk
+   INNER JOIN product p ON (pk.productid = p.productid))
+   LEFT JOIN product_generic_name_stub gen ON (p.productid = gen.productid))
+   LEFT JOIN (
+      SELECT
+        pbns.productid
+      , ARRAY_JOIN(SLICE(ARRAY_AGG(bns.brandednamestub ORDER BY bns.brandednamestub ASC), 1, 2), ', ') concatenated_branded_names
+      FROM
+        (product_branded_name_stub pbns
+      LEFT JOIN branded_name_stub bns ON (pbns.brandednamestubid = bns.brandednamestubid))
+      GROUP BY pbns.productid
+   )  bns2 ON (p.productid = bns2.productid))
+)  brand_generic ON (inv.product_id = brand_generic.ndc11))
+LEFT JOIN (
+   SELECT DISTINCT
+     product_id
+   , statusname
+   FROM
+     view_inventory_master
+)  inv2 ON (inv.product_id = inv2.product_id))
+LEFT JOIN (
+   SELECT DISTINCT
+     product_id
+   , brand_generic
+   FROM
+     iqvia_drug_class
+)  iqs ON (inv.product_id = iqs.product_id))
+GROUP BY 1, 3, 4, 5

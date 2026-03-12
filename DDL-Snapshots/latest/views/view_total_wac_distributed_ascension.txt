@@ -1,0 +1,25 @@
+(
+   SELECT
+     ship_date month_year
+   , ocid.product_id
+   , drug_name
+   , sum(total_units_distributed) units
+   , sum((total_units_distributed * inv.packagesize)) doses_distributed
+   , SUM((total_units_distributed * inv.unit_wac)) wac
+   , si.site_id
+   , site_name
+   , (CASE WHEN (insulin = 'True') THEN 'Cold Chain' ELSE 'Non Cold Chain' END) cold_vs_non_cold_chain
+   FROM
+     ((orders_with_companyid ocid
+   LEFT JOIN site_info si ON (si.site_id = ocid.site_id))
+   LEFT JOIN (
+      SELECT DISTINCT
+        inv.product_id
+      , packagesize
+      , inv.unit_wac
+      FROM
+        view_inventory_master inv
+   )  inv ON (ocid.product_id = inv.product_id))
+   WHERE (health_system LIKE 'Ascension Health')
+   GROUP BY 1, 2, 3, 7, 8, 9
+) 

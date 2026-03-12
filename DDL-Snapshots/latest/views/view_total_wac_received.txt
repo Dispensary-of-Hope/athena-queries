@@ -1,0 +1,22 @@
+SELECT
+  receive_date month_year
+, ohft.product_id
+, im.productnamelong
+, SUM(CAST(ohft.total_units AS double)) units
+, SUM((CAST(ohft.total_units AS double) * im.packagesize)) doses_received
+, SUM((CAST(im.unit_wac AS double) * CAST(ohft.total_units AS double))) wac
+, (CASE WHEN (ohft.insulin = 'True') THEN 'Cold Chain' ELSE 'Non Cold Chain' END) cold_vs_non_cold_chain
+FROM
+  (orders_historical_finale_timestamp ohft
+LEFT JOIN (
+   SELECT DISTINCT
+     inv.product_id
+   , inv.packagesize
+   , inv.productnamelong
+   , inv.unit_wac
+   FROM
+     view_inventory_master inv
+)  im ON (ohft.product_id = im.product_id))
+WHERE ((ohft.receive_date IS NOT NULL) AND (ohft.type IN ('Purchase', 'purchase')))
+GROUP BY 1, 2, 3, 7
+ORDER BY 1 DESC

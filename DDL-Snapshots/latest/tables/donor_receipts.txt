@@ -1,0 +1,40 @@
+  `order_id` string, 
+  `type` string, 
+  `status` string, 
+  `lot_id` string, 
+  `expiration_date` timestamp, 
+  `donor_lot` string, 
+  `receive_date` timestamp, 
+  `product_id` string, 
+  `total_units` bigint, 
+  `donor_id` string, 
+  `drug_name` string, 
+  `unit_measure_pkg` string, 
+  `strength` string, 
+  `manufacturer` string, 
+  `full_name__c` string, 
+  `primary_contact__c` string, 
+  `primary_contact_email__c` string, 
+  `shippingcity` string, 
+  `shippingstatecode` string, 
+  `shippingpostalcode` string, 
+  `phone` string, 
+  `email` string, 
+  `donor_id__c` string)
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe' 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
+LOCATION
+  's3://lambdarefreshresults/tables/879d7269-e365-4e72-9e39-205e1736f7ad'
+TBLPROPERTIES (
+  'auto.purge'='false', 
+  'has_encrypted_data'='false', 
+  'numFiles'='-1', 
+  'parquet.compression'='GZIP', 
+  'totalSize'='-1', 
+  'transactional'='false', 
+  'trino_query_id'='20260312_100022_00205_dpd2g', 
+  'trino_version'='0.215-24526-g02c3358')

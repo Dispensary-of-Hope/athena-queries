@@ -1,0 +1,45 @@
+SELECT
+  "date_parse"(year_month, '%Y-%m') year_month
+, month_long_name
+, year
+, CAST(quarter AS int) quarter
+, site_name
+, CAST(monthly_qty_shipped AS int) monthly_qty_shipped
+, CAST(monthly_orders AS int) monthly_orders
+, CAST(monthly_wac_distributed AS int) monthly_wac_distributed
+, account_manager
+, salesforce_id__c
+, ehope_type__c
+, shippingstatecode
+, CAST(total_qty_shipped AS int) total_qty_shipped
+, CAST(total_orders AS int) total_orders
+, CAST(wac_distributed AS int) wac_distributed
+, CAST(total_patients AS int) total_patients
+, joined_date
+, earliest_ship_date
+, latest_ship_date
+, TRY_CAST(months_in_network AS double) months_in_network
+, TRY_CAST(orders_per_month AS double) orders_per_month
+, TRY_CAST(wac_per_month AS double) wac_per_month
+, TRY_CAST(shipped_per_month AS double) shipped_per_month
+, TRY_CAST(patients_per_month AS double) patients_per_month
+, new_dispensing_entity__c
+, purchased_medicine__c
+, CAST(no_mail_order AS int) no_mail_order
+, CAST(no_refills AS int) no_refills
+, CAST(no_open_door AS int) no_open_door
+, CAST(not_accepting_new_patients AS int) not_accepting_new_patients
+, CAST(no_pharmacy_os AS int) no_pharmacy_os
+, CAST(no_attestation AS int) no_attestation
+, CAST(has_pap_assistance AS int) has_pap_assistance
+, CAST(adopted_medicaid_expansion AS int) adopted_medicaid_expansion
+, CAST(no_pharmacy AS int) no_pharmacy
+, CAST(no_insulin AS int) no_insulin
+, CAST(has_340b AS int) has_340b
+, CAST(less_than_2_years_active AS int) less_than_2_years_active
+, wac_utilization
+, patient_distribution
+, CAST(weighted_score AS int) weighted_score
+, (CASE WHEN (renewal_date__c <> '') THEN "date_parse"(renewal_date__c, '%Y-%m-%d') END) renewal_date__c
+FROM
+  site_stratification

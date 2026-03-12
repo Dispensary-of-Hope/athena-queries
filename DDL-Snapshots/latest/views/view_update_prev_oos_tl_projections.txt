@@ -1,0 +1,40 @@
+SELECT DISTINCT
+  alt.target_list_product
+, recommended_alternative_product
+, annual_projection alt_annual_projection
+, tl_eaches
+, alt_eaches
+, (CEIL((round(((annual_projection / alt_eaches) * tl_eaches), 0) / 144)) * 144) tl_annual_projection
+FROM
+  (((view_previously_in_stock_therapeutic_alternatives alt
+LEFT JOIN (
+   SELECT DISTINCT
+     target_list_product
+   , round(CAST(new_annual_projection_rounded_for_pallet_size AS double), 0) annual_projection
+   FROM
+     view_old_vs_new_tl_projections
+)  proj ON (alt.recommended_alternative_product = proj.target_list_product))
+LEFT JOIN (
+   SELECT *
+   FROM
+     (
+      SELECT
+        target_list_product
+      , medicaid_rx tl_eaches
+      FROM
+        view_rank_medicaid_rx
+      WHERE (NOT (target_list_product IN ('null', 'None')))
+   ) 
+)  iq1 ON (alt.target_list_product = iq1.target_list_product))
+LEFT JOIN (
+   SELECT *
+   FROM
+     (
+      SELECT
+        target_list_product
+      , medicaid_rx alt_eaches
+      FROM
+        view_rank_medicaid_rx
+      WHERE (NOT (target_list_product IN ('null', 'None')))
+   ) 
+)  iq2 ON (alt.recommended_alternative_product = iq2.target_list_product))

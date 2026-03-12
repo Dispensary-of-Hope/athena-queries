@@ -1,0 +1,63 @@
+  `ndc_upc_hri` string COMMENT 'from deserializer', 
+  `drug_name` string COMMENT 'from deserializer', 
+  `routeofadministration` string COMMENT 'from deserializer', 
+  `dosageform` string COMMENT 'from deserializer', 
+  `strength` string COMMENT 'from deserializer', 
+  `strength_unit_of_measure` string COMMENT 'from deserializer', 
+  `package_size` string COMMENT 'from deserializer', 
+  `package_size_unit_of_measure` string COMMENT 'from deserializer', 
+  `package_quantity` string COMMENT 'from deserializer', 
+  `pkgdesc` string COMMENT 'from deserializer', 
+  `manufacturers_labeler_name` string COMMENT 'from deserializer', 
+  `waceffectivedate` string COMMENT 'from deserializer', 
+  `wacpackageprice` string COMMENT 'from deserializer', 
+  `wacunitprice` string COMMENT 'from deserializer', 
+  `generic_product_packaging_code` string COMMENT 'from deserializer', 
+  `itemstatusflag` string COMMENT 'from deserializer', 
+  `generic_product_identifier` string COMMENT 'from deserializer', 
+  `rx_otc_indicator_code` string COMMENT 'from deserializer', 
+  `legend_indicator_code` string COMMENT 'from deserializer', 
+  `route_of_administration` string COMMENT 'from deserializer', 
+  `unitdose` string COMMENT 'from deserializer', 
+  `multi_source_summary_code` string COMMENT 'from deserializer', 
+  `multi_source_code` string COMMENT 'from deserializer', 
+  `limited_distribution_code` string COMMENT 'from deserializer', 
+  `gpi_14_name` string COMMENT 'from deserializer', 
+  `partial_gpi` string COMMENT 'from deserializer', 
+  `gpi_12_name` string COMMENT 'from deserializer', 
+  `gpi_10_name` string COMMENT 'from deserializer', 
+  `gpi_8_name` string COMMENT 'from deserializer', 
+  `gpi_6_name` string COMMENT 'from deserializer', 
+  `gpi_4_name` string COMMENT 'from deserializer', 
+  `gpi_2_name` string COMMENT 'from deserializer', 
+  `gpi_0_name` string COMMENT 'from deserializer', 
+  `desi_code` string COMMENT 'from deserializer', 
+  `clinic_pack_code` string COMMENT 'from deserializer', 
+  `brand_name_code` string COMMENT 'from deserializer', 
+  `dea_class_code` string COMMENT 'from deserializer', 
+  `awpeffectivedate` string COMMENT 'from deserializer', 
+  `awppackageprice` string COMMENT 'from deserializer', 
+  `awpunitprice` string COMMENT 'from deserializer', 
+  `awpunitpriceextended` string COMMENT 'from deserializer', 
+  `maintenance_drug_code` string COMMENT 'from deserializer', 
+  `cms_fuleffectivedate` string COMMENT 'from deserializer', 
+  `cms_fulpackageprice` string COMMENT 'from deserializer', 
+  `cms_fulunitprice` string COMMENT 'from deserializer', 
+  `item_description` string COMMENT 'from deserializer', 
+  `cs_filename` string COMMENT 'from deserializer', 
+  `land_timestamp` string COMMENT 'from deserializer')
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.OpenCSVSerde' 
+WITH SERDEPROPERTIES ( 
+  'escapeChar'='\\', 
+  'quoteChar'='\"', 
+  'separatorChar'=',') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://medispan-trg-data/'
+TBLPROPERTIES (
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1764716450')

@@ -1,0 +1,59 @@
+  `year_month` string COMMENT 'from deserializer', 
+  `month_long_name` string COMMENT 'from deserializer', 
+  `site_name` string COMMENT 'from deserializer', 
+  `monthly_qty_shipped` string COMMENT 'from deserializer', 
+  `monthly_orders` string COMMENT 'from deserializer', 
+  `monthly_wac_distributed` string COMMENT 'from deserializer', 
+  `mid_date` string COMMENT 'from deserializer', 
+  `quarter` string COMMENT 'from deserializer', 
+  `year` string COMMENT 'from deserializer', 
+  `account_manager` string COMMENT 'from deserializer', 
+  `salesforce_id__c` string COMMENT 'from deserializer', 
+  `ehope_type__c` string COMMENT 'from deserializer', 
+  `shippingstatecode` string COMMENT 'from deserializer', 
+  `total_qty_shipped` string COMMENT 'from deserializer', 
+  `total_orders` string COMMENT 'from deserializer', 
+  `wac_distributed` string COMMENT 'from deserializer', 
+  `total_patients` string COMMENT 'from deserializer', 
+  `joined_date` string COMMENT 'from deserializer', 
+  `earliest_ship_date` string COMMENT 'from deserializer', 
+  `latest_ship_date` string COMMENT 'from deserializer', 
+  `new_dispensing_entity__c` string COMMENT 'from deserializer', 
+  `purchased_medicine__c` string COMMENT 'from deserializer', 
+  `no_mail_order` string COMMENT 'from deserializer', 
+  `no_refills` string COMMENT 'from deserializer', 
+  `no_open_door` string COMMENT 'from deserializer', 
+  `not_accepting_new_patients` string COMMENT 'from deserializer', 
+  `no_pharmacy_os` string COMMENT 'from deserializer', 
+  `no_attestation` string COMMENT 'from deserializer', 
+  `has_pap_assistance` string COMMENT 'from deserializer', 
+  `renewal_date__c` string COMMENT 'from deserializer', 
+  `adopted_medicaid_expansion` string COMMENT 'from deserializer', 
+  `months_in_network` string COMMENT 'from deserializer', 
+  `orders_per_month` string COMMENT 'from deserializer', 
+  `wac_per_month` string COMMENT 'from deserializer', 
+  `shipped_per_month` string COMMENT 'from deserializer', 
+  `patients_per_month` string COMMENT 'from deserializer', 
+  `no_pharmacy` string COMMENT 'from deserializer', 
+  `no_insulin` string COMMENT 'from deserializer', 
+  `has_340b` string COMMENT 'from deserializer', 
+  `less_than_2_years_active` string COMMENT 'from deserializer', 
+  `wac_utilization` string COMMENT 'from deserializer', 
+  `patient_distribution` string COMMENT 'from deserializer', 
+  `weighted_score` string COMMENT 'from deserializer')
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.OpenCSVSerde' 
+WITH SERDEPROPERTIES ( 
+  'escapeChar'='\n', 
+  'quoteChar'='\"', 
+  'separatorChar'=',') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://site-strat-data/weighted_scores'
+TBLPROPERTIES (
+  'has_encrypted_data'='false', 
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1747058464')

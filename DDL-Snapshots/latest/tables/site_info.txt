@@ -1,0 +1,49 @@
+  `site_name` string, 
+  `health_system` string, 
+  `shippingstreet` string, 
+  `shippingstate` string, 
+  `shippingcity` string, 
+  `salesforce_id__c` string, 
+  `site_id` string, 
+  `company_id__c` string, 
+  `ehope_type__c` string, 
+  `account_record_type_text__c` string, 
+  `renewal_date` timestamp, 
+  `joined_date` timestamp, 
+  `account_manager` string, 
+  `subscription_fee` double, 
+  `monthly_subscription_fee` double, 
+  `lilly_approved__c` string, 
+  `licensed_pharmacy_licensed_distributor__c` string, 
+  `primary_contact__c` string, 
+  `order_pick_day__c` string, 
+  `wac_since_last_renewal` decimal(38,2), 
+  `new_dispensing_entity__c` string, 
+  `dispensing_entity__c` string, 
+  `shippingpostalcode` string, 
+  `shippingstatecode` string, 
+  `ascension_owned__c` string, 
+  `ascension_ministry__c` string, 
+  `purchased_medicine__c` string, 
+  `first_donated_iap_order__c` string, 
+  `latitude` string, 
+  `longitude` string, 
+  `divested_or_joint_venture_site` varchar(5), 
+  `phone` string)
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe' 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
+LOCATION
+  's3://lambdarefreshresults/tables/3c6329b4-2a71-4186-92ce-b74c42d05e47'
+TBLPROPERTIES (
+  'auto.purge'='false', 
+  'has_encrypted_data'='false', 
+  'numFiles'='-1', 
+  'parquet.compression'='GZIP', 
+  'totalSize'='-1', 
+  'transactional'='false', 
+  'trino_query_id'='20260312_133132_00160_mdqv2', 
+  'trino_version'='0.215-24526-g02c3358')

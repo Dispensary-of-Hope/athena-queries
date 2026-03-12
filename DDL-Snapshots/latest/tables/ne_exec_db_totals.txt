@@ -1,0 +1,24 @@
+  `health_system` string, 
+  `fills_since_inception` bigint, 
+  `uniquepatients_since_inception` decimal(38,2), 
+  `fills_first_year` bigint, 
+  `avg_uniquepatients_first_year` decimal(38,2), 
+  `day` timestamp, 
+  `first_qn_reporting_day` timestamp)
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe' 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
+LOCATION
+  's3://lambdarefreshresults/tables/7c17467c-4096-422c-a0ff-74ba50c949d1'
+TBLPROPERTIES (
+  'auto.purge'='false', 
+  'has_encrypted_data'='false', 
+  'numFiles'='-1', 
+  'parquet.compression'='GZIP', 
+  'totalSize'='-1', 
+  'transactional'='false', 
+  'trino_query_id'='20260312_100038_00106_9uvid', 
+  'trino_version'='0.215-24526-g02c3358')

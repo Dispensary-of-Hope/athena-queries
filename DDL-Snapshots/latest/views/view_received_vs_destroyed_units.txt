@@ -1,0 +1,27 @@
+SELECT
+  format_datetime(ohft.receive_date, 'Y-MM') month_year
+, ohft.product_id
+, im.productnamelong
+, SUM(CAST(ohft.total_units AS double)) units
+, SUM(CAST(des.units_destroyed AS double)) units_destroyed
+, SUM((CAST(des.units_destroyed AS double) * CAST(im.unit_wac AS double))) wac
+, (CASE WHEN (ohft.insulin = 'True') THEN 'Cold Chain' ELSE 'Non Cold Chain' END) cold_vs_non_cold_chain
+FROM
+  ((orders_historical_finale_timestamp ohft
+LEFT JOIN view_inventory_master im ON (ohft.product_id = im.product_id))
+LEFT JOIN (
+   SELECT
+     format_datetime(order_date, 'Y-MM') month_year
+   , product_id
+   , drug_name
+   , SUM(CAST(total_units_distributed AS double)) units_destroyed
+   , SUM((CAST(total_units_distributed AS double) * CAST(unit_wac AS double))) wac
+   , (CASE WHEN (insulin = 'True') THEN 'Cold Chain' ELSE 'Non Cold Chain' END) cold_vs_non_cold_chain
+   FROM
+     orders_with_companyid
+   WHERE (site_id = '10277')
+   GROUP BY 1, 2, 3, 6
+)  des ON ((des.product_id = ohft.product_id) AND (des.month_year = format_datetime(ohft.receive_date, 'Y-MM'))))
+WHERE (ohft.receive_date IS NOT NULL)
+GROUP BY 1, 2, 3, 7
+ORDER BY 1 DESC

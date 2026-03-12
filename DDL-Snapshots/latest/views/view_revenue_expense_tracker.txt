@@ -1,0 +1,64 @@
+WITH
+  table1 AS (
+   SELECT
+     year(day) year
+   , month(day) month
+   , CONCAT(CAST(year(day) AS VARCHAR), '-', LPAD(CAST(month(day) AS VARCHAR), 2, '0')) month_year
+   , ((SUM(fills) / 3E0) / COUNT(DISTINCT am.site_name)) avg_30_day_fills
+   , ROUND(((((SUM(uniquepatients) / 4) * 2.54E0) / COUNT(DISTINCT am.site_name)) / 3E0), 0) avg_unique_patients_per_site
+   , CAST(SUM(COALESCE(total_wac, 0)) AS DECIMAL(20, 2)) total_wac_distributed
+   FROM
+     ("database-prod"."view_am_dashboard" am
+   LEFT JOIN site_info si ON (si.site_name = am.site_name))
+   WHERE ((year(day) > 2023) AND (year(day) < 2025))
+   GROUP BY year(day), month(day)
+) 
+SELECT
+  table1.month_year
+, AVG(COALESCE(table1.avg_30_day_fills, 0)) OVER (PARTITION BY table1.year ORDER BY table1.year ASC, table1.month ASC ROWS BETWEEN 3 PRECEDING AND CURRENT ROW) avg_30_day_fills_4_month_lag
+, AVG(COALESCE(table1.avg_unique_patients_per_site, 0)) OVER (PARTITION BY table1.year ORDER BY table1.year ASC, table1.month ASC ROWS BETWEEN 3 PRECEDING AND CURRENT ROW) avg_unique_patients_per_site_4_month_lag
+, table1.total_wac_distributed
+, AVG(COALESCE((table1.avg_unique_patients_per_site * 3161), 0)) OVER (PARTITION BY table1.year ORDER BY table1.year ASC, table1.month ASC ROWS BETWEEN 3 PRECEDING AND CURRENT ROW) saving_per_site_4_month_lag
+, AVG(COALESCE(table2.saving_per_health_system, 0)) OVER (PARTITION BY table2.year ORDER BY table2.year ASC, table2.month ASC ROWS BETWEEN 3 PRECEDING AND CURRENT ROW) saving_per_health_system_4_month_lag
+, sub.subscription_fee
+, ((CAST(table1.total_wac_distributed AS DOUBLE) - CAST(sub.subscription_fee AS DOUBLE)) / CAST(sub.subscription_fee AS DOUBLE)) avg_roi_per_site
+FROM
+  ((table1
+LEFT JOIN (
+   SELECT
+     year(day) year
+   , month(day) month
+   , ROUND(((((SUM(uniquepatients) / 4) * 2.54E0) / COUNT(DISTINCT health_system)) * 3161), 0) saving_per_health_system
+   FROM
+     view_am_dashboard
+   WHERE ((health_system IS NOT NULL) AND (year(day) > 2023) AND (year(day) < 2025))
+   GROUP BY year(day), month(day)
+)  table2 ON ((table1.year = table2.year) AND (table1.month = table2.month)))
+LEFT JOIN (
+   SELECT
+     year
+   , month
+   , (SUM(subscription_fee) / 12) subscription_fee
+   FROM
+     (
+      SELECT DISTINCT
+        year(day) year
+      , month(day) month
+      , am.site_name
+      , subscription_fee
+      FROM
+        (view_am_dashboard am
+      LEFT JOIN (
+         SELECT DISTINCT
+           sfa.name site_name
+         , (CASE WHEN (ROUND(MAX(CAST(sfo.amount AS DOUBLE)), 2) = 0E0) THEN 1E0 ELSE ROUND(MAX(CAST(sfo.amount AS DOUBLE)), 2) END) subscription_fee
+         FROM
+           (sf_account sfa
+         LEFT JOIN sf_opportunity sfo ON (sfa.id = sfo.accountid))
+         WHERE ((sfo.amount IN ('0.0', '12500.0', '7500.0', '150000.0')) AND (LOWER(sfa.account_record_type_text__c) IN ('active access site')) AND (LOWER(sfa.type) IN ('active', 'retired', 'on hold')))
+         GROUP BY sfa.name
+      )  sub_fee ON (am.site_name = sub_fee.site_name))
+      WHERE ((year(day) > 2023) AND (year(day) < 2025))
+   )  sub_data
+   GROUP BY year, month
+)  sub ON ((table1.year = sub.year) AND (table1.month = sub.month)))

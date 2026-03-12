@@ -1,0 +1,25 @@
+  `brandednamestubid` string, 
+  `brandednamestub` string)
+ROW FORMAT DELIMITED 
+  FIELDS TERMINATED BY '|' 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://elsevier-exports/exports-folder/branded-name-stub/'
+TBLPROPERTIES (
+  'CrawlerSchemaDeserializerVersion'='1.0', 
+  'CrawlerSchemaSerializerVersion'='1.0', 
+  'UPDATED_BY_CRAWLER'='database-prod-elsevier-crawler', 
+  'areColumnsQuoted'='false', 
+  'averageRecordSize'='21', 
+  'classification'='csv', 
+  'columnsOrdered'='true', 
+  'compressionType'='none', 
+  'delimiter'='|', 
+  'objectCount'='1', 
+  'recordCount'='10341', 
+  'sizeKey'='217172', 
+  'skip.header.line.count'='1', 
+  'typeOfData'='file')

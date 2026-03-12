@@ -1,0 +1,38 @@
+  `productnamelong` string, 
+  `organsystem` string, 
+  `therapeuticclass` string, 
+  `pharmacologicalcategory` string, 
+  `chemicalsubgroup` string, 
+  `ndc11` string, 
+  `packagesize` double, 
+  `unitname` string, 
+  `pricetypename` string, 
+  `packageid` string, 
+  `packageprice` double, 
+  `pricetypeid` string, 
+  `companyname` string, 
+  `companynameshort` string, 
+  `offmarketdate` timestamp, 
+  `statusname` string, 
+  `inner_package` string, 
+  `outer_package` string, 
+  `innerpackagecount` bigint, 
+  `mechanism_of_action` string, 
+  `unit_of_measure` string)
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe' 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
+LOCATION
+  's3://lambdarefreshresults/tables/7965b019-1afb-4814-b1e6-2fc78bde6a38'
+TBLPROPERTIES (
+  'auto.purge'='false', 
+  'has_encrypted_data'='false', 
+  'numFiles'='-1', 
+  'parquet.compression'='GZIP', 
+  'totalSize'='-1', 
+  'transactional'='false', 
+  'trino_query_id'='20260310_090043_00052_vsue6', 
+  'trino_version'='0.215-24526-g02c3358')

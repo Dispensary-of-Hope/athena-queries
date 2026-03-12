@@ -1,0 +1,24 @@
+  `product_id` string, 
+  `day` timestamp, 
+  `lot_id` string, 
+  `expire_dt` string, 
+  `total_units_received` bigint, 
+  `total_units_distributed` bigint, 
+  `total_units_destroyed` bigint)
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe' 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
+LOCATION
+  's3://lambdarefreshresults/tables/10f4efe9-df4e-4893-a257-d5c13df3c886'
+TBLPROPERTIES (
+  'auto.purge'='false', 
+  'has_encrypted_data'='false', 
+  'numFiles'='-1', 
+  'parquet.compression'='GZIP', 
+  'totalSize'='-1', 
+  'transactional'='false', 
+  'trino_query_id'='20260312_135242_00052_p76bt', 
+  'trino_version'='0.215-24526-g02c3358')

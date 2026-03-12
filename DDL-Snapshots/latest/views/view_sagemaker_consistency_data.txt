@@ -1,0 +1,140 @@
+SELECT DISTINCT
+  (CASE WHEN ((on_hand_percent_of_par > 3.9E-1) AND (average_days_until_expiration > 149)) THEN 1 ELSE 0 END) prelim_consistent_value
+, ("row_number"() OVER (ORDER BY y.productnamelong ASC) - 1) row_number
+, "date_diff"('day', TIMESTAMP '2019-07-01 00:00:00.000', "date_trunc"('quarter', current_date)) days_since_first_quarter
+, y.productnamelong
+, (CASE WHEN (z.qty_accepted IS NOT NULL) THEN z.qty_accepted ELSE 0 END) offer_qty_accept_prev_qtr
+, number_of_pkg_size
+, (CASE WHEN (ins_y_n.productnamelong IS NULL) THEN 0 WHEN (ins_y_n.productnamelong IS NOT NULL) THEN 1 END) lilly_consistent
+, total_in_stock
+, on_hand_percent_of_par
+, average_days_until_expiration
+, min_days_since_last_receipt
+, (CASE WHEN (PO_units IS NULL) THEN 0 ELSE PO_units END) PO_units_current_qtr
+, (CASE WHEN (min_exp_inv_greater_than_max IS NULL) THEN 0 ELSE min_exp_inv_greater_than_max END) min_exp_inv_greater_than_max
+, (CASE WHEN (max_exp_inv_greater_than_min IS NULL) THEN 0 ELSE max_exp_inv_greater_than_min END) max_exp_inv_greater_than_min
+, (CASE WHEN (priority_weight IS NULL) THEN 0 ELSE priority_weight END) priority_weight
+, CAST(current_date AS timestamp) snapshot_date
+FROM
+  ((((((
+   SELECT DISTINCT
+     productnamelong
+   , number_of_pkg_size
+   , total_in_stock
+   , average_days_until_expiration
+   , min_days_since_last_receipt
+   , max_par_level
+   , "round"((CASE WHEN ((max_par_level IS NOT NULL) AND (max_par_level > 0)) THEN (CAST(total_in_stock AS double) / CAST(max_par_level AS double)) ELSE 0 END), 2) on_hand_percent_of_par
+   FROM
+     (
+      SELECT DISTINCT
+        productnamelong
+      , "count"(DISTINCT unit_of_measure) number_of_pkg_size
+      , "sum"(total_in_stock) total_in_stock
+      , CAST("round"("avg"(days_until_exp), 0) AS bigint) average_days_until_expiration
+      , "min"(days_since_last_receipt) min_days_since_last_receipt
+      , "max"(par_level) max_par_level
+      FROM
+        (
+         SELECT DISTINCT
+           productnamelong
+         , unit_of_measure
+         , total_in_stock
+         , min_exp_date
+         , "date_diff"('day', current_date, min_exp_date) days_until_exp
+         , latest_receipt_date
+         , "date_diff"('day', latest_receipt_date, current_date) days_since_last_receipt
+         , par_level
+         FROM
+           view_consistency_data
+      )  x
+      GROUP BY 1
+   ) 
+)  y
+LEFT JOIN (
+   SELECT DISTINCT
+     productnamelong
+   , "sum"(qty_accepted) qty_accepted
+   FROM
+     view_offers_distributed_received vodr
+   WHERE ((day < "date_trunc"('quarter', current_date)) AND (day >= "date_add"('quarter', -1, "date_trunc"('quarter', current_date))))
+   GROUP BY 1
+)  z ON (y.productnamelong = z.productnamelong))
+LEFT JOIN (
+   SELECT DISTINCT productnamelong
+   FROM
+     (orders_with_companyid ocid
+   LEFT JOIN (
+      SELECT DISTINCT
+        product_id
+      , productnamelong
+      FROM
+        view_inventory_master
+   )  vim ON (ocid.product_id = vim.product_id))
+   WHERE ("lower"(insulin) = 'true')
+)  ins_y_n ON (y.productnamelong = ins_y_n.productnamelong))
+LEFT JOIN (
+   SELECT DISTINCT
+     productnamelong
+   , (CASE WHEN (min_exp_in_stock > max_exp_in_stock) THEN 1 ELSE 0 END) min_exp_inv_greater_than_max
+   , (CASE WHEN (max_exp_in_stock > min_exp_in_stock) THEN 1 ELSE 0 END) max_exp_inv_greater_than_min
+   , current_date_in_stock
+   FROM
+     (
+      SELECT DISTINCT
+        x.productnamelong
+      , "sum"((CASE WHEN (inv.min_exp_date = max_exp_date) THEN total_in_stock END)) max_exp_in_stock
+      , "sum"((CASE WHEN (inv.min_exp_date = x.min_exp_date) THEN total_in_stock END)) min_exp_in_stock
+      , x.current_date_in_stock
+      FROM
+        (view_running_inventory inv
+      LEFT JOIN (
+         SELECT DISTINCT
+           productnamelong
+         , "max"(min_exp_date) max_exp_date
+         , "min"(min_exp_date) min_exp_date
+         , current_date_in_stock
+         FROM
+           view_running_inventory
+         WHERE ((current_date_in_stock = "date_add"('day', -1, current_date)) AND (total_in_stock > 0))
+         GROUP BY 1, 4
+         ORDER BY 1 ASC
+      )  x ON ((((inv.min_exp_date = x.min_exp_date) OR (inv.min_exp_date = x.max_exp_date)) AND (inv.productnamelong = x.productnamelong)) AND (inv.current_date_in_stock = x.current_date_in_stock)))
+      WHERE (x.productnamelong IS NOT NULL)
+      GROUP BY 1, 4
+   ) 
+)  exp_differences ON (y.productnamelong = exp_differences.productnamelong))
+LEFT JOIN (
+   SELECT
+     "date_diff"('day', TIMESTAMP '2019-07-01 00:00:00.000', "date_trunc"('quarter', purchase_order_date)) PO_days_since_first_qtr
+   , productnamelong
+   , "sum"(TRY_CAST(total_units AS bigint)) PO_units
+   FROM
+     (orders_historical_finale_timestamp ohft
+   LEFT JOIN (
+      SELECT DISTINCT
+        product_id
+      , productnamelong
+      FROM
+        view_inventory_master
+   )  inv ON (ohft.product_id = inv.product_id))
+   WHERE (purchase_order_date >= "date_trunc"('quarter', current_date))
+   GROUP BY 1, 2
+   ORDER BY 1 DESC
+)  PO_qty ON (y.productnamelong = PO_qty.productnamelong))
+LEFT JOIN (
+   SELECT DISTINCT
+     productnamelong
+   , (CASE WHEN (priority = 'P1') THEN 1 WHEN (priority = 'P2') THEN 7.5E-1 WHEN (priority = 'P3') THEN 5E-1 WHEN (priority = 'P4') THEN 2.5E-1 WHEN (priority IS NULL) THEN 0 END) priority_weight
+   FROM
+     (
+      SELECT DISTINCT
+        productnamelong
+      , "max"(priority) priority
+      FROM
+        view_running_inventory
+      WHERE ((current_date_in_stock = "date_add"('day', -1, current_date)) AND (total_in_stock > 0))
+      GROUP BY 1
+   ) 
+)  p_weight ON (y.productnamelong = p_weight.productnamelong))
+ORDER BY 4 ASC

@@ -1,0 +1,21 @@
+  `system_class` string COMMENT 'from deserializer', 
+  `disease_state` string COMMENT 'from deserializer', 
+  `moa` string COMMENT 'from deserializer', 
+  `med_purchasing_product` string COMMENT 'from deserializer', 
+  `iqvia_tl_product` string COMMENT 'from deserializer')
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.OpenCSVSerde' 
+WITH SERDEPROPERTIES ( 
+  'escapeChar'='\n', 
+  'quoteChar'='\"', 
+  'separatorChar'=',') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://iqviatables/med_purchasing_list'
+TBLPROPERTIES (
+  'has_encrypted_data'='false', 
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1722912675')

@@ -1,0 +1,32 @@
+SELECT DISTINCT
+  vtlp.target_list_product
+, vtlp.priority
+, (projected_units / 4) quarterly_demand
+, (CASE WHEN (available_qty IS NULL) THEN 0 ELSE available_qty END) available_qty
+FROM
+  ((view_target_list_products vtlp
+INNER JOIN target_list_projections tlp ON (vtlp.target_list_product = tlp.target_list_product))
+LEFT JOIN (
+   WITH
+     tl AS (
+      SELECT DISTINCT
+        target_list_product
+      , inv.priority
+      , sum(available_qty) available_qty
+      FROM
+        (view_inventory_master inv
+      LEFT JOIN (
+         SELECT DISTINCT
+           target_list_product
+         , ndc
+         FROM
+           iqvia_target_primary
+      )  iq ON (inv.product_id = iq.ndc))
+      GROUP BY 1, 2
+   ) 
+   SELECT *
+   FROM
+     tl
+   WHERE ((available_qty > 0) AND (priority IN ('P1', 'P2', 'P3')))
+)  tl_inv ON (vtlp.target_list_product = tl_inv.target_list_product))
+WHERE (NOT (vtlp.target_list_product IN ('None', 'null')))

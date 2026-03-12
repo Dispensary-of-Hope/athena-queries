@@ -1,0 +1,29 @@
+  `year` string COMMENT 'from deserializer', 
+  `stateabbr` string COMMENT 'from deserializer', 
+  `statedesc` string COMMENT 'from deserializer', 
+  `locationname` string COMMENT 'from deserializer', 
+  `category` string COMMENT 'from deserializer', 
+  `measure` string COMMENT 'from deserializer', 
+  `data_value_type` string COMMENT 'from deserializer', 
+  `data_value` string COMMENT 'from deserializer', 
+  `totalpopulation` string COMMENT 'from deserializer', 
+  `locationid` string COMMENT 'from deserializer', 
+  `short_question_text` string COMMENT 'from deserializer', 
+  `geolocation_type` string COMMENT 'from deserializer', 
+  `geolocation_coordinates` string COMMENT 'from deserializer')
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.OpenCSVSerde' 
+WITH SERDEPROPERTIES ( 
+  'escapeChar'='\n', 
+  'quoteChar'='\"', 
+  'separatorChar'=',') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://optum-tool-automation/cdc_data/PLACES_data'
+TBLPROPERTIES (
+  'has_encrypted_data'='false', 
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1659712549')

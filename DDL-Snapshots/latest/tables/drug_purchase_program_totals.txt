@@ -1,0 +1,24 @@
+  `status` string COMMENT 'from deserializer', 
+  `order_id` string COMMENT 'from deserializer', 
+  `supplier` string COMMENT 'from deserializer', 
+  `destination` string COMMENT 'from deserializer', 
+  `shipments` string COMMENT 'from deserializer', 
+  `order_date` string COMMENT 'from deserializer', 
+  `total_spent` string COMMENT 'from deserializer', 
+  `internal_notes` string COMMENT 'from deserializer', 
+  `grant_code` string COMMENT 'from deserializer')
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.OpenCSVSerde' 
+WITH SERDEPROPERTIES ( 
+  'separatorChar'=',') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://drug-purchasing-program/finale-drug-purchases/finale-product-purchase-list'
+TBLPROPERTIES (
+  'classification'='csv', 
+  'has_encrypted_data'='false', 
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1718398873')

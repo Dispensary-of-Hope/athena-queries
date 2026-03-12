@@ -1,0 +1,38 @@
+  `offer_id` string COMMENT 'from deserializer', 
+  `manufacturer` string COMMENT 'from deserializer', 
+  `offer_date` string COMMENT 'from deserializer', 
+  `wac` string COMMENT 'from deserializer', 
+  `awp` string COMMENT 'from deserializer', 
+  `ndc` string COMMENT 'from deserializer', 
+  `description` string COMMENT 'from deserializer', 
+  `brand_drugclass` string COMMENT 'from deserializer', 
+  `packagesize` string COMMENT 'from deserializer', 
+  `lot` string COMMENT 'from deserializer', 
+  `exp_date` string COMMENT 'from deserializer', 
+  `available_bottles` string COMMENT 'from deserializer', 
+  `qty_accepted` string COMMENT 'from deserializer', 
+  `doses_offered` string COMMENT 'from deserializer', 
+  `doses_accepted` string COMMENT 'from deserializer', 
+  `awp_offered` string COMMENT 'from deserializer', 
+  `awp_accepted` string COMMENT 'from deserializer', 
+  `wac_offered` string COMMENT 'from deserializer', 
+  `wac_accepted` string COMMENT 'from deserializer', 
+  `thirty_day_fills_accepted` string COMMENT 'from deserializer', 
+  `target_drug` string COMMENT 'from deserializer', 
+  `thirty_day_fills_offered` string COMMENT 'from deserializer')
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.OpenCSVSerde' 
+WITH SERDEPROPERTIES ( 
+  'escapeChar'='\n', 
+  'quoteChar'='\"', 
+  'separatorChar'=',') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://historical-data-powerbi/offers'
+TBLPROPERTIES (
+  'has_encrypted_data'='false', 
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1773323604')

@@ -1,0 +1,19 @@
+  `day` timestamp, 
+  `year` int, 
+  `monthnamelong` string, 
+  `month_number` int, 
+  `day_of_week` string, 
+  `monthnameshort` string, 
+  `calendar_quarter` string, 
+  `fiscal_quarter` string)
+ROW FORMAT DELIMITED 
+  FIELDS TERMINATED BY ',' 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://historical-data-powerbi/datestable'
+TBLPROPERTIES (
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1773323469')

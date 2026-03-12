@@ -1,0 +1,34 @@
+  `packagepriceerrataid` string, 
+  `originalpackagepriceerrataid` string, 
+  `pricetypeid` string, 
+  `packageid` string, 
+  `begindate` timestamp, 
+  `enddate` timestamp, 
+  `packageprice` double, 
+  `pricechangereasonid` string, 
+  `casecount` bigint, 
+  `caseprice` double, 
+  `unitprice` double)
+ROW FORMAT DELIMITED 
+  FIELDS TERMINATED BY '|' 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://elsevier-exports/exports-folder/price-errata/'
+TBLPROPERTIES (
+  'CrawlerSchemaDeserializerVersion'='1.0', 
+  'CrawlerSchemaSerializerVersion'='1.0', 
+  'UPDATED_BY_CRAWLER'='database-prod-elsevier-crawler', 
+  'areColumnsQuoted'='false', 
+  'averageRecordSize'='98', 
+  'classification'='csv', 
+  'columnsOrdered'='true', 
+  'compressionType'='none', 
+  'delimiter'='|', 
+  'objectCount'='1', 
+  'recordCount'='219880', 
+  'sizeKey'='21548304', 
+  'skip.header.line.count'='1', 
+  'typeOfData'='file')

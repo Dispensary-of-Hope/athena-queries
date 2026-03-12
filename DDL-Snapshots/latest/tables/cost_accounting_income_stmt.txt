@@ -1,0 +1,40 @@
+  `date` string COMMENT 'from deserializer', 
+  `contract_services_revenue` string COMMENT 'from deserializer', 
+  `contract_serv_revenue` string COMMENT 'from deserializer', 
+  `foundation_ic_trnsf` string COMMENT 'from deserializer', 
+  `foundation_transfers_revenue` string COMMENT 'from deserializer', 
+  `operatgrevtercompbetweenhms` string COMMENT 'from deserializer', 
+  `ic_revenue_shared_services` string COMMENT 'from deserializer', 
+  `other_miscellaneous_revenue` string COMMENT 'from deserializer', 
+  `totals_other_revenue` string COMMENT 'from deserializer', 
+  `totals_operating_revenues` string COMMENT 'from deserializer', 
+  `totals_operating_expenses` string COMMENT 'from deserializer', 
+  `salary_and_wages` string COMMENT 'from deserializer', 
+  `employee_benefits` string COMMENT 'from deserializer', 
+  `purchased_services` string COMMENT 'from deserializer', 
+  `professional_fees` string COMMENT 'from deserializer', 
+  `supplies_expense` string COMMENT 'from deserializer', 
+  `insurance_expense` string COMMENT 'from deserializer', 
+  `bad_dept_expense` string COMMENT 'from deserializer', 
+  `minor_equipment` string COMMENT 'from deserializer', 
+  `utilities` string COMMENT 'from deserializer', 
+  `rent` string COMMENT 'from deserializer', 
+  `travel_seminars_education` string COMMENT 'from deserializer', 
+  `public_relations` string COMMENT 'from deserializer', 
+  `other_expense` string COMMENT 'from deserializer', 
+  `depreciation_expense` string COMMENT 'from deserializer')
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.OpenCSVSerde' 
+WITH SERDEPROPERTIES ( 
+  'separatorChar'=',') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://testing-cost-accounting/financial_statement/output'
+TBLPROPERTIES (
+  'classification'='csv', 
+  'has_encrypted_data'='false', 
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1735848078')

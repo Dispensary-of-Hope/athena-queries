@@ -1,0 +1,28 @@
+(
+   SELECT
+     purchase_order_date
+   , pro.excess_orders_placed
+   , pro.planned_orders_placed
+   , (pro.excess_orders_placed + pro.planned_orders_placed) total_orders_placed
+   , total_orders_received
+   FROM
+     (view_total_orders_placed pro
+   INNER JOIN (
+      SELECT
+        total_orders_received
+      , receive_date
+      FROM
+        (
+         SELECT
+           receive_date
+         , "count"(DISTINCT order_id) total_orders_received
+         FROM
+           orders_historical_finale_timestamp
+         WHERE ((order_id LIKE '%E%') OR ((order_id LIKE '%P%') AND (type = 'Purchase')))
+         GROUP BY receive_date
+         ORDER BY receive_date DESC
+      ) 
+   )  tro ON (tro.receive_date = pro.purchase_order_date))
+   GROUP BY 1, 2, 3, 4, 5
+   ORDER BY 1 DESC
+) 

@@ -1,0 +1,11 @@
+SELECT
+  productnamelong
+, unit_of_measure
+, min_exp_date
+, drug_class
+, therapeutic_class
+, statusname
+, current_date_in_stock
+FROM
+  view_inventory_master
+WHERE ((min_exp_date BETWEEN (current_timestamp + INTERVAL  '60' DAY) AND (current_timestamp + INTERVAL  '120' DAY)) AND (available_qty > 0) AND (donor_id <> '702'))

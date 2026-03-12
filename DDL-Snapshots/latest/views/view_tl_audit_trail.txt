@@ -1,0 +1,11 @@
+SELECT
+  TRY_CAST(tl_date AS timestamp) tl_date
+, productnamelong
+, priority
+, tier
+, audit_trail_update
+, reason
+, TRY_CAST(audit_trail_date AS timestamp) audit_trail_date
+, TRY_CAST(date_added_to_tl AS timestamp) date_added_to_tl
+FROM
+  tl_audit_trail

@@ -1,0 +1,40 @@
+  `productnamelong` string COMMENT 'from deserializer', 
+  `product_id` string COMMENT 'from deserializer', 
+  `lot_id` string COMMENT 'from deserializer', 
+  `packagesize` string COMMENT 'from deserializer', 
+  `unitname` string COMMENT 'from deserializer', 
+  `inner_package` string COMMENT 'from deserializer', 
+  `outer_package` string COMMENT 'from deserializer', 
+  `unit_of_measure` string COMMENT 'from deserializer', 
+  `innerpackagecount` string COMMENT 'from deserializer', 
+  `priority` string COMMENT 'from deserializer', 
+  `primary` string COMMENT 'from deserializer', 
+  `total_in_stock` string COMMENT 'from deserializer', 
+  `available_qty` string COMMENT 'from deserializer', 
+  `purchase_order_qty` string COMMENT 'from deserializer', 
+  `min_exp_date` string COMMENT 'from deserializer', 
+  `drug_class` string COMMENT 'from deserializer', 
+  `therapeutic_class` string COMMENT 'from deserializer', 
+  `current_date_in_stock` string COMMENT 'from deserializer', 
+  `statusname` string COMMENT 'from deserializer', 
+  `donor_id` string COMMENT 'from deserializer', 
+  `sublocation` string COMMENT 'from deserializer', 
+  `unit_wac` string COMMENT 'from deserializer', 
+  `total_wac` string COMMENT 'from deserializer', 
+  `donor_name` string COMMENT 'from deserializer')
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.OpenCSVSerde' 
+WITH SERDEPROPERTIES ( 
+  'escapeChar'='\n', 
+  'quoteChar'='\"', 
+  'separatorChar'=',') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://daily-inventory-snapshot/inventory-master'
+TBLPROPERTIES (
+  'has_encrypted_data'='false', 
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1773316825')

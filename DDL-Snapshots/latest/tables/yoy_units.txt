@@ -1,0 +1,23 @@
+  `day` timestamp, 
+  `total_daily_units_received` bigint, 
+  `total_daily_units_distributed` bigint, 
+  `total_units_received_previous_year` bigint, 
+  `total_units_distributed_previous_year` bigint, 
+  `day_previous_year` timestamp)
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe' 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
+LOCATION
+  's3://lambdarefreshresults/tables/d13b6fe4-42d6-43fb-893e-e0857a38da7f'
+TBLPROPERTIES (
+  'auto.purge'='false', 
+  'has_encrypted_data'='false', 
+  'numFiles'='-1', 
+  'parquet.compression'='GZIP', 
+  'totalSize'='-1', 
+  'transactional'='false', 
+  'trino_query_id'='20260312_100014_00133_q9w3z', 
+  'trino_version'='0.215-24526-g02c3358')

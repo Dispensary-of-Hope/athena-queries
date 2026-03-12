@@ -1,0 +1,26 @@
+  `name` string, 
+  `type` string, 
+  `donor_code__c` string, 
+  `donor_id__c` string, 
+  `account_record_type_text__c` string, 
+  `date_became_active` timestamp, 
+  `donating_planned__c` string, 
+  `donating_excess__c` string, 
+  `first_donation_date` timestamp)
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe' 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
+LOCATION
+  's3://lambdarefreshresults/tables/e5940ca6-55d0-4cdc-847e-85eaea4250a3'
+TBLPROPERTIES (
+  'auto.purge'='false', 
+  'has_encrypted_data'='false', 
+  'numFiles'='-1', 
+  'parquet.compression'='GZIP', 
+  'totalSize'='-1', 
+  'transactional'='false', 
+  'trino_query_id'='20260312_135114_00142_ta98n', 
+  'trino_version'='0.215-24526-g02c3358')

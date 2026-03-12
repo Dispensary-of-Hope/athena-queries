@@ -1,0 +1,23 @@
+SELECT
+  ocid.product_id
+, ocid.drug_name
+, ocid.drug_class
+, (CASE WHEN (ocid.generic = 'Yes') THEN 'Generic' WHEN ((ocid.generic IS NULL) OR (ocid.generic = '')) THEN '' ELSE 'Brand' END) product_type
+, ocid.order_qty
+, ocid.total_units_distributed
+, ocid.unit_wac
+, "round"((ocid.unit_wac * ocid.total_units_distributed), 2) wac_total
+, ocid.order_date
+, ocid.ship_date
+, ocid.unit_of_measure
+, ocid.inner_package
+, ocid.packagesize
+, ocid.company_id__c company_id
+, sf.name
+, sf.id__c site_id
+, dt.day
+FROM
+  ((orders_with_companyid ocid
+LEFT JOIN sf_account sf ON (sf.id__c = ocid.site_id))
+LEFT JOIN date_table dt ON (dt.day = ocid.ship_date))
+WHERE (NOT (sf.company_id__c LIKE ''))

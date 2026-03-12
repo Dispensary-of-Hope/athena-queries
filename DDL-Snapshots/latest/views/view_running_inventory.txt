@@ -1,0 +1,27 @@
+SELECT
+  productnamelong
+, product_id
+, lot_id
+, TRY_CAST(packagesize AS double) packagesize
+, unitname
+, inner_package
+, outer_package
+, unit_of_measure
+, TRY_CAST(innerpackagecount AS bigint) innerpackagecount
+, priority
+, primary
+, TRY_CAST(total_in_stock AS bigint) total_in_stock
+, TRY_CAST(available_qty AS bigint) available_qty
+, TRY_CAST(purchase_order_qty AS bigint) purchase_order_qty
+, TRY_CAST(min_exp_date AS timestamp) min_exp_date
+, drug_class
+, therapeutic_class
+, TRY_CAST(current_date_in_stock AS timestamp) current_date_in_stock
+, statusname
+, donor_id
+, sublocation
+, TRY_CAST(unit_WAC AS double) unit_WAC
+, TRY_CAST(total_WAC AS double) total_WAC
+, donor_name
+FROM
+  running_inventory

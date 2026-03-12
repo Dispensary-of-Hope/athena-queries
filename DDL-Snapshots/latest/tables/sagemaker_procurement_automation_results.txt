@@ -1,0 +1,18 @@
+  `xgboost_predicted_amount_to_order` string COMMENT 'from deserializer', 
+  `productnamelong` string COMMENT 'from deserializer', 
+  `amount_to_order_before_prediction` string COMMENT 'from deserializer')
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.OpenCSVSerde' 
+WITH SERDEPROPERTIES ( 
+  'escapeChar'='\n', 
+  'quoteChar'='\"', 
+  'separatorChar'=',') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://sagemaker-us-east-1-276910288805/sagemaker-procurement-automation/results'
+TBLPROPERTIES (
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1684157021')

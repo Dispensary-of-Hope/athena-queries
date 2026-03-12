@@ -1,0 +1,63 @@
+WITH
+  doh_demand AS (
+   SELECT DISTINCT
+     target_list_product
+   , projected_units annual_doh_demand
+   , (projected_units / 4) quarterly_doh_demand
+   FROM
+     target_list_projections
+) 
+, iq AS (
+   SELECT DISTINCT
+     manufacturer
+   , target_list_product
+   , ndc
+   , donor_status
+   , max(pack_size) pack_size
+   , max(pack_qty) pack_qty
+   , sum(eaches) mfg_units_sold
+   , sum(nsp_ext_units) mfg_ext_units
+   , (CASE WHEN (month("day") BETWEEN 7 AND 9) THEN concat('Q1'' ', CAST((year("day") + 1) AS varchar)) WHEN (month("day") BETWEEN 10 AND 12) THEN concat('Q2'' ', CAST((year("day") + 1) AS varchar)) WHEN (month("day") BETWEEN 1 AND 3) THEN concat('Q3'' ', CAST(year("day") AS varchar)) WHEN (month("day") BETWEEN 4 AND 6) THEN concat('Q4'' ', CAST(year("day") AS varchar)) END) fiscal_quarter_year
+   FROM
+     view_iqvia_sales
+   WHERE ((NOT (target_list_product IN ('None', 'null', ''))) AND (ndc <> 'NDC'))
+   GROUP BY 1, 2, 3, 4, 9
+) 
+, inv AS (
+   SELECT DISTINCT
+     target_list_product
+   , priority
+   , sum(available_qty) current_available_qty
+   , min(min_exp_date) min_exp_date
+   FROM
+     (iqvia_target_primary iq
+   LEFT JOIN (
+      SELECT DISTINCT
+        product_id
+      , sum(available_qty) available_qty
+      , min(min_exp_date) min_exp_date
+      FROM
+        view_inventory_master
+      GROUP BY 1
+   )  inv ON (iq.ndc = inv.product_id))
+   WHERE ((NOT (target_list_product IN ('null', 'None', ''))) AND (ndc <> 'NDC'))
+   GROUP BY 1, 2
+) 
+SELECT DISTINCT
+  fiscal_quarter_year
+, manufacturer
+, donor_status
+, inv.target_list_product
+, ndc
+, CAST(pack_qty AS double) packagesize
+, inv.priority
+, mfg_units_sold
+, mfg_ext_units
+, current_available_qty
+, min_exp_date
+, annual_doh_demand
+, quarterly_doh_demand
+FROM
+  ((inv
+LEFT JOIN doh_demand ON (inv.target_list_product = doh_demand.target_list_product))
+LEFT JOIN iq ON (inv.target_list_product = iq.target_list_product))

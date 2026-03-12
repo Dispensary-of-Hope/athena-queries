@@ -1,0 +1,38 @@
+WITH
+  run_inv AS (
+   SELECT DISTINCT
+     current_date_in_stock
+   , run_inv.product_id
+   , productnamelong
+   , sum(total_in_stock) total_in_stock
+   , sum((total_in_stock * packagesize)) total_doses_in_stock
+   , unit_wac
+   , sum((unit_wac * total_in_stock)) total_wac
+   , (CASE WHEN (donor_id = '53826') THEN 'Cold Chain' ELSE 'Non Cold Chain' END) cold_vs_non_cold_chain
+   , (CASE WHEN (sublocation = 'Q0') THEN 'Quarantined for Destruction' WHEN (sublocation LIKE '%-W') THEN 'Waiting to be moved to Quarantine for destruction' WHEN (sublocation = 'R0') THEN 'Received and waiting to be placed in a pick location' ELSE 'Regular Stock' END) sublocation_description
+   FROM
+     view_running_inventory run_inv
+   GROUP BY 1, 2, 3, 6, 8, 9
+) 
+, month_last AS (
+   SELECT
+     date_trunc('month', current_date_in_stock) month_start
+   , max(current_date_in_stock) last_snapshot_date
+   FROM
+     view_running_inventory
+   GROUP BY 1
+) 
+SELECT DISTINCT
+  current_date_in_stock
+, product_id
+, productnamelong
+, total_in_stock
+, total_doses_in_stock
+, unit_wac
+, total_wac
+, cold_vs_non_cold_chain
+, sublocation_description
+FROM
+  (run_inv
+INNER JOIN month_last m ON ((date_trunc('month', run_inv.current_date_in_stock) = m.month_start) AND (run_inv.current_date_in_stock = m.last_snapshot_date)))
+WHERE (total_in_stock <> 0)

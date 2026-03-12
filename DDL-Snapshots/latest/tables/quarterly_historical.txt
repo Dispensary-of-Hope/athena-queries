@@ -1,0 +1,23 @@
+  `fills` string COMMENT 'from deserializer', 
+  `encounters` string COMMENT 'from deserializer', 
+  `uniquepatients` string COMMENT 'from deserializer', 
+  `quarter` string COMMENT 'from deserializer', 
+  `year` string COMMENT 'from deserializer', 
+  `site` string COMMENT 'from deserializer', 
+  `siteid` string COMMENT 'from deserializer', 
+  `quarter_end_date` string COMMENT 'from deserializer')
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.OpenCSVSerde' 
+WITH SERDEPROPERTIES ( 
+  'escapeChar'='\n', 
+  'quoteChar'='\"', 
+  'separatorChar'=',') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://quarterlynumbershistorical/'
+TBLPROPERTIES (
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1643067049')

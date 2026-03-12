@@ -1,0 +1,17 @@
+  `brandgenericstatusid` string, 
+  `statusname` string)
+ROW FORMAT DELIMITED 
+  FIELDS TERMINATED BY '|' 
+  MAP KEYS TERMINATED BY 'undefined' 
+WITH SERDEPROPERTIES ( 
+  'collection.delim'='undefined') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://elsevier-exports/exports-folder/brand-generic-status'
+TBLPROPERTIES (
+  'has_encrypted_data'='false', 
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1773133229')

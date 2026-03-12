@@ -1,0 +1,71 @@
+(
+   SELECT DISTINCT
+     sfo.retire_date day
+   , sfa.name site_name
+   , sfa2.name health_system
+   , sfa.shippingstate
+   , sfa.shippingcity
+   , "split_part"(sfa.site_id_formatted__c, ' ', 2) site_id
+   , sfa.ehope_type__c
+   , sfa.type
+   , sfa.account_record_type_text__c
+   , (CASE WHEN (TRY("date_parse"(sfa.renewal_date__c, '%m/%d/%Y')) < current_date) THEN "date_add"('day', 365, TRY("date_parse"(sfa.renewal_date__c, '%m/%d/%Y'))) ELSE TRY("date_parse"(sfa.renewal_date__c, '%m/%d/%Y')) END) renewal_date
+   , TRY("date_parse"(sfa.joined_network__c, '%m/%d/%Y')) joined_date
+   , "concat"("concat"(sfu.firstname, ' '), sfu.lastname) account_manager
+   , sfa.new_dispensing_entity__c
+   , sfa.shippingpostalcode
+   , sfa.shippingstatecode
+   , sfa.ascension_owned__c
+   , sfa.ascension_ministry__c
+   , sfa.purchased_medicine__c
+   , (CASE WHEN (sfa.type = 'Active%') THEN null WHEN (sfa.type = 'Retired') THEN sfo.retire_date END) retire_date
+   , 'Retire Date' date_type
+   FROM
+     (((sf_account sfa
+   LEFT JOIN sf_account sfa2 ON (sfa2.id = sfa.health_system__c))
+   LEFT JOIN sf_user sfu ON (sfu.id = sfa.ownerid))
+   LEFT JOIN (
+      SELECT
+        *
+      , TRY_CAST(TRY("date_format"("date_parse"(retire_date__c, '%m/%d/%Y'), '%Y-%m-%d %T')) AS timestamp) retire_date
+      FROM
+        sf_opportunity
+      WHERE (((stagename LIKE 'Retired%') OR (stagename LIKE 'Active%')) AND ((program__c LIKE 'Instant%') OR (program__c LIKE 'Continued%')))
+   )  sfo ON (sfa.id = sfo.accountid))
+   WHERE ((sfo.retire_date IS NOT NULL) AND ((("lower"(sfa.account_record_type_text__c) IN ('active access site')) AND (("lower"(sfa.type) = 'active') OR (("lower"(sfa.type) = 'retired') AND (sfo.retire_date IS NOT NULL)))) AND (NOT ("lower"(sfa.name) LIKE 'wwt'))))
+) UNION ALL (
+   SELECT DISTINCT
+     TRY("date_parse"(sfa.joined_network__c, '%m/%d/%Y')) day
+   , sfa.name site_name
+   , sfa2.name health_system
+   , sfa.shippingstate
+   , sfa.shippingcity
+   , "split_part"(sfa.site_id_formatted__c, ' ', 2) site_id
+   , sfa.ehope_type__c
+   , sfa.type
+   , sfa.account_record_type_text__c
+   , (CASE WHEN (TRY("date_parse"(sfa.renewal_date__c, '%m/%d/%Y')) < current_date) THEN "date_add"('day', 365, TRY("date_parse"(sfa.renewal_date__c, '%m/%d/%Y'))) ELSE TRY("date_parse"(sfa.renewal_date__c, '%m/%d/%Y')) END) renewal_date
+   , TRY("date_parse"(sfa.joined_network__c, '%m/%d/%Y')) joined_date
+   , "concat"("concat"(sfu.firstname, ' '), sfu.lastname) account_manager
+   , sfa.new_dispensing_entity__c
+   , sfa.shippingpostalcode
+   , sfa.shippingstatecode
+   , sfa.ascension_owned__c
+   , sfa.ascension_ministry__c
+   , sfa.purchased_medicine__c
+   , (CASE WHEN (sfa.type = 'Active%') THEN null WHEN (sfa.type = 'Retired') THEN sfo.retire_date END) retire_date
+   , 'Joined Date' date_type
+   FROM
+     (((sf_account sfa
+   LEFT JOIN sf_account sfa2 ON (sfa2.id = sfa.health_system__c))
+   LEFT JOIN sf_user sfu ON (sfu.id = sfa.ownerid))
+   LEFT JOIN (
+      SELECT
+        *
+      , TRY_CAST(TRY("date_format"("date_parse"(retire_date__c, '%m/%d/%Y'), '%Y-%m-%d %T')) AS timestamp) retire_date
+      FROM
+        sf_opportunity
+      WHERE (((stagename LIKE 'Retired%') OR (stagename LIKE 'Active%')) AND ((program__c LIKE 'Instant%') OR (program__c LIKE 'Continued%')))
+   )  sfo ON (sfa.id = sfo.accountid))
+   WHERE ((sfa.joined_network__c IS NOT NULL) AND ((("lower"(sfa.account_record_type_text__c) IN ('active access site')) AND (("lower"(sfa.type) = 'active') OR (("lower"(sfa.type) = 'retired') AND (sfo.retire_date IS NOT NULL)))) AND (NOT ("lower"(sfa.name) LIKE 'wwt'))))
+) 

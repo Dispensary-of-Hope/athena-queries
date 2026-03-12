@@ -1,0 +1,36 @@
+  `productid` string, 
+  `ingredientid` string, 
+  `substance` string, 
+  `p_code` string, 
+  `p_codequalifier` string, 
+  `p_codehazardouswastecode` string, 
+  `f_code` string, 
+  `f_codehazardouswastecode` string, 
+  `k_code` string, 
+  `k_codehazardouswastecode` string, 
+  `u_code` string, 
+  `u_codehazardouswastecode` string, 
+  `u_codequalifier` string)
+ROW FORMAT DELIMITED 
+  FIELDS TERMINATED BY '|' 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://elsevier-exports/exports-folder/product-ingredient-hazardous-waste-code/'
+TBLPROPERTIES (
+  'CrawlerSchemaDeserializerVersion'='1.0', 
+  'CrawlerSchemaSerializerVersion'='1.0', 
+  'UPDATED_BY_CRAWLER'='database-prod-elsevier-crawler', 
+  'areColumnsQuoted'='false', 
+  'averageRecordSize'='86', 
+  'classification'='csv', 
+  'columnsOrdered'='true', 
+  'compressionType'='none', 
+  'delimiter'='|', 
+  'objectCount'='1', 
+  'recordCount'='671', 
+  'sizeKey'='57721', 
+  'skip.header.line.count'='1', 
+  'typeOfData'='file')

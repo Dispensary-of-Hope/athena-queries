@@ -1,0 +1,23 @@
+  `date` string COMMENT 'from deserializer', 
+  `in_awareness` string COMMENT 'from deserializer', 
+  `in_engaged` string COMMENT 'from deserializer', 
+  `in_convert` string COMMENT 'from deserializer', 
+  `in_implementing` string COMMENT 'from deserializer', 
+  `in_sales_hold` string COMMENT 'from deserializer', 
+  `in_contracting` string COMMENT 'from deserializer')
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.OpenCSVSerde' 
+WITH SERDEPROPERTIES ( 
+  'escapeChar'='\n', 
+  'quoteChar'='\"', 
+  'separatorChar'=',') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://salesforce-reports-export/monthly_expansion_pipeline'
+TBLPROPERTIES (
+  'has_encrypted_data'='false', 
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1773324052')

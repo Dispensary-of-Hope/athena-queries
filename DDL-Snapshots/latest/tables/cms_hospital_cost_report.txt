@@ -1,0 +1,23 @@
+  `provider_ccn` string COMMENT 'from deserializer', 
+  `hospital_name` string COMMENT 'from deserializer', 
+  `zip_code` string COMMENT 'from deserializer', 
+  `state_code` string COMMENT 'from deserializer', 
+  `rural_versus_urban` string COMMENT 'from deserializer', 
+  `ccn_facility_type` string COMMENT 'from deserializer', 
+  `provider_type` string COMMENT 'from deserializer')
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.OpenCSVSerde' 
+WITH SERDEPROPERTIES ( 
+  'escapeChar'='\n', 
+  'quoteChar'='\"', 
+  'separatorChar'=',') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://optum-tool-automation/cms_data/cms_hospital_data/cms_hospital_cost_report'
+TBLPROPERTIES (
+  'has_encrypted_data'='false', 
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1659389468')

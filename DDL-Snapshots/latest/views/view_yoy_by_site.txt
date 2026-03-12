@@ -1,0 +1,60 @@
+SELECT
+  day
+, site_name
+, p1_units_distributed
+, non_p1_units_distributed
+, planned_distributed
+, non_planned_distributed
+, total_daily_units_distributed
+, "lag"(total_daily_units_distributed, 365) OVER (PARTITION BY site_name ORDER BY day ASC) total_units_distributed_previous_year
+, "date_add"('day', -365, day) day_previous_year
+FROM
+  (
+   SELECT DISTINCT
+     day
+   , site_name
+   , "sum"(p1_units_distributed) p1_units_distributed
+   , "sum"(non_p1_units_distributed) non_p1_units_distributed
+   , "sum"(total_units_distributed) total_daily_units_distributed
+   , "sum"(planned_distributed) planned_distributed
+   , "sum"(non_planned_distributed) non_planned_distributed
+   FROM
+     (
+(
+         SELECT DISTINCT
+           day
+         , site_name
+         , "sum"((CASE WHEN (priority = 'P1') THEN total_units_distributed END)) p1_units_distributed
+         , "sum"((CASE WHEN (priority <> 'P1') THEN total_units_distributed END)) non_p1_units_distributed
+         , "sum"((CASE WHEN ((donor_name LIKE 'ELI Lilly and Company') OR (donor_name LIKE 'Mylan')) THEN total_units_distributed END)) planned_distributed
+         , "sum"((CASE WHEN ((donor_name <> 'ELI Lilly and Company') AND (donor_name <> 'Mylan')) THEN total_units_distributed END)) non_planned_distributed
+         , "sum"(total_units_distributed) total_units_distributed
+         FROM
+           view_therapeutics_dashboard
+         GROUP BY 1, 2
+      ) UNION ALL (
+         SELECT DISTINCT
+           dt.day
+         , it.site_name
+         , 0 p1_units_distributed
+         , 0 non_p1_units_distributed
+         , 0 total_daily_units_distributed
+         , 0 planned_distributed
+         , 0 non_planned_distributed
+         FROM
+           ((
+            SELECT DISTINCT
+              day
+            , site_name
+            FROM
+              view_therapeutics_dashboard
+            GROUP BY 1, 2
+         )  it
+         CROSS JOIN date_table dt)
+         WHERE ((dt.day >= TIMESTAMP '2019-01-01 00:00:00.000') AND (dt.day <= current_date))
+         ORDER BY dt.day ASC
+      )    ) 
+   GROUP BY 1, 2
+) 
+GROUP BY 1, 2, 3, 4, 5, 6, 7, 9
+ORDER BY 1 DESC

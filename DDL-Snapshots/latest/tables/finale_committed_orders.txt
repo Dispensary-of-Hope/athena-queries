@@ -1,0 +1,29 @@
+  `order_id` string COMMENT 'from deserializer', 
+  `type` string COMMENT 'from deserializer', 
+  `status` string COMMENT 'from deserializer', 
+  `order_date` string COMMENT 'from deserializer', 
+  `product_id` string COMMENT 'from deserializer', 
+  `site_id` string COMMENT 'from deserializer', 
+  `drug_name` string COMMENT 'from deserializer', 
+  `unit_of_measure` string COMMENT 'from deserializer', 
+  `inner_package` string COMMENT 'from deserializer', 
+  `unit_wac` string COMMENT 'from deserializer', 
+  `total_units_distributed` string COMMENT 'from deserializer', 
+  `manufacturer` string COMMENT 'from deserializer', 
+  `drug_class` string COMMENT 'from deserializer', 
+  `insulin` string COMMENT 'from deserializer')
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.OpenCSVSerde' 
+WITH SERDEPROPERTIES ( 
+  'escapeChar'='\n', 
+  'quoteChar'='\"', 
+  'separatorChar'=',') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://finale-reports-bucket-prod/Finale Committed Orders'
+TBLPROPERTIES (
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1722983473')

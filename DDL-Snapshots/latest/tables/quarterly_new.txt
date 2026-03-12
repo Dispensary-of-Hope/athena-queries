@@ -1,0 +1,20 @@
+  `fills` int COMMENT '', 
+  `encounters` int COMMENT '', 
+  `uniquepatients` int COMMENT '', 
+  `quarter` int COMMENT '', 
+  `year` int COMMENT '', 
+  `site` string COMMENT '', 
+  `siteid` string COMMENT '', 
+  `quarter_end_date` timestamp COMMENT '')
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe' 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
+LOCATION
+  's3://lambdarefreshresults/tables/b2694b95-2855-4216-a280-c631e00d7d38/'
+TBLPROPERTIES (
+  'has_encrypted_data'='false', 
+  'parquet.compression'='GZIP', 
+  'presto_query_id'='20220207_150052_00034_942f9')

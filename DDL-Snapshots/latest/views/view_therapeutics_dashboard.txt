@@ -1,0 +1,262 @@
+(
+   SELECT DISTINCT
+     drd.day
+   , (CASE WHEN (inv.productnamelong IS NULL) THEN dcc.productnamelong ELSE inv.productnamelong END) productnamelong
+   , drd.product_id
+   , drd.lot_id
+   , (CASE WHEN (inv.unit_of_measure IS NULL) THEN CAST(dcc.unit_of_measure AS varchar) ELSE inv.unit_of_measure END) unit_of_measure
+   , inv.unitname
+   , inv.priority
+   , inv.primary
+   , 0 total_in_stock
+   , 0 available_qty
+   , 0 purchase_order_qty
+   , null min_exp_date
+   , inv.drug_class
+   , drd.total_units_received
+   , drd.total_units_distributed
+   , drd.site_name
+   , null health_system
+   , null ehope_type__c
+   , null fills
+   , null encounters
+   , null uniquepatients
+   , null quarter_end_date
+   , null request_date
+   , null account_manager
+   , dcc.statusname
+   , rd.donor_name
+   , drd.joined_date
+   FROM
+     ((((
+      SELECT
+        h.name site_name
+      , h.product_id
+      , h.day
+      , h.lot_id
+      , (CASE WHEN ("sum"(h.total_units_received) IS NULL) THEN 0 ELSE "sum"(h.total_units_received) END) total_units_received
+      , (CASE WHEN ("sum"(h.total_units_distributed) IS NULL) THEN 0 ELSE "sum"(h.total_units_distributed) END) total_units_distributed
+      , site_id
+      , donor_id
+      , joined_date
+      FROM
+        (
+(
+            SELECT DISTINCT
+              x.product_id
+            , dt.day
+            , x.lot_id
+            , x.total_units_received
+            , x.total_units_distributed
+            , sf.name
+            , x.site_id
+            , df2.donor_id
+            , TRY("date_parse"(sf.joined_network__c, '%m/%d/%Y')) joined_date
+            FROM
+              ((((
+               SELECT
+                 product_id
+               , receive_date
+               , lot_id
+               , "sum"(total_units_received) total_units_received
+               , null total_units_distributed
+               , site_id
+               , donor_id
+               FROM
+                 (
+                  SELECT
+                    *
+                  , TRY_CAST(o.total_units AS bigint) total_units_received
+                  FROM
+                    orders_historical_finale_timestamp o
+                  WHERE (receive_date IS NOT NULL)
+               )  test_receiving
+               WHERE ((product_id <> '00000000000') AND (product_id <> '99999999999'))
+               GROUP BY 1, 2, 3, 5, 6, 7
+            )  x
+            LEFT JOIN donor_id_finale df2 ON ((x.product_id = df2.product_id) AND (x.lot_id = df2.lot_id)))
+            LEFT JOIN date_table dt ON (x.receive_date = dt.day))
+            LEFT JOIN sf_account sf ON (x.site_id = "split_part"(sf.site_id_formatted__c, ' ', 2)))
+         ) UNION ALL (
+            SELECT DISTINCT
+              y.product_id
+            , dt2.day
+            , y.lot_id
+            , y.total_units_received
+            , y.total_units_distributed
+            , sf.name
+            , y.site_id
+            , df.donor_id
+            , TRY("date_parse"(sf.joined_network__c, '%m/%d/%Y')) joined_date
+            FROM
+              ((((
+               SELECT
+                 product_id
+               , ship_date
+               , lot_id
+               , null total_units_received
+               , "sum"(total_units_distributed) total_units_distributed
+               , site_id
+               , donor_id
+               FROM
+                 (
+                  SELECT
+                    *
+                  , TRY_CAST(o.total_units AS bigint) total_units_distributed
+                  FROM
+                    orders_historical_finale_timestamp o
+                  WHERE (ship_date IS NOT NULL)
+               )  test_distribution
+               WHERE (((NOT (site_id IN ('194', '10277'))) AND (product_id <> '00000000000')) AND (product_id <> '99999999999'))
+               GROUP BY 1, 2, 3, 4, 6, 7
+            )  y
+            LEFT JOIN donor_id_finale df ON ((y.product_id = df.product_id) AND (y.lot_id = df.lot_id)))
+            LEFT JOIN date_table dt2 ON (y.ship_date = dt2.day))
+            LEFT JOIN sf_account sf ON (y.site_id = "split_part"(sf.site_id_formatted__c, ' ', 2)))
+         )       )  h
+      WHERE ((h.day >= TIMESTAMP '2019-01-01 00:00:00.000') AND (donor_id <> '702'))
+      GROUP BY 1, 2, 3, 4, 7, 8, 9
+   )  drd
+   LEFT JOIN (
+      SELECT DISTINCT
+        product_id
+      , lot_id
+      , productnamelong
+      , unit_of_measure
+      , unitname
+      , priority
+      , primary
+      , drug_class
+      FROM
+        view_inventory_master
+   )  inv ON ((drd.product_id = inv.product_id) AND (drd.lot_id = inv.lot_id)))
+   LEFT JOIN (
+      SELECT DISTINCT
+        ndc11
+      , productnamelong
+      , unit_of_measure
+      , statusname
+      FROM
+        view_elsevier_drugclass_convert
+   )  dcc ON (drd.product_id = dcc.ndc11))
+   LEFT JOIN (
+      SELECT DISTINCT
+        donor_id__c
+      , name donor_name
+      FROM
+        regular_donors
+   )  rd ON (drd.donor_id = donor_id__c))
+   WHERE (drd.product_id <> '')
+   GROUP BY  DISTINCT 3, 2, 1, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 25, 26, 27
+) UNION ALL (
+   SELECT
+     dt.day
+   , inv.productnamelong
+   , inv.product_id
+   , inv.lot_id
+   , inv.unit_of_measure
+   , inv.unitname
+   , inv.priority
+   , inv.primary
+   , inv.total_in_stock
+   , inv.available_qty
+   , inv.purchase_order_qty
+   , inv.min_exp_date
+   , inv.drug_class
+   , 0 total_units_received
+   , 0 total_units_distributed
+   , null site_name
+   , null health_system
+   , null ehope_type__c
+   , null fills
+   , null encounters
+   , null uniquepatients
+   , null quarter_end_date
+   , null request_date
+   , null account_manager
+   , inv.statusname
+   , null donor_name
+   , null joined_date
+   FROM
+     ((
+      SELECT *
+      FROM
+        view_inventory_master
+      WHERE (donor_id <> '702')
+   )  inv
+   LEFT JOIN date_table dt ON (dt.day = inv.current_date_in_stock))
+) UNION ALL (
+   SELECT DISTINCT
+     dt.day
+   , null productnamelong
+   , null product_id
+   , null lot_id
+   , null unit_of_measure
+   , null unitname
+   , null priority
+   , null primary
+   , 0 total_in_stock
+   , 0 available_qty
+   , 0 purchase_order_qty
+   , null min_exp_date
+   , null drug_class
+   , 0 total_units_received
+   , 0 total_units_distributed
+   , sf.site_name
+   , sf.health_system
+   , sf.ehope_type__c
+   , qn.fills
+   , qn.encounters
+   , qn.uniquepatients
+   , qn.quarter_end_date
+   , null request_date
+   , sf.account_manager
+   , null statusname
+   , null donor_name
+   , null joined_date
+   FROM
+     ((quarterly_new qn
+   INNER JOIN date_table dt ON (qn.quarter_end_date = dt.day))
+   LEFT JOIN site_info sf ON (qn.siteid = sf.site_id))
+) UNION ALL (
+   SELECT
+     dt.day
+   , mr.productnamelong
+   , "ltrim"("replace"(mr.product_id, '"')) ndc11
+   , null lot_id
+   , null unit_of_measure
+   , null unitname
+   , mr.priority
+   , null primary
+   , 0 total_in_stock
+   , 0 available_qty
+   , 0 purchase_order_qty
+   , null min_exp_date
+   , null drug_class
+   , 0 total_units_received
+   , 0 total_units_distributed
+   , sf.site_name
+   , sf.health_system
+   , sf.ehope_type__c
+   , 0 fills
+   , 0 encounters
+   , 0 uniquepatients
+   , null quarter_end_date
+   , mr.request_date
+   , sf.account_manager
+   , dcc.statusname
+   , null donor_name
+   , null joined_date
+   FROM
+     (((medication_requests mr
+   INNER JOIN date_table dt ON (mr.request_date = dt.day))
+   LEFT JOIN site_info sf ON (mr.site_id = sf.site_id))
+   LEFT JOIN (
+      SELECT DISTINCT
+        ndc11
+      , productnamelong
+      , statusname
+      FROM
+        view_elsevier_drugclass_convert
+   )  dcc ON (mr.product_id = dcc.ndc11))
+) 

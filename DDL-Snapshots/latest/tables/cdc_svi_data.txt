@@ -1,0 +1,28 @@
+  `st` string COMMENT 'from deserializer', 
+  `state` string COMMENT 'from deserializer', 
+  `st_abbr` string COMMENT 'from deserializer', 
+  `county` string COMMENT 'from deserializer', 
+  `fips` string COMMENT 'from deserializer', 
+  `location` string COMMENT 'from deserializer', 
+  `e_totpop` string COMMENT 'from deserializer', 
+  `rpl_theme1` string COMMENT 'from deserializer', 
+  `rpl_theme2` string COMMENT 'from deserializer', 
+  `rpl_theme3` string COMMENT 'from deserializer', 
+  `rpl_theme4` string COMMENT 'from deserializer', 
+  `rpl_themes` string COMMENT 'from deserializer')
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.OpenCSVSerde' 
+WITH SERDEPROPERTIES ( 
+  'escapeChar'='\n', 
+  'quoteChar'='\"', 
+  'separatorChar'=',') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://optum-tool-automation/cdc_data/svi_data'
+TBLPROPERTIES (
+  'has_encrypted_data'='false', 
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1659711563')

@@ -1,0 +1,12 @@
+SELECT *
+FROM
+  ((view_tl_primary_status_and_demand vtp
+LEFT JOIN view_iqvia_tl_market_share vit ON (vtp.target_list_product = vit."full drug name"))
+LEFT JOIN (
+   SELECT DISTINCT
+     target_list_product iq_tl_product
+   , priority
+   FROM
+     iqvia_target_primary
+   WHERE ((NOT (target_list_product IN ('None', 'null'))) AND (priority IN ('P1', 'P2', 'P3')))
+)  iq ON (vtp.target_list_product = iq.iq_tl_product))

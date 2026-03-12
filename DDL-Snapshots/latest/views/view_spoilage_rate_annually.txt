@@ -1,0 +1,39 @@
+WITH
+  received AS (
+   SELECT
+     (CASE WHEN (month(receive_date) >= 7) THEN (year(receive_date) + 1) ELSE year(receive_date) END) fiscal_year
+   , sum(CAST(total_units AS bigint)) total_units_received
+   , sum((CAST(total_units AS DECIMAL(20, 2)) * CAST(unit_wac AS DECIMAL(20, 2)))) total_wac_received
+   FROM
+     (orders_historical_finale_timestamp ohft
+   LEFT JOIN (
+      SELECT DISTINCT
+        product_id
+      , unit_wac
+      FROM
+        view_inventory_master
+   )  inv ON (ohft.product_id = inv.product_id))
+   WHERE (receive_date IS NOT NULL)
+   GROUP BY 1
+) 
+, destroyed AS (
+   SELECT
+     (CASE WHEN (month(ship_date) >= 7) THEN (year(ship_date) + 1) ELSE year(ship_date) END) fiscal_year
+   , SUM(CAST(total_units_distributed AS double)) total_units_destroyed
+   , SUM((CAST(total_units_distributed AS double) * CAST(unit_wac AS double))) total_wac_destroyed
+   FROM
+     orders_with_companyid
+   WHERE (site_id = '10277')
+   GROUP BY 1
+) 
+SELECT
+  r.fiscal_year
+, total_units_received
+, total_wac_received
+, total_units_destroyed
+, total_wac_destroyed
+, (total_wac_destroyed / total_wac_received) spoilage_rate
+FROM
+  (received r
+INNER JOIN destroyed d ON (r.fiscal_year = d.fiscal_year))
+ORDER BY r.fiscal_year ASC

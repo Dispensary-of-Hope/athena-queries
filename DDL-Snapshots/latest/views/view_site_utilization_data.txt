@@ -1,0 +1,147 @@
+SELECT
+  site_r.site_name
+, account_manager
+, site_d.salesforce_id__c
+, ehope_type__c
+, shippingstatecode
+, total_qty_shipped
+, total_orders
+, wac_distributed
+, total_patients
+, joined_date
+, earliest_ship_date
+, latest_ship_date
+, new_dispensing_entity__c
+, purchased_medicine__c
+, mail_order__c
+, provides_refills__c
+, open_door__c
+, accepting_new_patients__c
+, pharmacy_operating_system__c
+, patient_attestation_form__c
+, pap_assistance_yes_no__c
+, renewal_date__c
+FROM
+  ((
+   SELECT
+     totals.site_name
+   , total_qty_shipped
+   , total_orders
+   , wac_distributed
+   , total_patients
+   , joined_date
+   , earliest_ship_date
+   , latest_ship_date
+   FROM
+     ((
+      SELECT
+        md.site_name
+      , COALESCE(md.total_qty_shipped, 0) total_qty_shipped
+      , COALESCE(md.total_orders, 0) total_orders
+      , md.wac_distributed
+      , COALESCE(total_patients, 0) total_patients
+      FROM
+        ((
+         SELECT
+           site_name
+         , "sum"(total_qty_shipped) total_qty_shipped
+         , "sum"(num_orders) total_orders
+         , "sum"(wac_distributed) WAC_distributed
+         FROM
+           view_monthly_distribution
+         GROUP BY site_name
+      )  md
+      LEFT JOIN (
+         SELECT
+           site
+         , "sum"(uniquepatients) total_patients
+         FROM
+           view_quarterly_numbers
+         GROUP BY site
+      )  q_pat ON (md.site_name = q_pat.site))
+   )  totals
+   INNER JOIN (
+      SELECT
+        site_name
+      , joined_date
+      , earliest_ship_date
+      , "max"(ship_date) latest_ship_date
+      FROM
+        ((
+         SELECT
+           site_name
+         , si.site_id
+         , ship_date
+         , product_id
+         , (CASE WHEN (total_units = '') THEN '0' ELSE total_units END) total_units
+         , joined_date
+         FROM
+           ((
+            SELECT
+              site_name
+            , site_id
+            , joined_date
+            FROM
+              site_info
+         )  si
+         LEFT JOIN (
+            SELECT
+              site_id
+            , ship_date
+            , product_id
+            , total_units
+            FROM
+              orders_historical_finale_timestamp
+            WHERE (((((NOT (site_id IN ('194', '10277'))) AND (product_id <> '00000000000')) AND (product_id <> '99999999999')) AND (product_id <> '00000000001')) AND (product_id <> '00000000002'))
+         )  ot ON (si.site_id = ot.site_id))
+      )  ohft
+      INNER JOIN (
+         SELECT
+           site_id
+         , earliest_ship_date
+         FROM
+           ((
+            SELECT
+              company_id__c
+            , "min"(ship_date) earliest_ship_date
+            FROM
+              orders_with_companyid
+            WHERE (((((NOT (site_id IN ('194', '10277'))) AND (product_id <> '00000000000')) AND (product_id <> '99999999999')) AND (product_id <> '00000000001')) AND (product_id <> '00000000002'))
+            GROUP BY company_id__c
+         )  oci
+         INNER JOIN (
+            SELECT
+              site_id
+            , company_id__c
+            FROM
+              site_info
+         )  si ON (si.company_id__c = oci.company_id__c))
+      )  oci_info ON (ohft.site_id = oci_info.site_id))
+      WHERE ((site_name IS NOT NULL) AND (site_name <> ''))
+      GROUP BY site_name, joined_date, earliest_ship_date
+   )  latest ON (totals.site_name = latest.site_name))
+)  site_r
+INNER JOIN (
+   SELECT DISTINCT
+     sfa.NAME site_name
+   , sfa.salesforce_id__c
+   , sfa.ehope_type__c
+   , "concat"("concat"(sfu.firstname, ' '), sfu.lastname) account_manager
+   , sfa.new_dispensing_entity__c
+   , sfa.shippingstatecode
+   , sfa.purchased_medicine__c
+   , sfa.type
+   , sfa.mail_order__c
+   , sfa.provides_refills__c
+   , sfa.open_door__c
+   , sfa.accepting_new_patients__c
+   , sfa.pharmacy_operating_system__c
+   , sfa.patient_attestation_form__c
+   , sfa.pap_assistance_yes_no__c
+   , sfa.renewal_date__c
+   FROM
+     ((sf_account sfa
+   LEFT JOIN sf_account sfa2 ON (sfa2.id = sfa.health_system__c))
+   LEFT JOIN sf_user sfu ON (sfu.id = sfa.ownerid))
+   WHERE ((sfa.ehope_type__c = 'Active Clinic') OR (sfa.ehope_type__c = 'Active Pharmacy'))
+)  site_d ON (site_r.site_name = site_d.site_name))

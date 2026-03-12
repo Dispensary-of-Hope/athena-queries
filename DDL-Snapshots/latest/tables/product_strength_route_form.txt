@@ -1,0 +1,40 @@
+  `rowhashid` string, 
+  `productid` string, 
+  `ingredientid` string, 
+  `ingredient_name` string, 
+  `base_ingredient_id` string, 
+  `base_ingredient` string, 
+  `tallman_name` string, 
+  `strength` string, 
+  `strength_unit_code` string, 
+  `per_volume` string, 
+  `per_volume_unit_code` string, 
+  `route_id` string, 
+  `route_name` string, 
+  `fda_form_id` string, 
+  `fda_form` string, 
+  `gs_form_id` string, 
+  `gs_form` string, 
+  `alternative_form_id` string, 
+  `alternative_form_name` string, 
+  `clinical_dose_form_id` string, 
+  `clinical_dose_form_name` string, 
+  `normalized_form_id` string, 
+  `normalized_form_name` string, 
+  `top_level_dose_form_id` string, 
+  `top_level_dose_form_name` string)
+ROW FORMAT DELIMITED 
+  FIELDS TERMINATED BY '|' 
+  MAP KEYS TERMINATED BY 'undefined' 
+WITH SERDEPROPERTIES ( 
+  'collection.delim'='undefined') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://elsevier-exports/exports-folder/product-strength-route-form'
+TBLPROPERTIES (
+  'has_encrypted_data'='false', 
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1650402129')

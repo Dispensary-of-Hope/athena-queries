@@ -1,0 +1,33 @@
+  `date` string COMMENT 'from deserializer', 
+  `email` string COMMENT 'from deserializer', 
+  `account_owner` string COMMENT 'from deserializer', 
+  `site_id` string COMMENT 'from deserializer', 
+  `company_id` string COMMENT 'from deserializer', 
+  `account_name` string COMMENT 'from deserializer', 
+  `product` string COMMENT 'from deserializer', 
+  `ndc` string COMMENT 'from deserializer', 
+  `prev` string COMMENT 'from deserializer', 
+  `ordered` string COMMENT 'from deserializer', 
+  `dispensed` string COMMENT 'from deserializer', 
+  `filled_not_picked` string COMMENT 'from deserializer', 
+  `expired` string COMMENT 'from deserializer', 
+  `total` string COMMENT 'from deserializer', 
+  `match` string COMMENT 'from deserializer', 
+  `explanation` string COMMENT 'from deserializer', 
+  `number_to_start_with_next_quarter` string COMMENT 'from deserializer')
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.OpenCSVSerde' 
+WITH SERDEPROPERTIES ( 
+  'escapeChar'='\n', 
+  'quoteChar'='\"', 
+  'separatorChar'=',') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://qir-csv/Current'
+TBLPROPERTIES (
+  'has_encrypted_data'='false', 
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1773259552')

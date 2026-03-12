@@ -1,0 +1,28 @@
+  `compendium_hospital_id` string COMMENT 'from deserializer', 
+  `ccn` string COMMENT 'from deserializer', 
+  `hospital_name` string COMMENT 'from deserializer', 
+  `hospital_street` string COMMENT 'from deserializer', 
+  `hospital_city` string COMMENT 'from deserializer', 
+  `hospital_state` string COMMENT 'from deserializer', 
+  `hospital_zip` string COMMENT 'from deserializer', 
+  `acutehosp_flag` string COMMENT 'from deserializer', 
+  `health_sys_id` string COMMENT 'from deserializer', 
+  `health_sys_name` string COMMENT 'from deserializer', 
+  `health_sys_city` string COMMENT 'from deserializer', 
+  `health_sys_state` string COMMENT 'from deserializer')
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.OpenCSVSerde' 
+WITH SERDEPROPERTIES ( 
+  'escapeChar'='\n', 
+  'quoteChar'='\"', 
+  'separatorChar'=',') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://optum-tool-automation/ahrq_data/health_system_compendium'
+TBLPROPERTIES (
+  'has_encrypted_data'='false', 
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1659388730')

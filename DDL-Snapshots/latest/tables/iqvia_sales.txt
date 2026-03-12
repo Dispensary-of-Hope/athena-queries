@@ -1,0 +1,42 @@
+  `month` string COMMENT 'from deserializer', 
+  `target_list_product` string COMMENT 'from deserializer', 
+  `priority` string COMMENT 'from deserializer', 
+  `primary` string COMMENT 'from deserializer', 
+  `dosage_form` string COMMENT 'from deserializer', 
+  `major_class` string COMMENT 'from deserializer', 
+  `minor_class` string COMMENT 'from deserializer', 
+  `manufacturer` string COMMENT 'from deserializer', 
+  `ndc` string COMMENT 'from deserializer', 
+  `pack_qty` string COMMENT 'from deserializer', 
+  `pack_size` string COMMENT 'from deserializer', 
+  `repackage` string COMMENT 'from deserializer', 
+  `product_sum` string COMMENT 'from deserializer', 
+  `brand_generic` string COMMENT 'from deserializer', 
+  `rx_status` string COMMENT 'from deserializer', 
+  `product_launch_date` string COMMENT 'from deserializer', 
+  `strength` string COMMENT 'from deserializer', 
+  `prod_form_1` string COMMENT 'from deserializer', 
+  `acute_chronic` string COMMENT 'from deserializer', 
+  `pharma_type` string COMMENT 'from deserializer', 
+  `sales` string COMMENT 'from deserializer', 
+  `units` string COMMENT 'from deserializer', 
+  `eaches` string COMMENT 'from deserializer', 
+  `nsp_ext_units` string COMMENT 'from deserializer', 
+  `wac_price` string COMMENT 'from deserializer', 
+  `nsp_price` string COMMENT 'from deserializer')
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.OpenCSVSerde' 
+WITH SERDEPROPERTIES ( 
+  'escapeChar'='\n', 
+  'quoteChar'='\"', 
+  'separatorChar'=',') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://iqviatables/IQVIA_Sales'
+TBLPROPERTIES (
+  'has_encrypted_data'='false', 
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1772791226')

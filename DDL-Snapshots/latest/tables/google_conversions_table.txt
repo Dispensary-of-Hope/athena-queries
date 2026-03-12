@@ -1,0 +1,28 @@
+  `date` string COMMENT 'from deserializer', 
+  `conversions_country` string COMMENT 'from deserializer', 
+  `conversions_conversions` string COMMENT 'from deserializer', 
+  `conversions_users` string COMMENT 'from deserializer', 
+  `conversions_new_users` string COMMENT 'from deserializer', 
+  `conversions_engaged_sessions` string COMMENT 'from deserializer', 
+  `conversions_event_count` string COMMENT 'from deserializer', 
+  `conversions_find_meds_location_input` string COMMENT 'from deserializer', 
+  `conversions_pharmaceutical_donor_contact` string COMMENT 'from deserializer', 
+  `conversions_find_out_if_you_qualify_click` string COMMENT 'from deserializer', 
+  `conversions_site_application_click` string COMMENT 'from deserializer', 
+  `conversions_download_white_paper_lead` string COMMENT 'from deserializer')
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.OpenCSVSerde' 
+WITH SERDEPROPERTIES ( 
+  'escapeChar'='\n', 
+  'quoteChar'='\"', 
+  'separatorChar'=',') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://doh-marketing/google-analytics/ga4-data-dump/table-conversions'
+TBLPROPERTIES (
+  'has_encrypted_data'='false', 
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1733943297')

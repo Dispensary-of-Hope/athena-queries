@@ -1,0 +1,20 @@
+SELECT
+  (CASE WHEN (consistent_xgboost = '1') THEN 'yes' WHEN (consistent_xgboost = '0') THEN 'no' END) consistent_xgboost
+, (CASE WHEN (consistent_old_process = '1') THEN 'yes' WHEN (consistent_old_process = '0') THEN 'no' END) consistent_old_process
+, CAST(row_index AS bigint) row_index
+, CAST(days_since_first_qtr AS bigint) days_since_first_qtr
+, product
+, CAST(offer_qty_accept_prev_qtr AS bigint) offer_qty_accept_prev_qtr
+, CAST(number_of_pkg_sizes AS bigint) number_of_pkg_sizes
+, CAST(lilly_consistent AS bigint) lilly_consistent
+, CAST(total_in_stock AS bigint) total_in_stock
+, CAST(on_hand_percent_of_par AS double) on_hand_percent_of_par
+, CAST(avg_days_until_expiration AS bigint) avg_days_until_expiration
+, TRY_CAST(days_since_last_receipt AS double) days_since_last_receipt
+, CAST(po_units AS bigint) po_units_current_qtr
+, CAST(min_exp_inv_greater_than_max AS bigint) min_exp_inv_greater_than_max
+, CAST(max_exp_inv_greater_than_min AS bigint) max_exp_inv_greater_than_min
+, CAST(priority_weight AS double) priority_weight
+, CAST(model_run_date AS timestamp) model_run_date
+FROM
+  sagemaker_xgboost_results

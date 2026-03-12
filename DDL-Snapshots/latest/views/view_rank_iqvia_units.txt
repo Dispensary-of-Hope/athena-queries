@@ -1,0 +1,39 @@
+WITH
+  agg AS (
+   SELECT
+     target_list_product
+   , avg(estimated_doses_per_rx) avg_estimated_doses_per_rx
+   , (sum(CAST(nsp_ext_units AS double)) / avg(CAST(estimated_doses_per_rx AS double))) nsp_ext_units
+   FROM
+     (view_iqvia_sales iq
+   LEFT JOIN (
+      SELECT DISTINCT
+        ndc
+      , (sum(CAST(units_reimbursed AS double)) / sum(CAST(number_of_rx AS double))) estimated_doses_per_rx
+      FROM
+        medicaid_national_drug_utilization
+      GROUP BY 1
+   )  x ON (iq.ndc = x.ndc))
+   GROUP BY 1
+) 
+, ranked AS (
+   SELECT
+     target_list_product
+   , nsp_ext_units
+   , avg_estimated_doses_per_rx
+   , RANK() OVER (ORDER BY nsp_ext_units DESC) nsp_ext_units_rank
+   , COUNT(*) OVER () n_products
+   , MAX(nsp_ext_units) OVER () max_nsp_ext_units
+   FROM
+     agg
+) 
+SELECT
+  target_list_product
+, nsp_ext_units
+, avg_estimated_doses_per_rx
+, nsp_ext_units_rank rank_overall
+, (CAST(nsp_ext_units AS DOUBLE) / NULLIF(max_nsp_ext_units, 0)) iq_norm_value
+, (CASE WHEN (n_products <= 1) THEN 1E0 ELSE (1E0 - ((nsp_ext_units_rank - 1E0) / NULLIF((n_products - 1E0), 0E0))) END) iq_norm_rank
+FROM
+  ranked
+WHERE (NOT (target_list_product IN ('null', 'None')))

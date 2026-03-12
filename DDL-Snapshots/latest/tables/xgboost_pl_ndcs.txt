@@ -1,0 +1,15 @@
+  `product` string, 
+  `consistent_xgboost` string, 
+  `product_id` string, 
+  `snapshot_date` timestamp)
+ROW FORMAT DELIMITED 
+  FIELDS TERMINATED BY ',' 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://historical-data-powerbi/primarylist-ndcs'
+TBLPROPERTIES (
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1720295572')

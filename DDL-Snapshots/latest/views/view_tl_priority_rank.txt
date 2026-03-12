@@ -1,0 +1,54 @@
+WITH
+  tl_rank AS (
+   SELECT DISTINCT
+     iq.target_list_product
+   , priority
+   , meps_norm_rank
+   , medicaid_rx
+   , medicaid_norm_rank
+   , meps_rx
+   , number_of_arx
+   , iq_norm_rank
+   , nsp_ext_units
+   , estimated_annual_throughput doh_estimated_annual_throughput
+   , doh_norm_rank
+   , arx_norm_rank
+   , COALESCE(medicaid_norm_rank, doh_norm_rank) normalized_medicaid_rank
+   , COALESCE(doh_norm_rank, medicaid_norm_rank) normalized_doh_rank
+   , COALESCE(meps_norm_rank, iq_norm_rank) normalized_meps_rank
+   , COALESCE(iq_norm_rank, medicaid_norm_rank) normalized_iq_rank
+   , COALESCE(arx_norm_rank, iq_norm_rank) normalized_arx_rank
+   FROM
+     (((((iqvia_target_primary iq
+   LEFT JOIN view_rank_medicaid_rx m ON (iq.target_list_product = m.target_list_product))
+   LEFT JOIN view_rank_meps_rx meps ON (iq.target_list_product = meps.target_list_product))
+   LEFT JOIN view_rank_iqvia_units riqu ON (iq.target_list_product = riqu.target_list_product))
+   LEFT JOIN view_rank_doh_units rdu ON (iq.target_list_product = rdu.target_list_product))
+   LEFT JOIN view_rank_arx_safety_net arx ON (iq.target_list_product = arx.target_list_product))
+   WHERE (NOT (iq.target_list_product IN ('null', 'None')))
+   ORDER BY 3 DESC
+) 
+, priority AS (
+   SELECT
+     *
+   , (((((normalized_arx_rank * 1E-1) + (normalized_medicaid_rank * 2E-1)) + (normalized_doh_rank * 3.5E-1)) + (normalized_meps_rank * 1.5E-1)) + (normalized_iq_rank * 2E-1)) priority_score
+   FROM
+     tl_rank
+) 
+SELECT DISTINCT
+  target_list_product
+, priority
+, priority.medicaid_rx
+, meps_rx
+, nsp_ext_units
+, number_of_arx
+, doh_norm_rank
+, arx_norm_rank
+, iq_norm_rank
+, meps_norm_rank
+, medicaid_norm_rank
+, doh_estimated_annual_throughput
+, priority_score
+FROM
+  priority
+ORDER BY priority_score DESC

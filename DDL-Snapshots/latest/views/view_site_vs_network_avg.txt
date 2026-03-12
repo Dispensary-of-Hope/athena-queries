@@ -1,0 +1,30 @@
+SELECT
+  health_system
+, "count"(DISTINCT site_name) hs_number_of_sites
+, (("sum"(total_wac) / "count"(DISTINCT site_name)) / 4) hs_avg_quarterly_wac_per_site
+, (("sum"(total_doses) / "count"(DISTINCT site_name)) / 4) hs_avg_quarterly_doses_per_site
+, (("sum"(fills) / "count"(DISTINCT site_name)) / 4) hs_avg_quarterly_fills_per_site
+, (("sum"(uniquepatients) / "count"(DISTINCT site_name)) / 4) hs_avg_quarterly_unique_patients_per_site
+, (("sum"(encounters) / "count"(DISTINCT site_name)) / 4) hs_avg_quarterly_encounters_per_site
+, network_number_of_sites
+, network_avg_quarterly_wac_per_site
+, network_avg_quarterly_doses_per_site
+, network_avg_quarterly_fills_per_site
+, network_avg_quarterly_unique_patients_per_site
+, network_avg_quarterly_encounters_per_site
+FROM
+  (view_am_dashboard
+CROSS JOIN (
+   SELECT
+     "count"(DISTINCT site_name) network_number_of_sites
+   , (("sum"(total_wac) / "count"(DISTINCT site_name)) / 4) network_avg_quarterly_wac_per_site
+   , (("sum"(total_doses) / "count"(DISTINCT site_name)) / 4) network_avg_quarterly_doses_per_site
+   , (("sum"(fills) / "count"(DISTINCT site_name)) / 4) network_avg_quarterly_fills_per_site
+   , (("sum"(uniquepatients) / "count"(DISTINCT site_name)) / 4) network_avg_quarterly_unique_patients_per_site
+   , (("sum"(encounters) / "count"(DISTINCT site_name)) / 4) network_avg_quarterly_encounters_per_site
+   FROM
+     view_am_dashboard
+   WHERE (((((new_dispensing_entity__c = 'Hospital Outpatient Pharmacy') AND (joined_date <= "date_add"('year', -1, current_date))) AND (ehope_type__c LIKE '%Active%')) AND (health_system IS NOT NULL)) AND (day BETWEEN "date_add"('year', -1, "date_trunc"('Quarter', current_date)) AND "date_add"('day', -1, "date_trunc"('Quarter', current_date))))
+)  network_avg)
+WHERE (((((new_dispensing_entity__c = 'Hospital Outpatient Pharmacy') AND (joined_date <= "date_add"('year', -1, current_date))) AND (ehope_type__c LIKE '%Active%')) AND (health_system IS NOT NULL)) AND (day BETWEEN "date_add"('year', -1, "date_trunc"('Quarter', current_date)) AND "date_add"('day', -1, "date_trunc"('Quarter', current_date))))
+GROUP BY 1, 8, 9, 10, 11, 12, 13

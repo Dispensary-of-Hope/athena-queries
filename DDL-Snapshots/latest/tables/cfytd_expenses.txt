@@ -1,0 +1,29 @@
+  `fiscal_year` string COMMENT 'from deserializer', 
+  `month_year` string COMMENT 'from deserializer', 
+  `account` string COMMENT 'from deserializer', 
+  `actual_this_month` string COMMENT 'from deserializer', 
+  `actual_last_year_month` string COMMENT 'from deserializer', 
+  `variance_this_month` string COMMENT 'from deserializer', 
+  `percent_change_month` string COMMENT 'from deserializer', 
+  `3_month_average` string COMMENT 'from deserializer', 
+  `variance_cm_3m_average` string COMMENT 'from deserializer', 
+  `ytdactual` string COMMENT 'from deserializer', 
+  `pytdactual` string COMMENT 'from deserializer', 
+  `variance_ytd` string COMMENT 'from deserializer', 
+  `percent_change_year` string COMMENT 'from deserializer')
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.OpenCSVSerde' 
+WITH SERDEPROPERTIES ( 
+  'escapeChar'='\n', 
+  'quoteChar'='\"', 
+  'separatorChar'=',') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://doh-financials/financials.CLEAN/historical_expenses'
+TBLPROPERTIES (
+  'has_encrypted_data'='true', 
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1773324074')

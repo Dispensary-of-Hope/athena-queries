@@ -1,0 +1,64 @@
+WITH
+  donor_counts AS (
+   SELECT
+     target_list_product
+   , COUNT(DISTINCT (CASE WHEN (trim(BOTH FROM donor_status) IN ('Active', 'Prospect')) THEN trim(BOTH FROM LOWER(donor_name)) END)) num_active_prospect_tp
+   FROM
+     view_iqvia_sales
+   WHERE ((quarter = 'Q2'' 2025') AND (NOT (target_list_product IN ('null', 'None'))))
+   GROUP BY target_list_product
+) 
+, acute_map AS (
+   SELECT
+     iq.target_list_product
+   , COALESCE(dc.num_active_prospect_tp, 0) num_active_prospect_tp
+   , MAX(iq.major_class) major_class
+   , (CASE WHEN (SUM((CASE WHEN (iq.acute_chronic = 'CHRONIC') THEN 1 ELSE 0 END)) > 0) THEN 'CHRONIC' ELSE MAX(iq.acute_chronic) END) acute_chronic
+   FROM
+     (view_iqvia_sales iq
+   LEFT JOIN donor_counts dc ON (iq.target_list_product = dc.target_list_product))
+   WHERE (NOT (iq.target_list_product IN ('null', 'None')))
+   GROUP BY iq.target_list_product, COALESCE(dc.num_active_prospect_tp, 0)
+) 
+, joined AS (
+   SELECT
+     v.target_list_product
+   , v.priority old_priority
+   , v.priority_score
+   , m.major_class
+   , m.acute_chronic
+   , m.num_active_prospect_tp
+   , (CASE WHEN (m.acute_chronic = 'CHRONIC') THEN (v.priority_score * 1.15E0) WHEN ((m.acute_chronic = 'ACUTE') AND (m.major_class = 'ANTIBACTERIALS')) THEN (v.priority_score * 1E0) WHEN (m.acute_chronic = 'ACUTE') THEN (v.priority_score * 9E-1) ELSE v.priority_score END) adjusted_priority_score
+   FROM
+     (view_tl_priority_rank v
+   LEFT JOIN acute_map m ON (v.target_list_product = m.target_list_product))
+) 
+, weighted AS (
+   SELECT
+     j.*
+   , (CASE WHEN (num_active_prospect_tp >= 15) THEN 1.3E0 WHEN (num_active_prospect_tp >= 10) THEN 1.2E0 WHEN (num_active_prospect_tp >= 3) THEN 1.1E0 WHEN (num_active_prospect_tp >= 1) THEN 1.05E0 ELSE 1 END) donor_stability_factor
+   , (j.adjusted_priority_score * (CASE WHEN (num_active_prospect_tp >= 15) THEN 1.3E0 WHEN (num_active_prospect_tp >= 10) THEN 1.2E0 WHEN (num_active_prospect_tp >= 5) THEN 1.1E0 WHEN (num_active_prospect_tp >= 1) THEN 1.05E0 ELSE 1 END)) donor_weighted_score
+   FROM
+     joined j
+) 
+, ptiles AS (
+   SELECT
+     approx_percentile(donor_weighted_score, 5E-1) p50
+   , approx_percentile(donor_weighted_score, 8.5E-1) p85
+   FROM
+     weighted
+) 
+SELECT
+  w.target_list_product
+, w.old_priority
+, w.priority_score
+, w.adjusted_priority_score
+, w.num_active_prospect_tp
+, w.donor_stability_factor
+, w.donor_weighted_score
+, w.major_class
+, w.acute_chronic
+, (CASE WHEN (w.donor_weighted_score >= p.p85) THEN 'P1' WHEN (w.donor_weighted_score >= p.p50) THEN 'P2' ELSE 'P3' END) new_priority
+FROM
+  (weighted w
+CROSS JOIN ptiles p)

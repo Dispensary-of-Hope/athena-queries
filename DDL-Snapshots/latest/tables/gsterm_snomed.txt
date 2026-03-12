@@ -1,0 +1,26 @@
+  `snomed_code` string, 
+  `gstermid` string, 
+  `snomed_description` string)
+ROW FORMAT DELIMITED 
+  FIELDS TERMINATED BY '|' 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://elsevier-exports/exports-folder/gsterm-snomed/'
+TBLPROPERTIES (
+  'CrawlerSchemaDeserializerVersion'='1.0', 
+  'CrawlerSchemaSerializerVersion'='1.0', 
+  'UPDATED_BY_CRAWLER'='database-prod-elsevier-crawler', 
+  'areColumnsQuoted'='false', 
+  'averageRecordSize'='35', 
+  'classification'='csv', 
+  'columnsOrdered'='true', 
+  'compressionType'='none', 
+  'delimiter'='|', 
+  'objectCount'='1', 
+  'recordCount'='61328', 
+  'sizeKey'='2146487', 
+  'skip.header.line.count'='1', 
+  'typeOfData'='file')

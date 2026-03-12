@@ -1,0 +1,43 @@
+WITH
+  received AS (
+   SELECT
+     date_trunc('month', receive_date) receive_month
+   , receive_date
+   , product_id
+   , TRY(CAST(date_parse(split_part(lot_id, ' ', 2), '%m/%d/%Y') AS DATE)) exp_date
+   , CAST(total_units AS bigint) units_received
+   FROM
+     orders_historical_finale_timestamp
+   WHERE ((receive_date IS NOT NULL) AND (receive_date >= TIMESTAMP '2020-01-01 00:00:00.000'))
+) 
+, cleaned AS (
+   SELECT
+     receive_month
+   , receive_date
+   , product_id
+   , exp_date
+   , units_received
+   , date_diff('day', CAST(receive_date AS date), exp_date) days_until_expiration
+   FROM
+     received
+   WHERE ((exp_date IS NOT NULL) AND (exp_date >= DATE '2010-01-01') AND (exp_date <= DATE '2030-12-31'))
+) 
+, bucketed AS (
+   SELECT
+     receive_month
+   , (CASE WHEN (days_until_expiration < 90) THEN '< 3 months' WHEN (days_until_expiration < 180) THEN '3-6 months' WHEN (days_until_expiration < 365) THEN '6-12 months' WHEN (days_until_expiration < 730) THEN '12-24 months' ELSE '> 24 months' END) expiration_range
+   , units_received
+   , product_id
+   FROM
+     cleaned
+) 
+SELECT
+  receive_month
+, expiration_range
+, SUM(units_received) units_received
+, COUNT(DISTINCT product_id) number_of_ndcs
+, ROUND(((1E2 * SUM(units_received)) / SUM(SUM(units_received)) OVER (PARTITION BY receive_month)), 2) pct_of_total_qty
+FROM
+  bucketed
+GROUP BY receive_month, expiration_range
+ORDER BY receive_month ASC, expiration_range ASC

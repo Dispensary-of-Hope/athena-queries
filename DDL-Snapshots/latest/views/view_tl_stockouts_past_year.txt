@@ -1,0 +1,61 @@
+WITH
+  tl_run_stock AS (
+   SELECT
+     inv.current_date_in_stock
+   , iq.target_list_product
+   , iq.priority
+   , SUM(inv.available_qty) available_qty
+   FROM
+     (view_running_inventory inv
+   INNER JOIN (
+      SELECT DISTINCT
+        target_list_product
+      , priority
+      , ndc
+      FROM
+        iqvia_target_primary
+      WHERE (NOT (target_list_product IN ('None', 'null')))
+   )  iq ON (inv.product_id = iq.ndc))
+   WHERE (inv.current_date_in_stock >= date_add('year', -1, current_date))
+   GROUP BY 1, 2, 3
+) 
+, stock_summary AS (
+   SELECT
+     target_list_product
+   , priority
+   , MAX(available_qty) max_in_stock
+   , MIN(available_qty) min_in_stock
+   , COUNT(current_date_in_stock) total_stock_days
+   , COUNT(DISTINCT (CASE WHEN (available_qty > 0) THEN current_date_in_stock END)) days_with_inventory
+   , COUNT(DISTINCT (CASE WHEN (COALESCE(available_qty, 0) <= 0) THEN current_date_in_stock END)) stockout_days
+   FROM
+     tl_run_stock
+   GROUP BY 1, 2
+) 
+, base_products AS (
+   SELECT DISTINCT
+     target_list_product
+   , priority
+   FROM
+     iqvia_target_primary
+   WHERE (NOT (target_list_product IN ('None', 'null')))
+) 
+, final AS (
+   SELECT
+     bp.target_list_product
+   , bp.priority
+   , COALESCE(s.max_in_stock, 0) max_in_stock
+   , COALESCE(s.min_in_stock, 0) min_in_stock
+   , COALESCE(s.total_stock_days, 0) total_stock_days
+   , COALESCE(s.days_with_inventory, 0) days_with_inventory
+   , COALESCE(s.stockout_days, 0) stockout_days
+   , (CASE WHEN ((s.days_with_inventory IS NULL) OR (COALESCE(s.days_with_inventory, 0) = 0)) THEN 'never_in_stock' WHEN (COALESCE(s.stockout_days, 0) = 0) THEN 'always_in_stock' ELSE (CASE WHEN (((1E0 * s.stockout_days) / s.total_stock_days) <= 5E-2) THEN 'rare_stockouts' WHEN (((1E0 * s.stockout_days) / s.total_stock_days) <= 1.5E-1) THEN 'moderate_stockouts' ELSE 'frequent_stockouts' END) END) stock_status
+   , ((1E0 * COALESCE(s.stockout_days, 0)) / NULLIF(COALESCE(s.total_stock_days, 0), 0)) stockout_ratio
+   FROM
+     (base_products bp
+   LEFT JOIN stock_summary s ON (bp.target_list_product = s.target_list_product))
+) 
+SELECT *
+FROM
+  final
+ORDER BY stock_status ASC, target_list_product ASC

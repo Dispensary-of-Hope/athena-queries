@@ -1,0 +1,20 @@
+  `site_name` string COMMENT 'from deserializer', 
+  `site_id` string COMMENT 'from deserializer', 
+  `company_id__c` string COMMENT 'from deserializer', 
+  `latitude` string COMMENT 'from deserializer', 
+  `longitude` string COMMENT 'from deserializer')
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.serde2.OpenCSVSerde' 
+WITH SERDEPROPERTIES ( 
+  'escapeChar'='\n', 
+  'quoteChar'='\"', 
+  'separatorChar'=',') 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://historical-data-powerbi/site_lat_long'
+TBLPROPERTIES (
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1739992255')
