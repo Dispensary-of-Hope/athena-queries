@@ -1,0 +1,28 @@
+SELECT
+  zip_geoid
+, ocg.county_geoid
+, "concat"(county_name, ', ', state) county_state
+, county_name
+, state
+, county_latitude
+, county_longitude
+FROM
+  ((
+   SELECT DISTINCT
+     (CASE WHEN (geoid_zcta5_20 IS NULL) THEN geoid_zcta5_20 ELSE "lpad"("replace"(geoid_zcta5_20, '.0', ''), 5, '0') END) zip_geoid
+   , (CASE WHEN (geoid_county_20 IS NULL) THEN geoid_county_20 ELSE "lpad"(geoid_county_20, 5, '0') END) county_geoid
+   , NAMELSAD_COUNTY_20
+   FROM
+     optum_zip_county_data
+   WHERE (geoid_zcta5_20 IS NOT NULL)
+)  ozcd
+LEFT JOIN (
+   SELECT DISTINCT
+     county_name
+   , state
+   , "lpad"(geoid, 5, '0') county_geoid
+   , latitude county_latitude
+   , longitude county_longitude
+   FROM
+     optum_county_geodata
+)  ocg ON (ozcd.county_geoid = ocg.county_geoid))
