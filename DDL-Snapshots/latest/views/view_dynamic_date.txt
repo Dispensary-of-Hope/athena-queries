@@ -1,0 +1,6 @@
+SELECT DISTINCT
+  CAST(current_timestamp AS date) date_today
+, CAST("date_add"('day', -365, current_timestamp) AS date) one_year_ago
+, 'dateParameterGroup' DateParameterGroup
+FROM
+  date_table
