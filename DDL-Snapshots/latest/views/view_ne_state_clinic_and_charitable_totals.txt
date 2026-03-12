@@ -1,0 +1,60 @@
+(
+   SELECT
+     qn2.shippingstate
+   , null fills_since_inception
+   , null uniquepatients_since_inception
+   , "sum"(qn.fills) fills_first_year
+   , ("sum"(CAST(qn.uniquepatients AS decimal(10, 2))) / "count"(DISTINCT qn.quarter_end_date)) avg_uniquepatients_first_year
+   , null day
+   , qn2.first_qn_reporting_day
+   FROM
+     ((view_quarterly_numbers qn
+   LEFT JOIN (
+      SELECT DISTINCT
+        sfa.shippingstate
+      , "split_part"(sfa.site_id_formatted__c, ' ', 2) site_id
+      FROM
+        sf_account sfa
+      WHERE (((account_record_type_text__c LIKE '%Active Access Site%') AND (type IN ('Active'))) AND (NOT (new_dispensing_entity__c IN ('FQHC w/ Pharmacy', 'Hospital Outpatient Pharmacy', '', 'FQHC w/o Pharmacy', 'CAP or Central Supply'))))
+   )  si ON (qn.site_id = si.site_id))
+   LEFT JOIN (
+      SELECT
+        sf.shippingstate
+      , (CASE WHEN ("min"(dt.day) >= TIMESTAMP '2015-01-01 00:00:00.000') THEN "min"(dt.day) ELSE TIMESTAMP '2015-01-01 00:00:00.000' END) first_qn_reporting_day
+      FROM
+        ((view_quarterly_numbers qn
+      INNER JOIN date_table dt ON (qn.quarter_end_date = dt.day))
+      LEFT JOIN (
+         SELECT DISTINCT
+           sfa.shippingstate
+         , "split_part"(sfa.site_id_formatted__c, ' ', 2) site_id
+         FROM
+           sf_account sfa
+         WHERE (((account_record_type_text__c LIKE '%Active Access Site%') AND (type IN ('Active'))) AND (NOT (new_dispensing_entity__c IN ('FQHC w/ Pharmacy', 'Hospital Outpatient Pharmacy', '', 'FQHC w/o Pharmacy', 'CAP or Central Supply'))))
+      )  sf ON (qn.site_id = sf.site_id))
+      GROUP BY 1
+   )  qn2 ON (si.shippingstate = qn2.shippingstate))
+   WHERE ((qn.quarter_end_date <= "date_add"('day', 365, qn2.first_qn_reporting_day)) AND (qn.quarter_end_date >= TIMESTAMP '2015-01-01 00:00:00.000'))
+   GROUP BY 1, 2, 3, 6, 7
+) UNION ALL (
+   SELECT
+     sf.shippingstate
+   , "sum"(qn.fills) fills_since_inception
+   , ("sum"(CAST(qn.uniquepatients AS decimal(10, 2))) / CAST("count"(DISTINCT quarter_end_date) AS decimal(10, 2))) uniquepatients_since_inception
+   , null fills_first_year
+   , null avg_uniquepatients_first_year
+   , "min"(dt.day) day
+   , null first_qn_reporting_day
+   FROM
+     ((view_quarterly_numbers qn
+   INNER JOIN date_table dt ON (qn.quarter_end_date = dt.day))
+   LEFT JOIN (
+      SELECT DISTINCT
+        sfa.shippingstate shippingstate
+      , "split_part"(sfa.site_id_formatted__c, ' ', 2) site_id
+      FROM
+        sf_account sfa
+      WHERE (((account_record_type_text__c LIKE '%Active Access Site%') AND (type IN ('Active'))) AND (NOT (new_dispensing_entity__c IN ('FQHC w/ Pharmacy', 'Hospital Outpatient Pharmacy', '', 'FQHC w/o Pharmacy', 'CAP or Central Supply'))))
+   )  sf ON (qn.site_id = sf.site_id))
+   GROUP BY 1, 4, 5, 7
+) 
