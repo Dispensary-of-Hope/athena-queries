@@ -1,0 +1,24 @@
+SELECT
+  ccn
+, facility.county_state
+, hospital_facility_name
+, street
+, city
+, (CASE WHEN (facility.state = 'Michigan') THEN 'MI' WHEN (facility.state <> 'Michigan') THEN facility.state END) state
+, zip
+, (CASE WHEN (health_sys_id = 'DoH') THEN 'Dispensary of Hope Sites' WHEN (NOT (health_sys_facility_name IN ('Rural Health Clinic', 'Federally Qualified Health Center', 'Free & Charitable Clinic Membership', 'State Association Membership'))) THEN 'Hospitals' WHEN (health_sys_facility_name = 'Federally Qualified Health Center') THEN 'FQHCs' WHEN (health_sys_facility_name = 'Rural Health Clinic') THEN 'Rural Health Clinics' WHEN (health_sys_facility_name = 'Free & Charitable Clinic Membership') THEN 'NAFC Members' WHEN (health_sys_facility_name = 'State Association Membership') THEN 'NAFC Members' END) health_sys_id
+, (CASE WHEN ((health_sys_facility_name IS NULL) OR (health_sys_facility_name = '')) THEN 'Hospital/Facility outside of a Health System' WHEN (health_sys_facility_name IS NOT NULL) THEN health_sys_facility_name END) health_sys_facility_name
+, zip_geoid
+, county_geoid
+, provider_ccn
+, state_code
+, hospital_name
+, rural_versus_urban
+, ccn_facility_type
+, county_latitude
+, county_longitude
+, estimated_total_doh_eligible doh_eligible_by_zip
+, county_name
+FROM
+  (view_hs_fqhc_rhc_data facility
+LEFT JOIN view_optum_acs_zip_data oazd ON (facility.zip = oazd.zip_code))
