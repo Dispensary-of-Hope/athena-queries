@@ -1,0 +1,124 @@
+SELECT
+  array_agg(DISTINCT day) FILTER (WHERE ((drd.total_units_received <> 0) AND (day IS NOT NULL))) receive_dates
+, array_agg(DISTINCT day) FILTER (WHERE ((total_units_destroyed <> 0) AND (day IS NOT NULL))) destroy_dates
+, drug_name
+, unit_of_measure
+, drd.product_id
+, drd.lot_id
+, sum(drd.total_units_received) units_received
+, sum(total_units_distributed) units_distributed
+, sum(total_units_destroyed) units_destroyed
+, purchase_order_date_1
+, receive_date_1
+, receive_qty_1
+, purchase_order_date_2
+, receive_date_2
+, receive_qty_2
+, purchase_order_date_3
+, receive_date_3
+, receive_qty_3
+, purchase_order_date_4
+, receive_date_4
+, receive_qty_4
+, purchase_order_date_5
+, receive_date_5
+, receive_qty_5
+, purchase_order_date_6
+, receive_date_6
+, receive_qty_6
+, purchase_order_date_7
+, receive_date_7
+, receive_qty_7
+, purchase_order_date_8
+, receive_date_8
+, receive_qty_8
+, purchase_order_date_9
+, receive_date_9
+, receive_qty_9
+, purchase_order_date_10
+, receive_date_10
+, receive_qty_10
+, purchase_order_date_11
+, receive_date_11
+, receive_qty_11
+FROM
+  ((distribution_receiving_destruction drd
+INNER JOIN (
+   SELECT
+     drug_name
+   , product_id
+   , unit_of_measure
+   , lot_id
+   , ship_date destruction_date
+   , SUM(total_units_distributed) units_destroyed
+   FROM
+     orders_with_companyid
+   WHERE ((site_id = '10277') AND (order_id IN ('100158', '100157')))
+   GROUP BY 1, 2, 3, 4, 5
+)  dest ON ((drd.product_id = dest.product_id) AND (drd.lot_id = dest.lot_id)))
+INNER JOIN (
+   WITH
+     numbered_receipts AS (
+      SELECT
+        ohft.product_id
+      , ohft.lot_id
+      , ohft.purchase_order_date
+      , ohft.receive_date
+      , CAST(ohft.total_units AS bigint) units_received
+      , ROW_NUMBER() OVER (PARTITION BY ohft.product_id, ohft.lot_id ORDER BY ohft.receive_date ASC) rn
+      FROM
+        (orders_historical_finale_timestamp ohft
+      INNER JOIN (
+         SELECT DISTINCT
+           product_id
+         , lot_id
+         FROM
+           orders_with_companyid
+         WHERE ((site_id = '10277') AND (order_id IN ('100158', '100157')))
+      )  dest ON ((ohft.product_id = dest.product_id) AND (ohft.lot_id = dest.lot_id)))
+      WHERE (ohft.receive_date IS NOT NULL)
+   ) 
+   SELECT
+     product_id
+   , lot_id
+   , MAX((CASE WHEN (rn = 1) THEN purchase_order_date END)) purchase_order_date_1
+   , MAX((CASE WHEN (rn = 1) THEN receive_date END)) receive_date_1
+   , MAX((CASE WHEN (rn = 1) THEN units_received END)) receive_qty_1
+   , MAX((CASE WHEN (rn = 2) THEN purchase_order_date END)) purchase_order_date_2
+   , MAX((CASE WHEN (rn = 2) THEN receive_date END)) receive_date_2
+   , MAX((CASE WHEN (rn = 2) THEN units_received END)) receive_qty_2
+   , MAX((CASE WHEN (rn = 3) THEN purchase_order_date END)) purchase_order_date_3
+   , MAX((CASE WHEN (rn = 3) THEN receive_date END)) receive_date_3
+   , MAX((CASE WHEN (rn = 3) THEN units_received END)) receive_qty_3
+   , MAX((CASE WHEN (rn = 4) THEN purchase_order_date END)) purchase_order_date_4
+   , MAX((CASE WHEN (rn = 4) THEN receive_date END)) receive_date_4
+   , MAX((CASE WHEN (rn = 4) THEN units_received END)) receive_qty_4
+   , MAX((CASE WHEN (rn = 5) THEN purchase_order_date END)) purchase_order_date_5
+   , MAX((CASE WHEN (rn = 5) THEN receive_date END)) receive_date_5
+   , MAX((CASE WHEN (rn = 5) THEN units_received END)) receive_qty_5
+   , MAX((CASE WHEN (rn = 6) THEN purchase_order_date END)) purchase_order_date_6
+   , MAX((CASE WHEN (rn = 6) THEN receive_date END)) receive_date_6
+   , MAX((CASE WHEN (rn = 6) THEN units_received END)) receive_qty_6
+   , MAX((CASE WHEN (rn = 7) THEN purchase_order_date END)) purchase_order_date_7
+   , MAX((CASE WHEN (rn = 7) THEN receive_date END)) receive_date_7
+   , MAX((CASE WHEN (rn = 7) THEN units_received END)) receive_qty_7
+   , MAX((CASE WHEN (rn = 8) THEN purchase_order_date END)) purchase_order_date_8
+   , MAX((CASE WHEN (rn = 8) THEN receive_date END)) receive_date_8
+   , MAX((CASE WHEN (rn = 8) THEN units_received END)) receive_qty_8
+   , MAX((CASE WHEN (rn = 9) THEN purchase_order_date END)) purchase_order_date_9
+   , MAX((CASE WHEN (rn = 9) THEN receive_date END)) receive_date_9
+   , MAX((CASE WHEN (rn = 9) THEN units_received END)) receive_qty_9
+   , MAX((CASE WHEN (rn = 10) THEN purchase_order_date END)) purchase_order_date_10
+   , MAX((CASE WHEN (rn = 10) THEN receive_date END)) receive_date_10
+   , MAX((CASE WHEN (rn = 10) THEN units_received END)) receive_qty_10
+   , MAX((CASE WHEN (rn = 11) THEN purchase_order_date END)) purchase_order_date_11
+   , MAX((CASE WHEN (rn = 11) THEN receive_date END)) receive_date_11
+   , MAX((CASE WHEN (rn = 11) THEN units_received END)) receive_qty_11
+   , COUNT(*) receipt_count
+   , SUM(units_received) total_units_received
+   FROM
+     numbered_receipts
+   GROUP BY product_id, lot_id
+   ORDER BY lot_id ASC
+)  r ON ((drd.product_id = r.product_id) AND (drd.lot_id = r.lot_id)))
+GROUP BY 3, 4, 5, 6, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42
