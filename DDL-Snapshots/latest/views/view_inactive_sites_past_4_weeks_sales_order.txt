@@ -1,0 +1,22 @@
+SELECT
+  health_system
+, site_name
+, si.site_id
+, shippingstreet
+, shippingstate
+, shippingcity
+, shippingpostalcode
+, new_dispensing_entity__c
+, account_manager
+, joined_date
+, renewal_date
+, account_record_type_text__c
+FROM
+  (site_info si
+LEFT JOIN (
+   SELECT DISTINCT site_id
+   FROM
+     orders_with_companyid
+   WHERE ((order_date >= date_add('day', -28, current_date)) AND (site_id <> '10277'))
+)  active ON (si.site_id = active.site_id))
+WHERE (((active.site_id IS NULL) OR (active.site_id = '')) AND (joined_date IS NOT NULL))
