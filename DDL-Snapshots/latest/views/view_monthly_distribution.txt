@@ -1,0 +1,67 @@
+SELECT
+  "to_char"(s_qty.month, 'yyyy-mm') year_month
+, "date_format"(s_qty.month, '%M') month_long_name
+, s_qty.site_name
+, total_qty_shipped
+, num_orders
+, COALESCE(wac_distributed, 0) WAC_distributed
+FROM
+  ((
+   SELECT
+     month
+   , site_name
+   , "sum"(CAST(total_units AS int)) total_qty_shipped
+   , "count"(DISTINCT order_id) num_orders
+   FROM
+     (
+      SELECT
+        "date_trunc"('month', ship_date) month
+      , *
+      FROM
+        (
+         SELECT
+           site_name
+         , ship_date
+         , product_id
+         , order_id
+         , (CASE WHEN (total_units = '') THEN '0' ELSE total_units END) total_units
+         FROM
+           ((
+            SELECT
+              site_name
+            , site_id
+            FROM
+              site_info
+         )  si
+         LEFT JOIN (
+            SELECT
+              site_id
+            , ship_date
+            , product_id
+            , order_id
+            , total_units
+            FROM
+              orders_historical_finale_timestamp
+            WHERE ((((((NOT (site_id IN ('194', '10277'))) AND (product_id <> '00000000000')) AND (product_id <> '99999999999')) AND (product_id <> '00000000001')) AND (product_id <> '00000000002')) AND (ship_date >= TIMESTAMP '2019-01-01 00:00:00.000'))
+         )  ot ON (si.site_id = ot.site_id))
+      ) 
+      WHERE ((site_name IS NOT NULL) AND (site_name <> ''))
+   ) 
+   GROUP BY month, site_name
+)  s_qty
+LEFT JOIN (
+   SELECT
+     month
+   , site_name
+   , "round"("sum"(wac_distributed), 0) WAC_distributed
+   FROM
+     (
+      SELECT
+        "date_trunc"('month', day) month
+      , *
+      FROM
+        view_rd_dashboard
+      WHERE (site_name IS NOT NULL)
+   ) 
+   GROUP BY month, site_name
+)  s_wac ON ((s_qty.month = s_wac.month) AND (s_qty.site_name = s_wac.site_name)))
