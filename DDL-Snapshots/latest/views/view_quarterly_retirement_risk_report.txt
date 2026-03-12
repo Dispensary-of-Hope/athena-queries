@@ -1,0 +1,36 @@
+SELECT DISTINCT
+  sfa.name site_name
+, sfa2.name health_system
+, sfa.account_record_type_text__c
+, sfa.ehope_type__c
+, sfa.type
+, sfa.shippingstate
+, sfa.shippingcity
+, split_part(sfa.site_id_formatted__c, ' ', 2) site_id
+, sfa.company_id__c
+, sfa.new_dispensing_entity__c
+, (CASE WHEN ((TRY(date_parse(sfa.renewal_date__c, '%m/%d/%Y')) < current_date) AND (fee.expiration_date__c IS NULL)) THEN "date_add"('day', 365, TRY(date_parse(sfa.renewal_date__c, '%m/%d/%Y'))) WHEN ((TRY(date_parse(sfa.renewal_date__c, '%m/%d/%Y')) >= current_date) AND (fee.expiration_date__c IS NULL)) THEN TRY(date_parse(sfa.renewal_date__c, '%m/%d/%Y')) ELSE fee.expiration_date__c END) renewal_date
+, TRY(date_parse(sfa.joined_network__c, '%m/%d/%Y')) joined_date
+, concat(concat(sfu.firstname, ' '), sfu.lastname) account_manager
+, fee.subscription_fee
+, fee.monthly_subscription_fee
+, sfa.risk_probability_of_retirement__c
+, sfa.reason_for_changing_risk_level__c
+FROM
+  (((sf_account sfa
+LEFT JOIN sf_account sfa2 ON (sfa2.id = sfa.health_system__c))
+LEFT JOIN sf_user sfu ON (sfu.id = sfa.ownerid))
+LEFT JOIN (
+   SELECT DISTINCT
+     sfa.name
+   , sfa.salesforce_id__c
+   , (CASE WHEN (round(max(CAST(sfo.amount AS double)), 2) = 0E0) THEN 1E0 ELSE round(max(CAST(sfo.amount AS double)), 2) END) subscription_fee
+   , (CASE WHEN (round((max(CAST(sfo.amount AS double)) / 12), 2) = 0E0) THEN 1E0 ELSE round((max(CAST(sfo.amount AS double)) / 12), 2) END) monthly_subscription_fee
+   , max((CASE WHEN (sfo.name LIKE '%IAP%') THEN TRY(date_parse(sfo.expiration_date__c, '%m/%d/%Y')) END)) expiration_date__c
+   FROM
+     (sf_account sfa
+   LEFT JOIN sf_opportunity sfo ON (sfa.id = sfo.accountid))
+   WHERE ((sfo.amount IN ('0.0', '12500.0', '7500.0', '150000.0')) AND (lower(sfa.account_record_type_text__c) IN ('active access site')) AND (lower(sfa.type) IN ('active', 'on hold')))
+   GROUP BY 1, 2
+)  fee ON (fee.salesforce_id__c = sfa.salesforce_id__c))
+WHERE ((lower(sfa.account_record_type_text__c) IN ('active access site')) AND (lower(sfa.type) IN ('active', 'on hold', 'retired')) AND (NOT (lower(sfa.name) LIKE 'wwt')))
