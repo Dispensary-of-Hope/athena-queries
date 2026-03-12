@@ -1,0 +1,27 @@
+WITH
+  offers_monthly AS (
+   SELECT
+     date_trunc('month', offer_date) month
+   , SUM(offers_total) total_offers
+   FROM
+     view_manufacturer_monthly_offers
+   GROUP BY 1
+) 
+, doses_monthly AS (
+   SELECT
+     date_trunc('month', month) month
+   , SUM(total_doses_received) total_doses_received
+   , SUM(total_doses_on_hand) total_doses_on_hand
+   FROM
+     view_monthly_dose_tracker
+   GROUP BY 1
+) 
+SELECT
+  d.month
+, d.total_doses_received
+, d.total_doses_on_hand
+, COALESCE(o.total_offers, 0) total_offers
+FROM
+  (view_monthly_dose_tracker d
+LEFT JOIN offers_monthly o ON (d.month = o.month))
+ORDER BY d.month ASC
