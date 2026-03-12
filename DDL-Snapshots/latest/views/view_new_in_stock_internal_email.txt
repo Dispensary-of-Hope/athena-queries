@@ -1,0 +1,50 @@
+(
+   SELECT DISTINCT
+     nps.productnamelong
+   , nps.drug_class
+   , nps.therapeutic_class
+   , im.primary
+   , nps.total_in_stock
+   , (CASE WHEN (max_last_day_in_stock IS NULL) THEN 'New in Stock' WHEN (max_last_day_in_stock IS NOT NULL) THEN 'Back in Stock' END) back_in_stock_status
+   , nps.days_in_stock
+   , ris.max_last_day_in_stock
+   , (CASE WHEN (med_request.productnamelong IS NOT NULL) THEN 'YES' WHEN (med_request.productnamelong IS NULL) THEN 'NO' END) med_request_last_6_months
+   , med_request.last_request_date
+   FROM
+     ((("database-prod"."view_new_products_in_stock" nps
+   LEFT JOIN (
+      SELECT DISTINCT
+        productnamelong
+      , primary
+      FROM
+        "database-prod"."view_inventory_master"
+      GROUP BY productnamelong, primary
+   )  im ON (im.productnamelong = nps.productnamelong))
+   LEFT JOIN (
+      SELECT DISTINCT
+        productnamelong
+      , "max"(current_date_in_stock) max_last_day_in_stock
+      FROM
+        "database-prod"."view_running_inventory"
+      WHERE ((total_in_stock > 0) AND (current_date_in_stock < (current_date - INTERVAL  '14' DAY)))
+      GROUP BY 1
+   )  ris ON (ris.productnamelong = nps.productnamelong))
+   LEFT JOIN (
+      SELECT DISTINCT
+        productnamelong
+      , last_request_date
+      FROM
+        (
+         SELECT DISTINCT
+           productnamelong
+         , count(DISTINCT site_id) number_of_sites_requesting
+         , max(request_date) last_request_date
+         FROM
+           medication_requests
+         WHERE (request_date >= date_add('day', -180, request_date))
+         GROUP BY 1
+      ) 
+      WHERE (number_of_sites_requesting >= 2)
+   )  med_request ON (nps.productnamelong = med_request.productnamelong))
+   GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+) 
