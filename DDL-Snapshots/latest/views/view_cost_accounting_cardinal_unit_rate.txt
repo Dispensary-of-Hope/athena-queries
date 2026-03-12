@@ -1,0 +1,44 @@
+(
+   SELECT DISTINCT
+     cmd.fiscal_year
+   , ins.site_id
+   , ins.dispensary_name
+   , ins.new_dispensing_entity__c
+   , ins.joined_network__c
+   , insulin_units
+   , (avg(customer_service) * sum(insulin_units)) customer_service
+   , (avg(distribution) * sum(insulin_units)) distribution
+   , (avg(storage) * sum(insulin_units)) storage
+   , (avg(shipping) * sum(insulin_units)) shipping
+   , (avg(supplies) * sum(insulin_units)) supplies
+   FROM
+     ((
+      SELECT DISTINCT
+        ship_date
+      , fiscal_year
+      , year
+      , month
+      , site_id
+      , dispensary_name
+      , new_dispensing_entity__c
+      , joined_network__c
+      , total_units
+      , insulin_units
+      FROM
+        "database-prod"."view_insulin_vs_non_insulin"
+   )  ins
+   LEFT JOIN (
+      SELECT
+        fiscal_year
+      , sum((CASE WHEN (category = 'Customer Service') THEN unit_rate END)) customer_service
+      , sum((CASE WHEN (category = 'Distribution') THEN unit_rate END)) distribution
+      , sum((CASE WHEN (category = 'Storage') THEN unit_rate END)) storage
+      , sum((CASE WHEN (category = 'Shipping') THEN unit_rate END)) shipping
+      , sum((CASE WHEN (category = 'Supplies') THEN unit_rate END)) supplies
+      FROM
+        "database-prod"."view_cardinal_unit_rate" cmd
+      GROUP BY 1
+   )  cmd ON (cmd.fiscal_year = ins.fiscal_year))
+   WHERE ((ins.site_id <> '') AND (ins.site_id <> '10277') AND ((ins.dispensary_name IS NOT NULL) OR (ins.dispensary_name <> '%test%')))
+   GROUP BY 1, 2, 3, 4, 5, 6
+) 
