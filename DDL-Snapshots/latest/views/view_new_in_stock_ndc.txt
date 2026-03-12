@@ -1,0 +1,19 @@
+SELECT
+  new.productnamelong
+, new.drug_class
+, new.therapeutic_class
+, inv.product_id
+, inv.available_qty
+FROM
+  (view_new_products_in_stock new
+LEFT JOIN (
+   SELECT DISTINCT
+     productnamelong
+   , product_id
+   , sum(available_qty) available_qty
+   FROM
+     view_inventory_master
+   WHERE ((available_qty <> 0) AND ((NOT (donor_id IN ('702', '24354'))) AND (min_exp_date > date_add('month', 6, current_date))))
+   GROUP BY 1, 2
+)  inv ON (new.productnamelong = inv.productnamelong))
+WHERE (current_date_in_stock = current_date)
