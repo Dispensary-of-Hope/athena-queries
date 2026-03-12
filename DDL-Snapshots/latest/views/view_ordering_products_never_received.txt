@@ -1,0 +1,85 @@
+SELECT DISTINCT
+  y.target_list_product
+, y.priority
+, units iq_units
+, avg_doh_units_per_product_per_qtr
+, P1_median_units
+, P2_median_units
+, P3_median_units
+, factor_of_median
+, (CASE WHEN (factor_of_median >= 1) THEN "round"((factor_of_median * avg_doh_units_per_product_per_qtr), 0) WHEN (factor_of_median < 1) THEN avg_doh_units_per_product_per_qtr END) amount_to_order_for_one_qtr
+FROM
+  (((
+   SELECT DISTINCT
+     target_list_product
+   , iq.priority
+   , "sum"(units) units
+   , P1_median_units
+   , P2_median_units
+   , P3_median_units
+   , (1 + (("sum"(units) - (CASE WHEN (priority = 'P1') THEN P1_median_units WHEN (priority = 'P2') THEN P2_median_units WHEN (priority = 'P3') THEN P3_median_units END)) / (CASE WHEN (priority = 'P1') THEN P1_median_units WHEN (priority = 'P2') THEN P2_median_units WHEN (priority = 'P3') THEN P3_median_units END))) factor_of_median
+   FROM
+     (view_iqvia_sales iq
+   CROSS JOIN (
+      SELECT DISTINCT
+        "approx_percentile"((CASE WHEN (priority = 'P1') THEN units END), 5E-1) P1_median_units
+      , "approx_percentile"((CASE WHEN (priority = 'P2') THEN units END), 5E-1) P2_median_units
+      , "approx_percentile"((CASE WHEN (priority = 'P3') THEN units END), 5E-1) P3_median_units
+      FROM
+        (
+         SELECT DISTINCT
+           priority
+         , target_list_product
+         , "sum"(units) units
+         FROM
+           view_iqvia_sales
+         WHERE ((priority <> '0') AND (day BETWEEN TIMESTAMP '2021-01-01 00:00:00.000' AND TIMESTAMP '2021-12-31 00:00:00.000'))
+         GROUP BY 1, 2
+      ) 
+   ) )
+   GROUP BY 1, 2, 4, 5, 6
+)  y
+LEFT JOIN (
+   SELECT
+     priority
+   , (("sum"(total_units_distributed) / "count"(DISTINCT drug_name)) / 4) avg_doh_units_per_product_per_qtr
+   FROM
+     (orders_with_companyid ocid
+   LEFT JOIN (
+      SELECT DISTINCT
+        product_id
+      , "min"(priority) priority
+      FROM
+        view_inventory_master
+      GROUP BY 1
+   )  inv ON (ocid.product_id = inv.product_id))
+   WHERE ((((ship_date >= "date_add"('year', -1, current_date)) AND (NOT (site_id IN ('194', '10277')))) AND (NOT (ocid.product_id IN ('00000000000', '00000000001', '00000000002')))) AND (drug_class <> ''))
+   GROUP BY 1
+   ORDER BY 1 ASC
+)  avg_units_by_priority ON (y.priority = avg_units_by_priority.priority))
+INNER JOIN (
+   SELECT DISTINCT target_list_product
+   FROM
+     (
+      SELECT DISTINCT
+        target_list_product
+      , "count"(product_id) received_previously
+      FROM
+        ((
+         SELECT DISTINCT
+           ndc
+         , target_list_product
+         FROM
+           iqvia_target_primary
+      )  iq
+      LEFT JOIN (
+         SELECT DISTINCT product_id
+         FROM
+           orders_historical_finale_timestamp
+         WHERE (receive_date IS NOT NULL)
+      )  ohft ON (iq.ndc = ohft.product_id))
+      GROUP BY 1
+   ) 
+   WHERE (received_previously = 0)
+)  tl_not_received ON (y.target_list_product = tl_not_received.target_list_product))
+WHERE (y.target_list_product <> 'null')
