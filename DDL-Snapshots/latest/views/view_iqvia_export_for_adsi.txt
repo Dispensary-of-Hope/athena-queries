@@ -1,0 +1,29 @@
+SELECT DISTINCT
+  date_trunc('quarter', day) iqvia_quarter
+, quarter quarter_name
+, target_list_product
+, priority
+, dosage_form
+, major_class
+, manufacturer iqvia_manufacturer_name
+, donor_status doh_donor_status
+, donor_name doh_donor_name
+, ndc ndc11
+, pack_qty
+, pack_size
+, product_sum
+, brand_generic
+, rx_status
+, strength
+, prod_form_1
+, acute_chronic
+, pharma_type
+, stagename doh_donor_strategy
+, sum(CAST(sales AS double)) iqvia_sales
+, sum(CAST(units AS double)) iqvia_units_sold
+, sum(CAST(eaches AS double)) iqvia_eaches_sold
+, sum(CAST(nsp_ext_units AS double)) iqvia_doses_sold
+FROM
+  view_iqvia_sales
+WHERE ((quarter = 'Q3'' 2025') AND (NOT (target_list_product IN ('None', 'null'))))
+GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20
