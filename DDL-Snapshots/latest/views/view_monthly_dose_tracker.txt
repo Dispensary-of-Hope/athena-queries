@@ -1,0 +1,37 @@
+SELECT
+  doses.month
+, doses.total_doses_received
+, doses.total_doses_distributed
+, doses.total_doses_destroyed
+, idh.total_doses_in_stock total_doses_on_hand
+FROM
+  ((
+   SELECT
+     month
+   , "sum"(total_doses_received) total_doses_received
+   , "sum"(total_doses_distributed) total_doses_distributed
+   , "sum"(total_doses_destroyed) total_doses_destroyed
+   FROM
+     (
+      SELECT
+        drd.day
+      , "date_trunc"('Month', drd.day) month
+      , CAST("ceil"((drd.total_units_received * inv.packagesize)) AS int) total_doses_received
+      , CAST("ceil"((drd.total_units_distributed * inv.packagesize)) AS int) total_doses_distributed
+      , CAST("ceil"((drd.total_units_destroyed * inv.packagesize)) AS int) total_doses_destroyed
+      FROM
+        (distribution_receiving_destruction drd
+      LEFT JOIN (
+         SELECT DISTINCT
+           product_id
+         , packagesize
+         , lot_id
+         , donor_id
+         FROM
+           view_inventory_master
+      )  inv ON ((drd.product_id = inv.product_id) AND (drd.lot_id = inv.lot_id)))
+      WHERE (inv.donor_id <> '702')
+   ) 
+   GROUP BY month
+)  doses
+INNER JOIN inv_doses_historical idh ON (doses.month = CAST(idh.date AS timestamp)))
