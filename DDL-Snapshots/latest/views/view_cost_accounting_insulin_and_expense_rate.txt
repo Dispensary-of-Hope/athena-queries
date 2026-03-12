@@ -1,0 +1,31 @@
+WITH
+  aggregated_insulin AS (
+   SELECT
+     Month
+   , Year
+   , SUM(CAST(insulin_units AS BIGINT)) total_insulin_units
+   , SUM(CAST(non_insulin_units AS BIGINT)) total_non_insulin_units
+   FROM
+     view_insulin_vs_non_insulin
+   GROUP BY Month, Year
+) 
+SELECT
+  inc.date
+, Round(((SUM(COALESCE(CAST(salary_and_wages AS BIGINT), 0)) * 1E0) / NULLIF(SUM((COALESCE(CAST(ai.total_insulin_units AS BIGINT), 0) + COALESCE(CAST(ai.total_non_insulin_units AS BIGINT), 0))), 0)), 2) salary_wages_unit_rate
+, Round(((SUM(COALESCE(CAST(employee_benefits AS BIGINT), 0)) * 1E0) / NULLIF(SUM((COALESCE(CAST(ai.total_insulin_units AS BIGINT), 0) + COALESCE(CAST(ai.total_non_insulin_units AS BIGINT), 0))), 0)), 2) employee_benefits_unit_rate
+, Round(((SUM(COALESCE(CAST(purchased_services AS BIGINT), 0)) * 1E0) / NULLIF(SUM((COALESCE(CAST(ai.total_insulin_units AS BIGINT), 0) + COALESCE(CAST(ai.total_non_insulin_units AS BIGINT), 0))), 0)), 2) purchased_services_unit_rate
+, Round(((SUM(COALESCE(CAST(professional_fees AS BIGINT), 0)) * 1E0) / NULLIF(SUM((COALESCE(CAST(ai.total_insulin_units AS BIGINT), 0) + COALESCE(CAST(ai.total_non_insulin_units AS BIGINT), 0))), 0)), 2) professional_fees_unit_rate
+, Round(((SUM(COALESCE(CAST(supplies_expense AS BIGINT), 0)) * 1E0) / NULLIF(SUM((COALESCE(CAST(ai.total_insulin_units AS BIGINT), 0) + COALESCE(CAST(ai.total_non_insulin_units AS BIGINT), 0))), 0)), 2) supplies_expense_unit_rate
+, Round(((SUM(COALESCE(CAST(insurance_expense AS BIGINT), 0)) * 1E0) / NULLIF(SUM((COALESCE(CAST(ai.total_insulin_units AS BIGINT), 0) + COALESCE(CAST(ai.total_non_insulin_units AS BIGINT), 0))), 0)), 2) insurance_expense_unit_rate
+, Round(((SUM(COALESCE(CAST(bad_dept_expense AS BIGINT), 0)) * 1E0) / NULLIF(SUM((COALESCE(CAST(ai.total_insulin_units AS BIGINT), 0) + COALESCE(CAST(ai.total_non_insulin_units AS BIGINT), 0))), 0)), 2) bad_debt_expense_unit_rate
+, Round(((SUM(COALESCE(CAST(minor_equipment AS BIGINT), 0)) * 1E0) / NULLIF(SUM((COALESCE(CAST(ai.total_insulin_units AS BIGINT), 0) + COALESCE(CAST(ai.total_non_insulin_units AS BIGINT), 0))), 0)), 2) minor_equipment_unit_rate
+, Round(((SUM(COALESCE(CAST(utilities AS BIGINT), 0)) * 1E0) / NULLIF(SUM((COALESCE(CAST(ai.total_insulin_units AS BIGINT), 0) + COALESCE(CAST(ai.total_non_insulin_units AS BIGINT), 0))), 0)), 2) utilities_unit_rate
+, Round(((SUM(COALESCE(CAST(rent AS BIGINT), 0)) * 1E0) / NULLIF(SUM((COALESCE(CAST(ai.total_insulin_units AS BIGINT), 0) + COALESCE(CAST(ai.total_non_insulin_units AS BIGINT), 0))), 0)), 2) rent_unit_rate
+, Round(((SUM(COALESCE(CAST(travel_seminars_education AS BIGINT), 0)) * 1E0) / NULLIF(SUM((COALESCE(CAST(ai.total_insulin_units AS BIGINT), 0) + COALESCE(CAST(ai.total_non_insulin_units AS BIGINT), 0))), 0)), 2) travel_seminars_education_unit_rate
+, Round(((SUM(COALESCE(CAST(public_relations AS BIGINT), 0)) * 1E0) / NULLIF(SUM((COALESCE(CAST(ai.total_insulin_units AS BIGINT), 0) + COALESCE(CAST(ai.total_non_insulin_units AS BIGINT), 0))), 0)), 2) public_relations_unit_rate
+, Round(((SUM(COALESCE(CAST(other_expense AS BIGINT), 0)) * 1E0) / NULLIF(SUM((COALESCE(CAST(ai.total_insulin_units AS BIGINT), 0) + COALESCE(CAST(ai.total_non_insulin_units AS BIGINT), 0))), 0)), 2) other_expense_unit_rate
+, Round(((SUM(COALESCE(CAST(totals_operating_expenses AS BIGINT), 0)) * 1E0) / NULLIF(SUM((COALESCE(CAST(ai.total_insulin_units AS BIGINT), 0) + COALESCE(CAST(ai.total_non_insulin_units AS BIGINT), 0))), 0)), 2) operating_expense_unit_rate
+FROM
+  (view_cost_accounting_income_stmt inc
+LEFT JOIN aggregated_insulin ai ON ((ai.month = MONTH(inc.date)) AND (ai.year = YEAR(inc.date))))
+GROUP BY inc.date, ai.total_insulin_units, ai.total_non_insulin_units
