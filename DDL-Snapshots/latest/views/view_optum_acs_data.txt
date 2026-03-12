@@ -1,0 +1,44 @@
+SELECT
+  "concat"(county_name, ', ', state) county_state
+, "lpad"(geoid, 5, '0') geoid
+, county_name
+, state
+, latitude
+, longitude
+, total_population
+, total_uninsured
+, percent_uninsured
+, total_below_138_fpl
+, uninsured_below_138_fpl
+, percent_uninsured_below_138_fpl
+, CAST((uninsured_below_138_fpl / total_population) AS double) percent_total_pop_uninsured_below_138_fpl
+, total_138_399_fpl
+, ((total_138_399_fpl + total_below_138_fpl) * 7.26E-1) estimated_total_pop_below_300_fpl
+, uninsured_138_399_fpl
+, percent_uninsured_138_399_fpl
+, (percent_uninsured_138_399_fpl * 7.26E-1) estimated_percent_uninsured_138_399_fpl
+, ((uninsured_138_399_fpl * 7.26E-1) / total_population) percent_total_pop_uninsured_below_138_300_fpl
+, (((uninsured_138_399_fpl * 7.26E-1) / total_population) + CAST((uninsured_below_138_fpl / total_population) AS double)) total_percent_uninsured_below_300_fpl
+, ((((uninsured_138_399_fpl * 7.26E-1) / total_population) + CAST((uninsured_below_138_fpl / total_population) AS double)) * total_population) estimated_total_DOH_eligible_population
+, state_fips
+, county_fips
+FROM
+  ((
+   SELECT
+     county_state
+   , "split_part"(geo_id, 'US', 2) geo_id
+   , CAST(total_population AS double) total_population
+   , CAST(total_uninsured AS bigint) total_uninsured
+   , (CAST(percent_uninsured AS double) / 100) percent_uninsured
+   , CAST(total_below_138_fpl AS double) total_below_138_fpl
+   , CAST(uninsured_below_138_fpl AS double) uninsured_below_138_fpl
+   , (CAST(percent_uninsured_below_138_fpl AS double) / 100) percent_uninsured_below_138_fpl
+   , CAST(total_138_399_fpl AS double) total_138_399_fpl
+   , CAST(uninsured_138_399_fpl AS bigint) uninsured_138_399_fpl
+   , (CAST(percent_uninsured_138_399_fpl AS double) / 100) percent_uninsured_138_399_fpl
+   , state_fips
+   , county_fips
+   FROM
+     optum_acs_data
+)  acs
+LEFT JOIN optum_county_geodata ocg ON (acs.geo_id = "lpad"(ocg.geoid, 5, '0')))
