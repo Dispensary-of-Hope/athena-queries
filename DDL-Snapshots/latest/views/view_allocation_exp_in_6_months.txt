@@ -1,0 +1,16 @@
+WITH
+  six_months_exp AS (
+   SELECT DISTINCT
+     productnamelong
+   , count(DISTINCT product_id) number_of_ndcs_exp_in_6_months
+   , SUM(available_qty) available_qty_in_stock
+   FROM
+     view_inventory_master
+   WHERE (min_exp_date <= date_add('day', 182, current_date_in_stock))
+   GROUP BY 1
+) 
+SELECT *
+FROM
+  six_months_exp
+WHERE (available_qty_in_stock > 100)
+ORDER BY 3 DESC
