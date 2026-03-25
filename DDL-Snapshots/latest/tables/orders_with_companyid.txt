@@ -26,7 +26,9 @@
   `expire_dt` timestamp, 
   `generic` string, 
   `unit_awp` double, 
-  `packagesize` double)
+  `packagesize` double, 
+  `transfer_site_id__c` string, 
+  `transfer_company_id__c` string)
 ROW FORMAT SERDE 
   'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe' 
 STORED AS INPUTFORMAT 
@@ -34,7 +36,7 @@ STORED AS INPUTFORMAT
 OUTPUTFORMAT 
   'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
 LOCATION
-  's3://lambdarefreshresults/tables/acb088d9-c852-4f6a-97cb-2dc3229a4439'
+  's3://lambdarefreshresults/tables/73d8a837-e0a2-4f72-b675-75563d4b6475'
 TBLPROPERTIES (
   'auto.purge'='false', 
   'has_encrypted_data'='false', 
@@ -42,5 +44,5 @@ TBLPROPERTIES (
   'parquet.compression'='GZIP', 
   'totalSize'='-1', 
   'transactional'='false', 
-  'trino_query_id'='20260316_104022_00025_t86cb', 
-  'trino_version'='0.215-24526-g02c3358')
+  'trino_query_id'='20260325_104022_00349_26f9n', 
+  'trino_version'='0.215-24582-g0575ac4')

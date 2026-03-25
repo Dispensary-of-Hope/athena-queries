@@ -4,7 +4,7 @@ SELECT DISTINCT
 , ocid.product_id
 , (CASE WHEN (productnamelong IS NULL) THEN drug_name ELSE productnamelong END) productnamelong
 , priority
-, "date_parse"("split_part"(lot_id, ' ', 2), '%m/%d/%Y') exp_date
+, TRY("date_parse"("split_part"(lot_id, ' ', 2), '%m/%d/%Y')) exp_date
 , "sum"(total_units_distributed) total_units_distributed
 , site_id
 , order_id

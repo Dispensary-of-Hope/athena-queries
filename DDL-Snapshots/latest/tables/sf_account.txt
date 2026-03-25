@@ -95,7 +95,9 @@
   `map_international__c` string COMMENT 'from deserializer', 
   `other__c` string COMMENT 'from deserializer', 
   `other_pharmaceutical_access__c` string COMMENT 'from deserializer', 
-  `drug_samples__c` string COMMENT 'from deserializer')
+  `drug_samples__c` string COMMENT 'from deserializer', 
+  `transfer_site_id__c` string COMMENT 'from deserializer', 
+  `transfer_company_id__c` string COMMENT 'from deserializer')
 ROW FORMAT SERDE 
   'org.apache.hadoop.hive.serde2.OpenCSVSerde' 
 WITH SERDEPROPERTIES ( 
@@ -111,4 +113,4 @@ LOCATION
 TBLPROPERTIES (
   'has_encrypted_data'='false', 
   'skip.header.line.count'='1', 
-  'transient_lastDdlTime'='1773657085')
+  'transient_lastDdlTime'='1774434685')

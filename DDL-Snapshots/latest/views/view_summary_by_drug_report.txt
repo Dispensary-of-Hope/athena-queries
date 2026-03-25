@@ -1,5 +1,6 @@
 SELECT
   ocid.product_id
+, ocid.order_id
 , ocid.drug_name
 , ocid.drug_class
 , (CASE WHEN (ocid.generic = 'Yes') THEN 'Generic' WHEN ((ocid.generic IS NULL) OR (ocid.generic = '')) THEN '' ELSE 'Brand' END) product_type
