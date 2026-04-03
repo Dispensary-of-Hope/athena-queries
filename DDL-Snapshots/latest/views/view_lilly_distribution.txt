@@ -23,6 +23,7 @@ LEFT JOIN (
    , shippingpostalcode
    FROM
      sf_account
+   WHERE ((id__c IS NOT NULL) AND (id__c <> ''))
 )  sf ON (ocid.site_id = sf.id__c))
 LEFT JOIN (
    SELECT DISTINCT

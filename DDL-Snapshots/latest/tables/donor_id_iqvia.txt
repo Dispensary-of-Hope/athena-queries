@@ -16,4 +16,4 @@ LOCATION
 TBLPROPERTIES (
   'has_encrypted_data'='false', 
   'skip.header.line.count'='1', 
-  'transient_lastDdlTime'='1774605622')
+  'transient_lastDdlTime'='1775210421')

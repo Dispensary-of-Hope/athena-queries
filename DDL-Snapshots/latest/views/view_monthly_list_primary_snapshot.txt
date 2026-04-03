@@ -1,0 +1,39 @@
+WITH
+  max_run_date AS (
+   SELECT max(model_run_date) max_run_date
+   FROM
+     view_sagemaker_primary_list_results
+) 
+, latest_xgboost AS (
+   SELECT *
+   FROM
+     (view_sagemaker_primary_list_results vsplr
+   INNER JOIN max_run_date ON (vsplr.model_run_date = max_run_date.max_run_date))
+) 
+, current_vs_future_primary AS (
+   SELECT DISTINCT
+     model_run_date
+   , productnamelong
+   , primary current_primary
+   , x.priority
+   , consistent_xgboost primary_next_90_days
+   , sum(available_qty) available_qty
+   FROM
+     (view_inventory_master inv
+   INNER JOIN (
+      SELECT DISTINCT
+        product
+      , model_run_date
+      , consistent_xgboost
+      , (CASE WHEN (priority_weight = 1) THEN 'P1' WHEN (priority_weight = 7.5E-1) THEN 'P2' WHEN (priority_weight = 5E-1) THEN 'P3' WHEN (priority_weight = 2.5E-1) THEN 'P4' END) priority
+      FROM
+        latest_xgboost
+   )  x ON (inv.productnamelong = x.product))
+   WHERE (available_qty <> 0)
+   GROUP BY 1, 2, 3, 4, 5
+) 
+SELECT
+  *
+, (CASE WHEN ((current_primary = 'yes') AND (primary_next_90_days = 'no')) THEN 'Product currently on primary but will not be consistent next quarter' WHEN ((current_primary = 'no') AND (primary_next_90_days = 'yes')) THEN concat('Product not on primary but will be consistent until ', CAST(date_add('day', 90, current_date) AS varchar)) WHEN ((current_primary = 'yes') AND (primary_next_90_days = 'yes')) THEN concat('Product currently on primary and is expected to remain consistent until ', CAST(date_add('day', 90, current_date) AS varchar)) WHEN ((current_primary = 'no') AND (primary_next_90_days = 'no')) THEN 'Product available in variable supply and is not expected to make the primary list next quarter ' END) status
+FROM
+  current_vs_future_primary
