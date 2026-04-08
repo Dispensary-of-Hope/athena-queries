@@ -38,7 +38,7 @@ FROM
       WHERE ((stock_status = 'In Stock') AND (count_stock_status_day < 10))
       GROUP BY 1, 2, 3
    )  newly_in_stock ON (vim.productnamelong = newly_in_stock.productnamelong))
-   WHERE ((((NOT (vim.product_id IN ('00002771559', '00002879959', '00002831501', '00002143480', '00002223680', '00002821501', '00002318280', '00002143380', '00002871501', '00002879759', '00002751001'))) AND (((donor_id <> '702') OR (donor_id IS NULL)) OR ((NOT (donor_id IN ('702', '24354'))) AND (donor_id IS NOT NULL))) AND (available_qty IS NOT NULL)) AND (vim.min_exp_date > date_add('month', 6, current_date))) AND (vim.product_id IN ('59651049901', '65862021901', '58151012593', '58151012577', '58151011088')))
+   WHERE (((NOT (vim.product_id IN ('00002771559', '00002879959', '00002831501', '00002143480', '00002223680', '00002821501', '00002318280', '00002143380', '00002871501', '00002879759', '00002751001'))) AND (((donor_id <> '702') OR (donor_id IS NULL)) OR ((NOT (donor_id IN ('702', '24354'))) AND (donor_id IS NOT NULL))) AND (available_qty IS NOT NULL)) AND (vim.min_exp_date > date_add('month', 6, current_date)))
    GROUP BY 1, 2, 3, 5, 6, 7
    ORDER BY vim.productnamelong ASC
 ) 
