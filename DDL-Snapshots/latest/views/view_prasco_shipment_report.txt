@@ -9,7 +9,7 @@
    , trackingnumber tracking_number
    , replace(productcode, '-', '') ndc
    , productnamelong
-   , quantity qty
+   , TRY_CAST(quantity AS BIGINT) qty
    , lotnumber lot
    , date_parse(lotexp, '%m/%d/%Y') expiration_date
    , shiptoaddress1 shippingaddress

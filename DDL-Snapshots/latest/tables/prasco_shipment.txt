@@ -29,4 +29,5 @@ TBLPROPERTIES (
   'classification'='csv', 
   'has_encrypted_data'='false', 
   'skip.header.line.count'='1', 
-  'transient_lastDdlTime'='1723575709')
+  'transient_lastDdlTime'='1776191762', 
+  'use.null.for.invalid.data'='true')

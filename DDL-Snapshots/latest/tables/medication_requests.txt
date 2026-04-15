@@ -14,4 +14,4 @@ LOCATION
   's3://historical-data-powerbi/medication_requests'
 TBLPROPERTIES (
   'skip.header.line.count'='1', 
-  'transient_lastDdlTime'='1775568786')
+  'transient_lastDdlTime'='1776173580')

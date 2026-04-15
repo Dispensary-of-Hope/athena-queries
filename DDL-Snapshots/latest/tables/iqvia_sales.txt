@@ -35,8 +35,8 @@ STORED AS INPUTFORMAT
 OUTPUTFORMAT 
   'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
 LOCATION
-  's3://iqviatables/IQVIA_Sales'
+  's3://iqviatables/IQVIA_Sales/IQVIA_Sales_Latest'
 TBLPROPERTIES (
   'has_encrypted_data'='false', 
   'skip.header.line.count'='1', 
-  'transient_lastDdlTime'='1775210427')
+  'transient_lastDdlTime'='1776102675')

@@ -3,4 +3,4 @@ SELECT DISTINCT
 , target_list_product
 FROM
   iqvia_target_primary
-WHERE ((NOT (target_list_product IN ('None', 'null'))) AND (priority IN ('P1', 'P2', 'P3')))
+WHERE (((NOT (target_list_product IN ('None', 'null'))) AND (priority IN ('P1', 'P2', 'P3'))) AND (NOT (ndc IN ('NDC'))))
