@@ -14,6 +14,8 @@ WITH
    SELECT DISTINCT
      model_run_date
    , productnamelong
+   , on_hand_percent_of_par
+   , avg_days_until_expiration
    , primary current_primary
    , x.priority
    , consistent_xgboost primary_next_90_days
@@ -24,13 +26,15 @@ WITH
       SELECT DISTINCT
         product
       , model_run_date
+      , on_hand_percent_of_par
+      , avg_days_until_expiration
       , consistent_xgboost
       , (CASE WHEN (priority_weight = 1) THEN 'P1' WHEN (priority_weight = 7.5E-1) THEN 'P2' WHEN (priority_weight = 5E-1) THEN 'P3' WHEN (priority_weight = 2.5E-1) THEN 'P4' END) priority
       FROM
         latest_xgboost
    )  x ON (inv.productnamelong = x.product))
    WHERE (available_qty <> 0)
-   GROUP BY 1, 2, 3, 4, 5
+   GROUP BY 1, 2, 3, 4, 5, 6, 7
 ) 
 SELECT
   *

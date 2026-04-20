@@ -9,7 +9,7 @@ SELECT
 , CAST(lilly_consistent AS bigint) lilly_consistent
 , TRY_CAST(total_in_stock AS bigint) total_in_stock
 , TRY_CAST(on_hand_percent_of_par AS double) on_hand_percent_of_par
-, TRY_CAST(avg_days_until_expiration AS bigint) avg_days_until_expiration
+, CAST(TRY_CAST(avg_days_until_expiration AS double) AS bigint) avg_days_until_expiration
 , TRY_CAST(days_since_last_receipt AS double) days_since_last_receipt
 , TRY_CAST(po_units AS bigint) po_units_current_qtr
 , CAST(min_exp_inv_greater_than_max AS bigint) min_exp_inv_greater_than_max
