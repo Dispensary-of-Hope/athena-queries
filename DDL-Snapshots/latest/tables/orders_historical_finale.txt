@@ -33,4 +33,4 @@ LOCATION
   's3://finale-reports-bucket-prod/Finale Overwrite'
 TBLPROPERTIES (
   'skip.header.line.count'='1', 
-  'transient_lastDdlTime'='1776854114')
+  'transient_lastDdlTime'='1777286115')
