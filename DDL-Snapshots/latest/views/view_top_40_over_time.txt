@@ -12,14 +12,14 @@ FROM
 LEFT JOIN (
    SELECT DISTINCT
      productnamelong
-   , "date_trunc"('month', current_date_in_stock) month_in_stock
-   , ("sum"(available_qty) / "count"(current_date_in_stock)) avg_in_stock
+   , DATE_TRUNC('month', current_date_in_stock) month_in_stock
+   , (SUM(available_qty) / NULLIF(COUNT(current_date_in_stock), 0)) avg_in_stock
    FROM
      (
       SELECT DISTINCT
         productnamelong
       , current_date_in_stock
-      , "sum"(available_qty) available_qty
+      , SUM(available_qty) available_qty
       FROM
         view_running_inventory
       GROUP BY 1, 2
