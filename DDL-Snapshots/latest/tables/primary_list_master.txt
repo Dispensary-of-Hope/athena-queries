@@ -12,4 +12,4 @@ LOCATION
   's3://historical-data-powerbi/primarylist'
 TBLPROPERTIES (
   'skip.header.line.count'='1', 
-  'transient_lastDdlTime'='1778839238')
+  'transient_lastDdlTime'='1779098438')
