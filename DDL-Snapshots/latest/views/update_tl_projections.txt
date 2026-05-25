@@ -21,7 +21,7 @@ WITH
       SELECT DISTINCT product_id
       FROM
         view_inventory_master
-      WHERE (donor_id = '702')
+      WHERE (donor_id IN ('702', '24354'))
    )  inv ON (drd.product_id = inv.product_id))
    WHERE ((day >= date_add('year', -1, current_date)) AND (target_list_product IS NOT NULL) AND (target_list_product <> 'None') AND ((inv.product_id IS NULL) OR (inv.product_id = '')))
    GROUP BY 1
@@ -48,7 +48,7 @@ WITH
          FROM
            iqvia_target_primary
       )  iq ON (vri.product_id = iq.ndc))
-      WHERE ((current_date_in_stock >= date_add('year', -1, current_date)) AND (target_list_product IS NOT NULL) AND (donor_id <> '702') AND (NOT (target_list_product IN ('None', 'null'))))
+      WHERE ((current_date_in_stock >= date_add('year', -1, current_date)) AND (target_list_product IS NOT NULL) AND (NOT (donor_id IN ('702', '24354'))) AND (NOT (target_list_product IN ('None', 'null'))))
       GROUP BY 1, 3
       ORDER BY 1 ASC
    ) 
