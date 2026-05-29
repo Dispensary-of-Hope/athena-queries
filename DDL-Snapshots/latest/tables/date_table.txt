@@ -16,4 +16,4 @@ LOCATION
   's3://historical-data-powerbi/datestable'
 TBLPROPERTIES (
   'skip.header.line.count'='1', 
-  'transient_lastDdlTime'='1779879070')
+  'transient_lastDdlTime'='1780051869')
