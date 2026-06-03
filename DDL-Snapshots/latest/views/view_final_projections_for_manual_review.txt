@@ -81,7 +81,7 @@ UNION ALL (
    , null alt_eaches
    , projected_units old_annual_projection
    , (CASE WHEN (projected_annual_amount > 20000) THEN (projected_units * (1 + avg_percent_change)) WHEN (round((((projected_annual_amount - CAST(old_proj.projected_units AS double)) / CAST(old_proj.projected_units AS double)) * 100), 2) < 0) THEN (projected_units * (1 + avg_percent_change)) ELSE projected_annual_amount END) new_annual_projection
-   , round((((projected_annual_amount - CAST(old_proj.projected_units AS double)) / CAST(old_proj.projected_units AS double)) * 100), 2) percent_change
+   , round(((((CASE WHEN (projected_annual_amount > 20000) THEN (projected_units * (1 + avg_percent_change)) WHEN (round((((projected_annual_amount - CAST(old_proj.projected_units AS double)) / CAST(old_proj.projected_units AS double)) * 100), 2) < 0) THEN (projected_units * (1 + avg_percent_change)) ELSE projected_annual_amount END) - CAST(old_proj.projected_units AS double)) / CAST(old_proj.projected_units AS double)) * 100), 2) percent_change
    FROM
      ((remaining_tl_products r
    LEFT JOIN target_list_projections old_proj ON (r.remaining_tl_product = old_proj.target_list_product))
