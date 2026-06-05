@@ -14,4 +14,4 @@ LOCATION
   's3://elsevier-exports/drug_class_convert'
 TBLPROPERTIES (
   'skip.header.line.count'='1', 
-  'transient_lastDdlTime'='1780483890')
+  'transient_lastDdlTime'='1780656690')
