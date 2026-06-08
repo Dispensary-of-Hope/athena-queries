@@ -11,4 +11,4 @@ LOCATION
   's3://historical-data-powerbi/consistentlist'
 TBLPROPERTIES (
   'skip.header.line.count'='1', 
-  'transient_lastDdlTime'='1780653655')
+  'transient_lastDdlTime'='1780912855')
