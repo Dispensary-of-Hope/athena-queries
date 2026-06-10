@@ -168,8 +168,5 @@
                WHERE (((dt.day >= TIMESTAMP '2020-01-01 00:00:00.000') AND (dt.day <= current_date)) AND ((NOT (ohft.product_id IN ('99999999999', ''))) AND (NOT (ohft.company_id LIKE ''))))
                GROUP BY 1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 13, 14, 15, 17
             )          )       ) 
-      WHERE (((company_id = '36118') OR (transfer_company_id__c IS NOT NULL)) AND (NOT (site_id IN (SELECT DISTINCT site_id
-FROM
-  site_info
-))))
+      WHERE ((company_id = '36118') OR (transfer_company_id__c IS NOT NULL))
    ) ) 
