@@ -41,4 +41,4 @@ LOCATION
   's3://finale-reports-bucket-prod/Finale Orders Export'
 TBLPROPERTIES (
   'skip.header.line.count'='1', 
-  'transient_lastDdlTime'='1781088017')
+  'transient_lastDdlTime'='1781260817')

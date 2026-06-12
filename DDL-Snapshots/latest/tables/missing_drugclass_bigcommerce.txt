@@ -15,4 +15,4 @@ LOCATION
   's3://bigcommerce-products-production/'
 TBLPROPERTIES (
   'skip.header.line.count'='1', 
-  'transient_lastDdlTime'='1781085627')
+  'transient_lastDdlTime'='1781258427')
