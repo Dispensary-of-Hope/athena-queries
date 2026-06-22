@@ -20,4 +20,4 @@ LOCATION
   's3://quarterly-numbers-athena-update/current'
 TBLPROPERTIES (
   'skip.header.line.count'='1', 
-  'transient_lastDdlTime'='1781813132')
+  'transient_lastDdlTime'='1781899532')
