@@ -15,4 +15,4 @@ LOCATION
   's3://back-in-stock-daily-snapshot/lambda_daily_snapshot_output'
 TBLPROPERTIES (
   'skip.header.line.count'='1', 
-  'transient_lastDdlTime'='1781874020')
+  'transient_lastDdlTime'='1782219620')
