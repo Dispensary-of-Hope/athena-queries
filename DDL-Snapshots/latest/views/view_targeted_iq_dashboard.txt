@@ -48,7 +48,7 @@ SELECT DISTINCT
 , manufacturer
 , donor_status
 , inv.target_list_product
-, ndc
+, iq.ndc
 , CAST(pack_qty AS double) packagesize
 , inv.priority
 , mfg_units_sold
@@ -57,7 +57,9 @@ SELECT DISTINCT
 , min_exp_date
 , annual_doh_demand
 , quarterly_doh_demand
+, CAST(NULLIF(REPLACE(REPLACE(wac.wac_price, '$', ''), ',', ''), '') AS double) wac_unit
 FROM
-  ((inv
+  (((inv
 LEFT JOIN doh_demand ON (inv.target_list_product = doh_demand.target_list_product))
 LEFT JOIN iq ON (inv.target_list_product = iq.target_list_product))
+LEFT JOIN finale_inventory_wac wac ON (iq.ndc = wac.ndc11))
