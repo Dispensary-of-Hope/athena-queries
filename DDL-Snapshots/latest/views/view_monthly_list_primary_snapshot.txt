@@ -3,6 +3,7 @@ WITH
    SELECT max(model_run_date) max_run_date
    FROM
      view_sagemaker_primary_list_results
+   WHERE (priority_weight IN (1, 7.5E-1, 5E-1, 2.5E-1))
 ) 
 , latest_xgboost AS (
    SELECT *
