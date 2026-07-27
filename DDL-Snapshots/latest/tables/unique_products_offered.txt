@@ -9,7 +9,7 @@ STORED AS INPUTFORMAT
 OUTPUTFORMAT 
   'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
 LOCATION
-  's3://lambdarefreshresults/tables/0fb59aee-99da-49a0-bc83-30969c5d6f61'
+  's3://lambdarefreshresults/tables/ec516c14-f6f2-474a-a7c6-c3347d2c41a0'
 TBLPROPERTIES (
   'auto.purge'='false', 
   'has_encrypted_data'='false', 
@@ -17,5 +17,5 @@ TBLPROPERTIES (
   'parquet.compression'='GZIP', 
   'totalSize'='-1', 
   'transactional'='false', 
-  'trino_query_id'='20260721_133331_00151_cx9tm', 
+  'trino_query_id'='20260724_133329_00354_h8yui', 
   'trino_version'='0.215-24607-gdd3e75d')
