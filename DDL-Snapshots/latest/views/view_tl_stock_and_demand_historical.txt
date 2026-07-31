@@ -1,0 +1,35 @@
+WITH
+  month_end_snapshots AS (
+   SELECT
+     DATE_TRUNC('month', r.current_date_in_stock) snapshot_month
+   , MAX(r.current_date_in_stock) final_snapshot_day
+   FROM
+     "database-prod"."view_running_inventory" r
+   WHERE ((r.current_date_in_stock >= DATE '2025-07-01') AND (r.current_date_in_stock <= DATE '2026-06-30'))
+   GROUP BY 1
+) 
+, historical_tl_balances AS (
+   SELECT
+     DATE(mes.snapshot_month) month_period
+   , iq.target_list_product
+   , ri.priority
+   , SUM(ri.total_in_stock) available_qty
+   FROM
+     ((month_end_snapshots mes
+   INNER JOIN "database-prod"."view_running_inventory" ri ON (ri.current_date_in_stock = mes.final_snapshot_day))
+   LEFT JOIN "database-prod"."iqvia_target_primary" iq ON (ri.product_id = iq.ndc))
+   WHERE ((NOT (ri.sublocation IN ('Q0', 'R0'))) AND (NOT (ri.sublocation LIKE '%-W')) AND (ri.priority IN ('P1', 'P2', 'P3')))
+   GROUP BY 1, 2, 3
+) 
+SELECT DISTINCT
+  b.month_period "Reporting Month"
+, vtlp.target_list_product
+, b.priority
+, CAST((tlp.projected_units / 4) AS DECIMAL(18, 2)) quarterly_demand
+, CAST(COALESCE(b.available_qty, 0) AS BIGINT) available_qty
+FROM
+  ((view_target_list_products vtlp
+INNER JOIN "database-prod"."target_list_projections" tlp ON (vtlp.target_list_product = tlp.target_list_product))
+LEFT JOIN historical_tl_balances b ON (vtlp.target_list_product = b.target_list_product))
+WHERE ((NOT (vtlp.target_list_product IN ('None', 'null'))) AND (b.month_period IS NOT NULL))
+ORDER BY b.month_period ASC, vtlp.target_list_product ASC
