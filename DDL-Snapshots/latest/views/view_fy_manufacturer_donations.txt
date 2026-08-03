@@ -1,0 +1,13 @@
+SELECT
+  rd.name
+, rd.donor_id__c
+, rd.donor_code__c
+, COUNT(DISTINCT (CASE WHEN (vdr.receive_date BETWEEN DATE '2023-07-01' AND DATE '2024-06-30') THEN vdr.order_id END)) donations_fy24
+, COUNT(DISTINCT (CASE WHEN (vdr.receive_date BETWEEN DATE '2024-07-01' AND DATE '2025-06-30') THEN vdr.order_id END)) donations_fy25
+, COUNT(DISTINCT (CASE WHEN (vdr.receive_date BETWEEN DATE '2025-07-01' AND DATE '2026-06-30') THEN vdr.order_id END)) donations_fy26
+, COUNT(DISTINCT (CASE WHEN (vdr.receive_date BETWEEN DATE '2026-07-01' AND DATE '2027-06-30') THEN vdr.order_id END)) donations_fy27
+FROM
+  (regular_donors rd
+LEFT JOIN view_donor_report vdr ON ((rd.donor_id__c = vdr.donor_id) AND (vdr.ship_date IS NULL)))
+GROUP BY rd.name, rd.donor_id__c, rd.donor_code__c
+ORDER BY donations_fy27 DESC
