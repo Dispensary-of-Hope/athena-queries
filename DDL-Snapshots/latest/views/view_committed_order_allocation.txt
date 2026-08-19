@@ -93,4 +93,4 @@ FROM
    WHERE (type = 'Sale')
    GROUP BY 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16
 ) 
-WHERE (((priority = 'P1') AND (insulin = 'False') AND (committed_qty > max_ship_qty)) OR ((priority IN ('P2', 'P3')) AND (committed_qty > max_ship_qty)) OR (((insulin = 'True') AND (committed_qty > max_ship_qty)) AND (site_id <> '10277')))
+WHERE (((priority = 'P1') AND (insulin = 'False') AND (committed_qty > max_ship_qty)) OR ((priority IN ('P2', 'P3', 'P4')) AND (committed_qty > max_ship_qty)) OR (((insulin = 'True') AND (committed_qty > max_ship_qty)) AND (site_id <> '10277')))
