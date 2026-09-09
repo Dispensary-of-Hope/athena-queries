@@ -8,7 +8,7 @@ SELECT
 , status
 , ocid.product_id
 , drug_name
-, total_units_distributed
+, ocid.total_units_shipped total_units_distributed
 , (CASE WHEN (donor_info.donor_id = '702') THEN 'Yes' ELSE 'No' END) Direct_Purchase
 , "split_part"(ocid.lot_id, ' ', 3) lot_id
 , (CASE WHEN regexp_like(split_part(ocid.lot_id, ' ', 2), '^[0-9]{1,2}/0/[0-9]{4}$') THEN CONCAT(substr(split_part(ocid.lot_id, ' ', 2), 1, (strpos(split_part(ocid.lot_id, ' ', 2), '/') - 1)), '/', '30/', split_part(split_part(ocid.lot_id, ' ', 2), '/', 3)) WHEN (ocid.lot_id = 'Mfg: 1/31/0223 3109396') THEN '1/31/2023' WHEN regexp_like(split_part(ocid.lot_id, ' ', 2), '^[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}$') THEN split_part(ocid.lot_id, ' ', 2) WHEN regexp_like(split_part(ocid.lot_id, ' ', 2), '^[0-9]{4}-[0-9]{2}-[0-9]{2}$') THEN date_format(CAST(split_part(ocid.lot_id, ' ', 2) AS date), '%m/%d/%Y') ELSE null END) exp_date
