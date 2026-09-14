@@ -81,7 +81,7 @@ WITH
       FROM
         view_inventory_master inv
    )  inv ON (ocid.product_id = inv.product_id))
-   WHERE ((si.site_id IS NULL) AND (NOT (ocid.site_id IN ('194', '10277'))))
+   WHERE ((si.site_id IS NULL) AND (NOT (ocid.site_id IN ('194', '10277', '12131'))))
    GROUP BY 1, 5
 ) 
 SELECT

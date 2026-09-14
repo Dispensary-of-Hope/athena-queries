@@ -17,7 +17,7 @@
       FROM
         view_inventory_master inv
    )  inv ON (ocid.product_id = inv.product_id))
-   WHERE (site_id = '10277')
+   WHERE (site_id IN ('10277', '12131'))
    GROUP BY 1, 2, 3, 7
    ORDER BY 1 DESC
 ) 
