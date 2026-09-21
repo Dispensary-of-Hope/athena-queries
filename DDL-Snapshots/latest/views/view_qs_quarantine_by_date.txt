@@ -1,0 +1,8 @@
+SELECT
+  CAST(current_date_in_stock AS date) snapshot_date
+, SUM(total_in_stock) quarantine_units
+, SUM(total_wac) quarantine_wac
+FROM
+  view_total_wac_on_hand
+WHERE (sublocation_description IN ('Quarantined for Destruction', 'Waiting to be moved to Quarantine for destruction'))
+GROUP BY 1

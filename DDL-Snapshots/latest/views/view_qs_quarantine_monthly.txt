@@ -1,0 +1,18 @@
+WITH
+  month_ends AS (
+   SELECT
+     CAST(DATE_TRUNC('month', current_date_in_stock) AS date) month_start
+   , MAX(CAST(current_date_in_stock AS date)) snapshot_date
+   FROM
+     view_total_wac_on_hand
+   GROUP BY 1
+) 
+SELECT
+  m.month_start
+, m.snapshot_date
+, SUM(v.total_in_stock) quarantine_units
+, SUM(v.total_wac) quarantine_wac
+FROM
+  (month_ends m
+LEFT JOIN view_total_wac_on_hand v ON ((CAST(v.current_date_in_stock AS date) = m.snapshot_date) AND (v.sublocation_description IN ('Quarantined for Destruction', 'Waiting to be moved to Quarantine for destruction'))))
+GROUP BY m.month_start, m.snapshot_date

@@ -1,0 +1,63 @@
+WITH
+  base AS (
+   SELECT
+     CAST(DATE_TRUNC('month', month) AS date) month_start
+   , CAST(month AS date) as_of_date
+   , "Non-Cold Chain Units" non_cold_units
+   , "Non-Cold Chain WAC" non_cold_wac
+   , "Cold Chain Units" cold_units
+   , "Cold Chain WAC" cold_wac
+   , "Total Units" total_units
+   , "Total WAC" total_wac
+   , "Destructed Units" destructed_units
+   , "Destructed WAC" destructed_wac
+   , "Received Units" received_units
+   , "Received WAC" received_wac
+   , "Non-Ascension Distributed Units" non_asc_dist_units
+   , "Non-Ascension Distributed WAC" non_asc_dist_wac
+   , "Ascension Distributed Units" asc_dist_units
+   , "Ascension Distributed WAC" asc_dist_wac
+   , "Total Distributed Units" total_dist_units
+   , "Total Distributed WAC" total_dist_wac
+   , ROW_NUMBER() OVER (PARTITION BY DATE_TRUNC('month', month) ORDER BY month DESC) rn
+   FROM
+     view_monthly_wac_ascension_finance
+) 
+, m AS (
+   SELECT
+     base.*
+   , LAG(total_wac) OVER (ORDER BY month_start ASC) beginning_wac
+   FROM
+     base
+   WHERE (rn = 1)
+) 
+SELECT
+  m.month_start
+, m.as_of_date
+, (m.month_start < CAST(DATE_TRUNC('month', current_date) AS date)) is_month_complete
+, (CASE WHEN (EXTRACT(MONTH FROM m.month_start) >= 7) THEN (EXTRACT(YEAR FROM m.month_start) + 1) ELSE EXTRACT(YEAR FROM m.month_start) END) fiscal_year
+, m.non_cold_units
+, m.non_cold_wac
+, m.cold_units
+, m.cold_wac
+, m.total_units
+, m.total_wac
+, m.received_units
+, m.received_wac
+, m.destructed_units
+, m.destructed_wac
+, m.non_asc_dist_units
+, m.non_asc_dist_wac
+, m.asc_dist_units
+, m.asc_dist_wac
+, m.total_dist_units
+, m.total_dist_wac
+, m.beginning_wac
+, (((m.beginning_wac + m.received_wac) - m.destructed_wac) - m.total_dist_wac) calculated_end_wac
+, m.total_wac actual_end_wac
+, (m.total_wac - (((m.beginning_wac + m.received_wac) - m.destructed_wac) - m.total_dist_wac)) delta_wac
+, q.quarantine_units
+, q.quarantine_wac
+FROM
+  (m
+LEFT JOIN view_qs_quarantine_by_date q ON (q.snapshot_date = m.as_of_date))

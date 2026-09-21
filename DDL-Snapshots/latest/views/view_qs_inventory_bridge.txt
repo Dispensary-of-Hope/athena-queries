@@ -1,0 +1,9 @@
+SELECT
+  v.month_start
+, v.fiscal_year
+, r.step_order step_order
+, r.step step
+, r.amount_wac amount_wac
+FROM
+  (view_qs_inventory_monthly v
+CROSS JOIN UNNEST(ARRAY[CAST(ROW (1, '1 Beginning', CAST(v.beginning_wac AS DOUBLE)) AS ROW(step_order INTEGER, step VARCHAR, amount_wac DOUBLE)),CAST(ROW (2, '2 Received', CAST(v.received_wac AS DOUBLE)) AS ROW(step_order INTEGER, step VARCHAR, amount_wac DOUBLE)),CAST(ROW (3, '3 Destroyed', CAST(-(v.destructed_wac) AS DOUBLE)) AS ROW(step_order INTEGER, step VARCHAR, amount_wac DOUBLE)),CAST(ROW (4, '4 Distributed', CAST(-(v.total_dist_wac) AS DOUBLE)) AS ROW(step_order INTEGER, step VARCHAR, amount_wac DOUBLE)),CAST(ROW (5, '5 Unexplained delta', CAST(v.delta_wac AS DOUBLE)) AS ROW(step_order INTEGER, step VARCHAR, amount_wac DOUBLE))]) t (r))
