@@ -1,0 +1,21 @@
+SELECT
+  month
+, SUM(total_units) total_units
+, SUM(total_wac) total_wac
+FROM
+  (
+   SELECT
+     DATE_TRUNC('month', current_date_in_stock) month
+   , current_date_in_stock
+   , sublocation_description
+   , SUM(total_in_stock) total_units
+   , SUM(total_wac) total_wac
+   , MAX(current_date_in_stock) OVER (PARTITION BY DATE_TRUNC('month', current_date_in_stock)) month_end
+   FROM
+     view_total_wac_on_hand
+   WHERE (sublocation_description IN ('Quarantined for Destruction', 'Waiting to be moved to Quarantine for destruction'))
+   GROUP BY current_date_in_stock, sublocation_description
+)  t
+WHERE (current_date_in_stock = month_end)
+GROUP BY month
+ORDER BY month ASC

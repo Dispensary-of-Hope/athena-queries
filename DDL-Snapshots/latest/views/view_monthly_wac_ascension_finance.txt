@@ -4,8 +4,8 @@ SELECT
 , inv."Non-Cold Chain WAC"
 , inv."Cold Chain Units"
 , inv."Cold Chain WAC"
-, inv."Quarantined Units"
-, inv."Quarantined WAC"
+, quar."Quarantined Units"
+, quar."Quarantined WAC"
 , inv."Total Units"
 , inv."Total WAC"
 , act."Destructed WAC"
@@ -19,15 +19,13 @@ SELECT
 , act."Total Distributed WAC"
 , act."Total Distributed Units"
 FROM
-  ((
+  (((
    SELECT
      month_end
    , CAST(SUM((CASE WHEN ((cold_vs_non_cold_chain = 'Non Cold Chain') AND (sublocation_description = 'Regular Stock')) THEN total_in_stock END)) AS BIGINT) "Non-Cold Chain Units"
    , CAST(ROUND(SUM((CASE WHEN ((cold_vs_non_cold_chain = 'Non Cold Chain') AND (sublocation_description = 'Regular Stock')) THEN total_wac END)), 2) AS DECIMAL(18, 2)) "Non-Cold Chain WAC"
    , CAST(SUM((CASE WHEN ((cold_vs_non_cold_chain = 'Cold Chain') AND (sublocation_description = 'Regular Stock')) THEN total_in_stock END)) AS BIGINT) "Cold Chain Units"
    , CAST(ROUND(SUM((CASE WHEN ((cold_vs_non_cold_chain = 'Cold Chain') AND (sublocation_description = 'Regular Stock')) THEN total_wac END)), 2) AS DECIMAL(18, 2)) "Cold Chain WAC"
-   , CAST(SUM((CASE WHEN (sublocation_description IN ('Quarantined for Destruction', 'Waiting to be moved to Quarantine for destruction')) THEN total_in_stock END)) AS BIGINT) "Quarantined Units"
-   , CAST(ROUND(SUM((CASE WHEN (sublocation_description IN ('Quarantined for Destruction', 'Waiting to be moved to Quarantine for destruction')) THEN total_wac END)), 2) AS DECIMAL(18, 2)) "Quarantined WAC"
    , CAST(SUM(total_in_stock) AS BIGINT) "Total Units"
    , CAST(ROUND(SUM(total_wac), 2) AS DECIMAL(18, 2)) "Total WAC"
    FROM
@@ -46,6 +44,36 @@ FROM
    WHERE ((current_date_in_stock = month_end) AND (month_end >= TIMESTAMP '2024-07-01 00:00:00.000'))
    GROUP BY month_end
 )  inv
+LEFT JOIN (
+   WITH
+     quarantine_daily AS (
+      SELECT
+        DATE_TRUNC('month', current_date_in_stock) month_start
+      , current_date_in_stock
+      , SUM(total_in_stock) total_units
+      , SUM(total_wac) total_wac
+      FROM
+        view_running_inventory
+      WHERE (((sublocation = 'Q0') OR (sublocation LIKE '%-W')) AND (current_date_in_stock >= TIMESTAMP '2024-07-01 00:00:00.000'))
+      GROUP BY DATE_TRUNC('month', current_date_in_stock), current_date_in_stock
+   ) 
+,    last_nonzero_day AS (
+      SELECT
+        month_start
+      , MAX(current_date_in_stock) last_day_with_quarantine
+      FROM
+        quarantine_daily
+      WHERE (total_units > 0)
+      GROUP BY month_start
+   ) 
+   SELECT
+     q.month_start
+   , CAST(q.total_units AS BIGINT) "Quarantined Units"
+   , CAST(ROUND(q.total_wac, 2) AS DECIMAL(18, 2)) "Quarantined WAC"
+   FROM
+     (quarantine_daily q
+   INNER JOIN last_nonzero_day l ON ((q.month_start = l.month_start) AND (q.current_date_in_stock = l.last_day_with_quarantine)))
+)  quar ON (DATE_TRUNC('month', inv.month_end) = quar.month_start))
 LEFT JOIN (
    SELECT
      month

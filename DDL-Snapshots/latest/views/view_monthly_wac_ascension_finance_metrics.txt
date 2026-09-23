@@ -1,0 +1,60 @@
+WITH
+  base AS (
+   SELECT
+     DATE_TRUNC('month', month) month_start
+   , "Non-Cold Chain Units" non_cold_units
+   , "Non-Cold Chain WAC" non_cold_wac
+   , "Cold Chain Units" cold_units
+   , "Cold Chain WAC" cold_wac
+   , "Total WAC" total_wac
+   , "Total Units" total_units
+   , "Destructed WAC" destructed_wac
+   , "Destructed Units" destructed_units
+   , "Received WAC" received_wac
+   , "Received Units" received_units
+   , "Non-Ascension Distributed WAC" non_asc_wac
+   , "Non-Ascension Distributed Units" non_asc_units
+   , "Ascension Distributed WAC" asc_wac
+   , "Ascension Distributed Units" asc_units
+   , "Total Distributed WAC" total_dist_wac
+   , "Total Distributed Units" total_dist_units
+   FROM
+     view_monthly_wac_ascension_finance
+) 
+, metrics AS (
+   SELECT
+     month_start
+   , r.metric
+   , r.value
+   FROM
+     (base
+   CROSS JOIN UNNEST(ARRAY[CAST(ROW ('Non-Cold Chain Units', CAST(non_cold_units AS VARCHAR)) AS ROW(metric VARCHAR, value VARCHAR)),CAST(ROW ('Non-Cold Chain WAC', format('%,.2f', non_cold_wac)) AS ROW(metric VARCHAR, value VARCHAR)),CAST(ROW ('Cold Chain Units', CAST(cold_units AS VARCHAR)) AS ROW(metric VARCHAR, value VARCHAR)),CAST(ROW ('Cold Chain WAC', format('%,.2f', cold_wac)) AS ROW(metric VARCHAR, value VARCHAR)),CAST(ROW ('Total WAC', format('%,.2f', total_wac)) AS ROW(metric VARCHAR, value VARCHAR)),CAST(ROW ('Total Units', CAST(total_units AS VARCHAR)) AS ROW(metric VARCHAR, value VARCHAR)),CAST(ROW ('Destructed WAC', format('%,.2f', destructed_wac)) AS ROW(metric VARCHAR, value VARCHAR)),CAST(ROW ('Destructed Units', CAST(destructed_units AS VARCHAR)) AS ROW(metric VARCHAR, value VARCHAR)),CAST(ROW ('Received WAC', format('%,.2f', received_wac)) AS ROW(metric VARCHAR, value VARCHAR)),CAST(ROW ('Received Units', CAST(received_units AS VARCHAR)) AS ROW(metric VARCHAR, value VARCHAR)),CAST(ROW ('Non-Ascension Distributed WAC', format('%,.2f', non_asc_wac)) AS ROW(metric VARCHAR, value VARCHAR)),CAST(ROW ('Non-Ascension Distributed Units', CAST(non_asc_units AS VARCHAR)) AS ROW(metric VARCHAR, value VARCHAR)),CAST(ROW ('Ascension Distributed WAC', format('%,.2f', asc_wac)) AS ROW(metric VARCHAR, value VARCHAR)),CAST(ROW ('Ascension Distributed Units', CAST(asc_units AS VARCHAR)) AS ROW(metric VARCHAR, value VARCHAR)),CAST(ROW ('Total Distributed WAC', format('%,.2f', total_dist_wac)) AS ROW(metric VARCHAR, value VARCHAR)),CAST(ROW ('Total Distributed Units', CAST(total_dist_units AS VARCHAR)) AS ROW(metric VARCHAR, value VARCHAR))]) t (r))
+) 
+SELECT
+  metric
+, MAX((CASE WHEN (month_start = DATE '2024-07-01') THEN value END)) "Jul 24"
+, MAX((CASE WHEN (month_start = DATE '2024-08-01') THEN value END)) "Aug 24"
+, MAX((CASE WHEN (month_start = DATE '2024-09-01') THEN value END)) "Sep 24"
+, MAX((CASE WHEN (month_start = DATE '2024-10-01') THEN value END)) "Oct 24"
+, MAX((CASE WHEN (month_start = DATE '2024-11-01') THEN value END)) "Nov 24"
+, MAX((CASE WHEN (month_start = DATE '2024-12-01') THEN value END)) "Dec 24"
+, MAX((CASE WHEN (month_start = DATE '2025-01-01') THEN value END)) "Jan 25"
+, MAX((CASE WHEN (month_start = DATE '2025-02-01') THEN value END)) "Feb 25"
+, MAX((CASE WHEN (month_start = DATE '2025-03-01') THEN value END)) "Mar 25"
+, MAX((CASE WHEN (month_start = DATE '2025-04-01') THEN value END)) "Apr 25"
+, MAX((CASE WHEN (month_start = DATE '2025-05-01') THEN value END)) "May 25"
+, MAX((CASE WHEN (month_start = DATE '2025-06-01') THEN value END)) "Jun 25"
+, MAX((CASE WHEN (month_start = DATE '2025-07-01') THEN value END)) "Jul 25"
+, MAX((CASE WHEN (month_start = DATE '2025-08-01') THEN value END)) "Aug 25"
+, MAX((CASE WHEN (month_start = DATE '2025-09-01') THEN value END)) "Sep 25"
+, MAX((CASE WHEN (month_start = DATE '2025-10-01') THEN value END)) "Oct 25"
+, MAX((CASE WHEN (month_start = DATE '2025-11-01') THEN value END)) "Nov 25"
+, MAX((CASE WHEN (month_start = DATE '2025-12-01') THEN value END)) "Dec 25"
+, MAX((CASE WHEN (month_start = DATE '2026-01-01') THEN value END)) "Jan 26"
+, MAX((CASE WHEN (month_start = DATE '2026-02-01') THEN value END)) "Feb 26"
+, MAX((CASE WHEN (month_start = DATE '2026-03-01') THEN value END)) "Mar 26"
+, MAX((CASE WHEN (month_start = DATE '2026-04-01') THEN value END)) "Apr 26"
+FROM
+  metrics
+GROUP BY metric
+ORDER BY (CASE metric WHEN 'Non-Cold Chain WAC' THEN 1 WHEN 'Non-Cold Chain Units' THEN 2 WHEN 'Cold Chain WAC' THEN 3 WHEN 'Cold Chain Units' THEN 4 WHEN 'Total WAC' THEN 5 WHEN 'Total Units' THEN 6 WHEN 'Destructed WAC' THEN 7 WHEN 'Destructed Units' THEN 8 WHEN 'Received WAC' THEN 9 WHEN 'Received Units' THEN 10 WHEN 'Non-Ascension Distributed WAC' THEN 11 WHEN 'Non-Ascension Distributed Units' THEN 12 WHEN 'Ascension Distributed WAC' THEN 13 WHEN 'Ascension Distributed Units' THEN 14 WHEN 'Total Distributed WAC' THEN 15 WHEN 'Total Distributed Units' THEN 16 ELSE 99 END) ASC
