@@ -19,7 +19,7 @@ LEFT JOIN (
    , (CASE WHEN (insulin = 'True') THEN 'Cold Chain' ELSE 'Non Cold Chain' END) cold_vs_non_cold_chain
    FROM
      orders_with_companyid
-   WHERE (site_id = '10277')
+   WHERE (site_id IN ('10277', '12131'))
    GROUP BY 1, 2, 3, 6
 )  des ON ((des.product_id = ohft.product_id) AND (des.month_year = format_datetime(ohft.receive_date, 'Y-MM'))))
 WHERE (ohft.receive_date IS NOT NULL)

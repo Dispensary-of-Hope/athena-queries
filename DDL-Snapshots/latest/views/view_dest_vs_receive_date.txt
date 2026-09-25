@@ -53,7 +53,7 @@ INNER JOIN (
    , SUM(total_units_distributed) units_destroyed
    FROM
      orders_with_companyid
-   WHERE ((site_id = '10277') AND (order_id IN ('100158', '100157')))
+   WHERE ((site_id IN ('10277', '12131')) AND (order_id IN ('100158', '100157')))
    GROUP BY 1, 2, 3, 4, 5
 )  dest ON ((drd.product_id = dest.product_id) AND (drd.lot_id = dest.lot_id)))
 INNER JOIN (
