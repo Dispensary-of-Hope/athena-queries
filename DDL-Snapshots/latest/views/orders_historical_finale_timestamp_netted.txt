@@ -1,0 +1,33 @@
+SELECT
+  h.order_id
+, h.type
+, h.status
+, h.ship_date
+, h.receive_date
+, h.purchase_order_date
+, h.product_id
+, h.lot_id
+, (CASE WHEN (x.qty_excl IS NULL) THEN h.total_units ELSE CAST(GREATEST((TRY_CAST(h.total_units AS bigint) - x.qty_excl), 0) AS varchar) END) total_units
+, h.site_id
+, h.donor_id
+, h.salesforceid
+, h.insulin
+, h.drug_id
+, h.donor_code
+, h.dispensary_name
+, h.drug_name
+, h.strength
+, h.unit_measure_pkg
+, h.donor_lot
+, h.expire_dt
+FROM
+  (orders_historical_finale_timestamp h
+LEFT JOIN (
+   SELECT *
+   FROM
+     (
+ VALUES 
+        ROW ('976753', '00002879959', 37)
+      , ROW ('978416A', '00002223680', 20)
+   )  t (order_id, product_id, qty_excl)
+)  x ON ((x.order_id = h.order_id) AND (x.product_id = h.product_id) AND (h.type = 'Sale')))
