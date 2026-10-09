@@ -68,7 +68,7 @@
                     *
                   , TRY_CAST(o.total_units AS bigint) total_units_received
                   FROM
-                    orders_historical_finale_timestamp_netted o
+                    orders_historical_finale_timestamp o
                   WHERE (receive_date IS NOT NULL)
                )  test_receiving
                WHERE ((product_id <> '00000000000') AND (product_id <> '99999999999'))
@@ -104,7 +104,7 @@
                     *
                   , TRY_CAST(o.total_units AS bigint) total_units_distributed
                   FROM
-                    orders_historical_finale_timestamp_netted o
+                    orders_historical_finale_timestamp o
                   WHERE (ship_date IS NOT NULL)
                )  test_distribution
                WHERE (((NOT (site_id IN ('194', '10277'))) AND (product_id <> '00000000000')) AND (product_id <> '99999999999'))
