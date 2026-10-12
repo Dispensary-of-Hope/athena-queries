@@ -23,12 +23,13 @@
    )  ohft
    LEFT JOIN (
       SELECT
-        productnamelong
-      , product_id
-      , priority
-      , total_in_stock
+        product_id
+      , max(productnamelong) productnamelong
+      , max(priority) priority
+      , sum(total_in_stock) total_in_stock
       FROM
         view_inventory_master
+      GROUP BY product_id
    )  im ON (im.product_id = ohft.product_id))
    WHERE ((type = 'Purchase') AND (Donor_id IN ('2192', '55311', '55312')) AND (ohft.receive_date IS NOT NULL))
    GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13
