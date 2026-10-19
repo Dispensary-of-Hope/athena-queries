@@ -29,7 +29,7 @@
       , avg_units_3_months
       FROM
         ((((orders_with_companyid ocid
-      LEFT JOIN sf_account sf ON (sf.id__c = ocid.site_id))
+      LEFT JOIN sf_account sf ON ((sf.id__c = ocid.site_id) AND (ocid.site_id <> '')))
       LEFT JOIN (
          SELECT DISTINCT
            product_id

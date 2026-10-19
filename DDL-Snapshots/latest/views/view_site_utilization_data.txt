@@ -6,7 +6,7 @@ SELECT
 , shippingstatecode
 , total_qty_shipped
 , total_orders
-, wac_distributed
+, format('%.1f', round(wac_distributed)) wac_distributed
 , total_patients
 , joined_date
 , earliest_ship_date
@@ -138,7 +138,7 @@ INNER JOIN (
    , sfa.pharmacy_operating_system__c
    , sfa.patient_attestation_form__c
    , sfa.pap_assistance_yes_no__c
-   , sfa.renewal_date__c
+   , COALESCE(date_format(TRY(date_parse(sfa.renewal_date__c, '%c/%e/%Y')), '%Y-%m-%d %H:%i:%s.000'), sfa.renewal_date__c) renewal_date__c
    FROM
      ((sf_account sfa
    LEFT JOIN sf_account sfa2 ON (sfa2.id = sfa.health_system__c))
