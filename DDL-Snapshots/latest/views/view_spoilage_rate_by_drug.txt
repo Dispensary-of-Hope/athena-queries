@@ -1,0 +1,32 @@
+SELECT
+  COALESCE(r.month, d.month) receive_month
+, COALESCE(r.product_id, d.product_id) product_id
+, COALESCE(r.drug_name, d.drug_name) drug_name
+, COALESCE(r.wac_received, 0) total_wac_received
+, COALESCE(d.wac_destroyed, 0) total_wac_destroyed
+, (CASE WHEN (COALESCE(r.wac_received, 0) = 0) THEN null ELSE (COALESCE(d.wac_destroyed, 0) / r.wac_received) END) spoilage_rate
+FROM
+  ((
+   SELECT
+     DATE_TRUNC('month', month_year) month
+   , product_id
+   , productnamelong drug_name
+   , SUM(wac) wac_received
+   FROM
+     view_total_wac_received
+   GROUP BY 1, 2, 3
+)  r
+LEFT JOIN (
+   SELECT
+     DATE_TRUNC('month', month_year) month
+   , product_id
+   , drug_name
+   , SUM(total_wac) wac_destroyed
+   FROM
+     view_total_wac_destroyed
+   GROUP BY 1, 2, 3
+)  d ON ((d.product_id = r.product_id) AND (d.month = r.month)))
+WHERE (COALESCE(r.month, d.month) IN (SELECT DISTINCT receive_month
+FROM
+  view_spoilage_rate
+))

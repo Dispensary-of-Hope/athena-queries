@@ -23,7 +23,7 @@ WITH
    , SUM((CAST(total_units_distributed AS double) * CAST(unit_wac AS double))) total_wac_destroyed
    FROM
      orders_with_companyid
-   WHERE (site_id = '10277')
+   WHERE (site_id IN ('194', '10277', '12131'))
    GROUP BY 1
 ) 
 SELECT
