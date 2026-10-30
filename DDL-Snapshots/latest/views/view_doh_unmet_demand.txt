@@ -1,0 +1,43 @@
+WITH
+  ri AS (
+   SELECT
+     product_id
+   , current_date_in_stock
+   , MAX(productnamelong) productnamelong
+   , SUM((CASE WHEN ((NOT (COALESCE(sublocation, '') IN ('Q0', 'R0'))) AND (NOT (COALESCE(sublocation, '') LIKE '%-W'))) THEN COALESCE(available_qty, 0) ELSE 0 END)) available_qty
+   , SUM((CASE WHEN ((NOT (COALESCE(sublocation, '') IN ('Q0', 'R0'))) AND (NOT (COALESCE(sublocation, '') LIKE '%-W'))) THEN COALESCE(total_in_stock, 0) ELSE 0 END)) total_in_stock
+   , MAX(priority) priority
+   , MAX("primary") "primary"
+   FROM
+     "database-prod".view_running_inventory
+   WHERE (NOT (product_id IN ('00000000001', '00000000002')))
+   GROUP BY product_id, current_date_in_stock
+) 
+, with_last AS (
+   SELECT
+     ri.*
+   , MAX((CASE WHEN (available_qty > 0) THEN current_date_in_stock END)) OVER (PARTITION BY product_id ORDER BY current_date_in_stock ASC ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) prior_available_date
+   , MAX((CASE WHEN (total_in_stock > 0) THEN current_date_in_stock END)) OVER (PARTITION BY product_id ORDER BY current_date_in_stock ASC ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) prior_in_stock_date
+   FROM
+     ri
+) 
+SELECT
+  w.product_id
+, w.productnamelong
+, m.generic_product_identifier gpi_14
+, substr(m.generic_product_identifier, 1, 12) gpi_12
+, m.gpi_14_name
+, m.gpi_12_name
+, w.current_date_in_stock
+, (CASE WHEN (w.available_qty > 0) THEN 'Yes' ELSE 'No' END) available
+, w.available_qty
+, (CASE WHEN (w.total_in_stock > 0) THEN 'Yes' ELSE 'No' END) in_stock
+, w.total_in_stock
+, (CASE WHEN (w.available_qty <= 0) THEN w.prior_available_date END) last_date_available
+, (CASE WHEN (w.total_in_stock <= 0) THEN w.prior_in_stock_date END) last_date_in_stock
+, (CASE WHEN ((w.total_in_stock <= 0) AND (date_diff('day', w.prior_in_stock_date, w.current_date_in_stock) <= 30)) THEN w.prior_in_stock_date END) last_in_stock_within_30_days
+, w.priority
+, w."primary"
+FROM
+  (with_last w
+LEFT JOIN "database-prod".medispan_trg_file m ON (m.ndc_upc_hri = w.product_id))
