@@ -1,0 +1,35 @@
+  `month_start` date, 
+  `month_end` date, 
+  `non_cold_units` bigint, 
+  `non_cold_wac` decimal(18,2), 
+  `cold_units` bigint, 
+  `cold_wac` decimal(18,2), 
+  `q0_units` bigint, 
+  `q0_wac` decimal(18,2), 
+  `w_units` bigint, 
+  `w_wac` decimal(18,2), 
+  `r0_units` bigint, 
+  `r0_wac` decimal(18,2), 
+  `quarantine_units` bigint, 
+  `quarantine_wac` decimal(18,2), 
+  `total_units` bigint, 
+  `total_wac` decimal(18,2), 
+  `export_version_id` string, 
+  `export_last_modified_utc` string, 
+  `wac_version_id` string, 
+  `wac_last_modified_utc` string, 
+  `cutoff_utc` string, 
+  `computed_at_utc` string, 
+  `method` string)
+COMMENT 'DOH-5492 Finance month-end inventory, calendar close America/Chicago. One YYYY-MM.csv per month written by scripts/monthly_wac_report.py. Read by view_monthly_wac_ascension_finance.'
+ROW FORMAT DELIMITED 
+  FIELDS TERMINATED BY ',' 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.mapred.TextInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat'
+LOCATION
+  's3://doh-financials/finance-month-end-inventory'
+TBLPROPERTIES (
+  'skip.header.line.count'='1', 
+  'transient_lastDdlTime'='1793582661')

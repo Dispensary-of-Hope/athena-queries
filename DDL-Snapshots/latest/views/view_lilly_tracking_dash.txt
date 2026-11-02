@@ -61,7 +61,10 @@
          GROUP BY company_id__c, product_id
          ORDER BY company_id__c ASC, product_id ASC
       )  avg_3 ON ((ocid.company_id__c = avg_3.company_id__c) AND (ocid.product_id = avg_3.product_id)))
-      WHERE (NOT (ocid.site_id IN ('194', '10277')))
+      WHERE (NOT (ocid.site_id IN (SELECT site_id
+FROM
+  view_destruction_site_ids
+)))
       GROUP BY 1, 2, 3, 4, 5, 6, 8, 9, 11, 12
    )  it
    LEFT JOIN date_table dt ON (it.ship_month = "date_trunc"('month', dt.day)))

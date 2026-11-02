@@ -92,7 +92,10 @@ FROM
             , total_units
             FROM
               orders_historical_finale_timestamp
-            WHERE (((((NOT (site_id IN ('194', '10277'))) AND (product_id <> '00000000000')) AND (product_id <> '99999999999')) AND (product_id <> '00000000001')) AND (product_id <> '00000000002'))
+            WHERE (((((NOT (site_id IN (SELECT site_id
+FROM
+  view_destruction_site_ids
+))) AND (product_id <> '00000000000')) AND (product_id <> '99999999999')) AND (product_id <> '00000000001')) AND (product_id <> '00000000002'))
          )  ot ON (si.site_id = ot.site_id))
       )  ohft
       INNER JOIN (
@@ -106,7 +109,10 @@ FROM
             , "min"(ship_date) earliest_ship_date
             FROM
               orders_with_companyid
-            WHERE (((((NOT (site_id IN ('194', '10277'))) AND (product_id <> '00000000000')) AND (product_id <> '99999999999')) AND (product_id <> '00000000001')) AND (product_id <> '00000000002'))
+            WHERE (((((NOT (site_id IN (SELECT site_id
+FROM
+  view_destruction_site_ids
+))) AND (product_id <> '00000000000')) AND (product_id <> '99999999999')) AND (product_id <> '00000000001')) AND (product_id <> '00000000002'))
             GROUP BY company_id__c
          )  oci
          INNER JOIN (

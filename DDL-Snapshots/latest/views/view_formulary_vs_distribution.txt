@@ -9,7 +9,10 @@
       FROM
         (orders_with_companyid ocid
       LEFT JOIN primary_list_master plm ON (("date_trunc"('quarter', ocid.ship_date) = "date_trunc"('quarter', plm.quarter_begin_date)) AND (ocid.drug_name = plm.product)))
-      WHERE (NOT (site_id IN ('194', '10277')))
+      WHERE (NOT (site_id IN (SELECT site_id
+FROM
+  view_destruction_site_ids
+)))
       GROUP BY 1, 2, 3
    ) UNION ALL (
       SELECT

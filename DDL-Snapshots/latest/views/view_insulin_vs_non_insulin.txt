@@ -16,7 +16,10 @@
    FROM
      ("database-prod"."orders_historical_finale_date" oid
    LEFT JOIN sf_account sf ON (sf.id__c = oid.site_id))
-   WHERE ((sf.id__c <> '') AND (account_record_type_text__c = 'Active Access Site') AND (oid.site_id <> '10277') AND (year(oid.ship_date) > 2021) AND (insulin <> ''))
+   WHERE ((sf.id__c <> '') AND (account_record_type_text__c = 'Active Access Site') AND (NOT (oid.site_id IN (SELECT site_id
+FROM
+  view_destruction_site_ids
+))) AND (year(oid.ship_date) > 2021) AND (insulin <> ''))
    GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
    ORDER BY 1 DESC
 ) 

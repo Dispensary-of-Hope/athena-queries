@@ -1,25 +1,29 @@
-SELECT
-  inv.month_end month
-, inv."Non-Cold Chain Units"
-, inv."Non-Cold Chain WAC"
-, inv."Cold Chain Units"
-, inv."Cold Chain WAC"
-, quar."Quarantined Units"
-, quar."Quarantined WAC"
-, inv."Total Units"
-, inv."Total WAC"
-, act."Destructed WAC"
-, act."Destructed Units"
-, act."Received WAC"
-, act."Received Units"
-, act."Non-Ascension Distributed WAC"
-, act."Non-Ascension Distributed Units"
-, act."Ascension Distributed WAC"
-, act."Ascension Distributed Units"
-, act."Total Distributed WAC"
-, act."Total Distributed Units"
-FROM
-  (((
+WITH
+  fme_ranked AS (
+   SELECT
+     f.*
+   , 'DOH-5492 finance_month_end_inventory calendar close' doh_ticket
+   , ROW_NUMBER() OVER (PARTITION BY DATE_TRUNC('month', f.month_end) ORDER BY TRY(from_iso8601_timestamp(f.computed_at_utc)) DESC NULLS LAST, f.computed_at_utc DESC NULLS LAST, f.export_last_modified_utc DESC NULLS LAST, f."$path" DESC) rn
+   FROM
+     finance_month_end_inventory f
+   WHERE ((f.month_end IS NOT NULL) AND regexp_like(f."$path", '/finance-month-end-inventory/[0-9]{4}-[0-9]{2}\.csv$') AND (regexp_extract(f."$path", '([0-9]{4}-[0-9]{2})\.csv$', 1) = substr(CAST(f.month_start AS varchar), 1, 7)) AND (f.month_start = DATE_TRUNC('month', f.month_end)) AND (f.month_end = last_day_of_month(f.month_end)))
+) 
+, fme AS (
+   SELECT
+     CAST(month_end AS timestamp(3)) month_end
+   , CAST(non_cold_units AS bigint) "Non-Cold Chain Units"
+   , CAST(non_cold_wac AS decimal(18, 2)) "Non-Cold Chain WAC"
+   , CAST(cold_units AS bigint) "Cold Chain Units"
+   , CAST(cold_wac AS decimal(18, 2)) "Cold Chain WAC"
+   , CAST(quarantine_units AS bigint) "Quarantined Units"
+   , CAST(quarantine_wac AS decimal(18, 2)) "Quarantined WAC"
+   , CAST(total_units AS bigint) "Total Units"
+   , CAST(total_wac AS decimal(18, 2)) "Total WAC"
+   FROM
+     fme_ranked
+   WHERE ((rn = 1) AND (month_end >= DATE '2024-07-01'))
+) 
+, snap AS (
    SELECT
      month_end
    , CAST(SUM((CASE WHEN ((cold_vs_non_cold_chain = 'Non Cold Chain') AND (sublocation_description = 'Regular Stock')) THEN total_in_stock END)) AS BIGINT) "Non-Cold Chain Units"
@@ -43,38 +47,50 @@ FROM
    ) 
    WHERE ((current_date_in_stock = month_end) AND (month_end >= TIMESTAMP '2024-07-01 00:00:00.000'))
    GROUP BY month_end
-)  inv
-LEFT JOIN (
-   WITH
-     quarantine_daily AS (
-      SELECT
-        DATE_TRUNC('month', current_date_in_stock) month_start
-      , current_date_in_stock
-      , SUM(total_in_stock) total_units
-      , SUM(total_wac) total_wac
-      FROM
-        view_running_inventory
-      WHERE (((sublocation = 'Q0') OR (sublocation LIKE '%-W')) AND (current_date_in_stock >= TIMESTAMP '2024-07-01 00:00:00.000'))
-      GROUP BY DATE_TRUNC('month', current_date_in_stock), current_date_in_stock
-   ) 
-,    last_nonzero_day AS (
-      SELECT
-        month_start
-      , MAX(current_date_in_stock) last_day_with_quarantine
-      FROM
-        quarantine_daily
-      WHERE (total_units > 0)
-      GROUP BY month_start
-   ) 
+) 
+, snap_quar AS (
    SELECT
-     q.month_start
-   , CAST(q.total_units AS BIGINT) "Quarantined Units"
-   , CAST(ROUND(q.total_wac, 2) AS DECIMAL(18, 2)) "Quarantined WAC"
+     current_date_in_stock
+   , CAST(SUM(total_in_stock) AS BIGINT) "Quarantined Units"
+   , CAST(ROUND(SUM(total_wac), 2) AS DECIMAL(18, 2)) "Quarantined WAC"
    FROM
-     (quarantine_daily q
-   INNER JOIN last_nonzero_day l ON ((q.month_start = l.month_start) AND (q.current_date_in_stock = l.last_day_with_quarantine)))
-)  quar ON (DATE_TRUNC('month', inv.month_end) = quar.month_start))
-LEFT JOIN (
+     view_running_inventory
+   WHERE (((sublocation = 'Q0') OR (sublocation LIKE '%-W')) AND (current_date_in_stock >= TIMESTAMP '2024-07-01 00:00:00.000'))
+   GROUP BY current_date_in_stock
+) 
+, inv AS (
+   SELECT
+     month_end
+   , "Non-Cold Chain Units"
+   , "Non-Cold Chain WAC"
+   , "Cold Chain Units"
+   , "Cold Chain WAC"
+   , "Quarantined Units"
+   , "Quarantined WAC"
+   , "Total Units"
+   , "Total WAC"
+   FROM
+     fme
+UNION ALL    SELECT
+     s.month_end
+   , s."Non-Cold Chain Units"
+   , s."Non-Cold Chain WAC"
+   , s."Cold Chain Units"
+   , s."Cold Chain WAC"
+   , q."Quarantined Units"
+   , q."Quarantined WAC"
+   , s."Total Units"
+   , s."Total WAC"
+   FROM
+     (snap s
+   LEFT JOIN snap_quar q ON (q.current_date_in_stock = s.month_end))
+   WHERE (NOT (EXISTS (SELECT 1
+FROM
+  fme
+WHERE (DATE_TRUNC('month', fme.month_end) = DATE_TRUNC('month', s.month_end))
+)))
+) 
+, act AS (
    SELECT
      month
    , CAST(ROUND(SUM(wac_destroyed), 2) AS DECIMAL(18, 2)) "Destructed WAC"
@@ -91,5 +107,28 @@ LEFT JOIN (
      view_wac_dashboard_summary
    WHERE (month >= TIMESTAMP '2024-07-01 00:00:00.000')
    GROUP BY month
-)  act ON (DATE_TRUNC('month', inv.month_end) = DATE_TRUNC('month', act.month)))
+) 
+SELECT
+  inv.month_end month
+, inv."Non-Cold Chain Units"
+, inv."Non-Cold Chain WAC"
+, inv."Cold Chain Units"
+, inv."Cold Chain WAC"
+, inv."Quarantined Units"
+, inv."Quarantined WAC"
+, inv."Total Units"
+, inv."Total WAC"
+, act."Destructed WAC"
+, act."Destructed Units"
+, act."Received WAC"
+, act."Received Units"
+, act."Non-Ascension Distributed WAC"
+, act."Non-Ascension Distributed Units"
+, act."Ascension Distributed WAC"
+, act."Ascension Distributed Units"
+, act."Total Distributed WAC"
+, act."Total Distributed Units"
+FROM
+  (inv
+LEFT JOIN act ON (DATE_TRUNC('month', inv.month_end) = DATE_TRUNC('month', act.month)))
 ORDER BY inv.month_end DESC

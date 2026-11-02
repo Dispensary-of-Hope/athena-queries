@@ -50,7 +50,10 @@ LEFT JOIN (
    , (sum((CASE WHEN (ship_date >= date_add('day', -30, current_date)) THEN total_units_distributed ELSE 0 END)) / 3E1) sales_velocity
    FROM
      orders_with_companyid
-   WHERE (NOT (site_id IN ('194', '10277')))
+   WHERE (NOT (site_id IN (SELECT site_id
+FROM
+  view_destruction_site_ids
+)))
    GROUP BY product_id
 )  fsv ON (inv.product_id = fsv.product_id))
 WHERE ((NOT (inv.product_id IN ('', '00000000000', '99999999999', '59467067901'))) AND (inv.available_qty > 0))

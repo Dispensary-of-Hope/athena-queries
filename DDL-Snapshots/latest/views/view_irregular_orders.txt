@@ -32,5 +32,8 @@ LEFT JOIN (
    WHERE ((ship_date >= "date_add"('month', -6, current_timestamp)) AND (receive_date IS NULL))
    GROUP BY productnamelong
 )  par_level ON (vim.productnamelong = par_level.productnamelong))
-WHERE (((owc.product_id <> '') AND (owc.product_id IS NOT NULL)) AND (NOT (owc.site_id IN ('194', '10277'))))
+WHERE (((owc.product_id <> '') AND (owc.product_id IS NOT NULL)) AND (NOT (owc.site_id IN (SELECT site_id
+FROM
+  view_destruction_site_ids
+))))
 GROUP BY 1, 2, 3, 4, 5, 7, 8, 10, 11

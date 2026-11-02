@@ -17,6 +17,9 @@ LEFT JOIN (
    SELECT DISTINCT site_id
    FROM
      orders_with_companyid
-   WHERE ((order_date >= date_add('day', -28, current_date)) AND (site_id <> '10277'))
+   WHERE ((order_date >= date_add('day', -28, current_date)) AND (NOT (site_id IN (SELECT site_id
+FROM
+  view_destruction_site_ids
+))))
 )  active ON (si.site_id = active.site_id))
 WHERE (((active.site_id IS NULL) OR (active.site_id = '')) AND (joined_date IS NOT NULL))

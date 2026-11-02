@@ -53,7 +53,10 @@ LEFT JOIN (
         view_inventory_master
       GROUP BY 1
    )  inv ON (ocid.product_id = inv.product_id))
-   WHERE ((((ship_date >= "date_add"('year', -1, current_date)) AND (NOT (site_id IN ('194', '10277')))) AND (NOT (ocid.product_id IN ('00000000000', '00000000001', '00000000002')))) AND (drug_class <> ''))
+   WHERE ((((ship_date >= "date_add"('year', -1, current_date)) AND (NOT (site_id IN (SELECT site_id
+FROM
+  view_destruction_site_ids
+)))) AND (NOT (ocid.product_id IN ('00000000000', '00000000001', '00000000002')))) AND (drug_class <> ''))
    GROUP BY 1
    ORDER BY 1 ASC
 )  avg_units_by_priority ON (y.priority = avg_units_by_priority.priority))

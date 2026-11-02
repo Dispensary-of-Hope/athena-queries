@@ -141,7 +141,10 @@ FROM
             , lot_id
             , ndc
             , product_id
-            , sum((CASE WHEN ((receive_date IS NOT NULL) AND (NOT (site_id IN ('194', '10277')))) THEN TRY_CAST(total_units AS bigint) END)) total_units_received
+            , sum((CASE WHEN ((receive_date IS NOT NULL) AND (NOT (site_id IN (SELECT site_id
+FROM
+  view_destruction_site_ids
+)))) THEN TRY_CAST(total_units AS bigint) END)) total_units_received
             FROM
               (orders_historical_finale_timestamp ohft
             INNER JOIN (
@@ -164,7 +167,10 @@ FROM
             , lot_id
             , product_id
             , count(DISTINCT site_id) number_of_sites
-            , sum((CASE WHEN ((ship_date IS NOT NULL) AND (NOT (site_id IN ('194', '10277')))) THEN TRY_CAST(total_units AS bigint) END)) total_units_distributed
+            , sum((CASE WHEN ((ship_date IS NOT NULL) AND (NOT (site_id IN (SELECT site_id
+FROM
+  view_destruction_site_ids
+)))) THEN TRY_CAST(total_units AS bigint) END)) total_units_distributed
             FROM
               (orders_historical_finale_timestamp ohft
             INNER JOIN (
@@ -198,7 +204,10 @@ FROM
                  iqvia_target_primary
                WHERE ((NOT (target_list_product IN ('None', 'null'))) AND (priority <> '0') AND (target_list_product <> ''))
             )  iq ON (ohft.product_id = iq.ndc))
-            WHERE ((ship_date >= TIMESTAMP '2021-01-01 00:00:00.000') AND (site_id IN ('10277', '194')))
+            WHERE ((ship_date >= TIMESTAMP '2021-01-01 00:00:00.000') AND (site_id IN (SELECT site_id
+FROM
+  view_destruction_site_ids
+)))
             GROUP BY 1, 2, 3, 4, 5
          ) 
          SELECT DISTINCT

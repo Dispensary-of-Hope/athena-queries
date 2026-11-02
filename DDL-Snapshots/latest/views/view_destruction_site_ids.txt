@@ -1,0 +1,8 @@
+SELECT site_id
+FROM
+  (
+ VALUES 
+     '194'
+   , '10277'
+   , '12131'
+)  t (site_id)

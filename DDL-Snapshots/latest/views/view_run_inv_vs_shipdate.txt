@@ -33,7 +33,10 @@
       , "max"(ship_date) last_ship_date
       FROM
         orders_with_companyid ocid
-      WHERE (NOT (ocid.site_id IN ('10277', '194')))
+      WHERE (NOT (ocid.site_id IN (SELECT site_id
+FROM
+  view_destruction_site_ids
+)))
       GROUP BY 1
    )  lsd ON (ldis.product_id = lsd.product_id))
    WHERE (vri.donor_id <> '702')

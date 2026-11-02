@@ -55,6 +55,9 @@ LEFT JOIN (
    FROM
      view_quarterly_numbers
 )  qn ON (("date_trunc"('quarter', ship_date) = "date_trunc"('quarter', quarter_end_date)) AND (ocid.site_id = qn.site_id)))
-WHERE (((ocid.product_id IN ('00002771559', '00002751001', '00002879959', '00002879759', '00002871501', '00002831501', '00002821501', '00002143380', '00002143480', '00002143480', '00002223680', '00002318280')) AND (NOT (ocid.site_id IN ('194', '10277')))) AND (ship_date >= TIMESTAMP '2020-01-01 00:00:00.000'))
+WHERE (((ocid.product_id IN ('00002771559', '00002751001', '00002879959', '00002879759', '00002871501', '00002831501', '00002821501', '00002143380', '00002143480', '00002143480', '00002223680', '00002318280')) AND (NOT (ocid.site_id IN (SELECT site_id
+FROM
+  view_destruction_site_ids
+)))) AND (ship_date >= TIMESTAMP '2020-01-01 00:00:00.000'))
 GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12
 ORDER BY 3 ASC, 2 ASC, 4 ASC

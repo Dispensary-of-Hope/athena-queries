@@ -15,7 +15,10 @@ WITH
         view_inventory_master
       GROUP BY 1
    )  inv ON (ocid.product_id = inv.product_id))
-   WHERE ((ship_date >= TIMESTAMP '2024-10-01 00:00:00.000') AND (NOT (site_id IN ('194', '10277'))))
+   WHERE ((ship_date >= TIMESTAMP '2024-10-01 00:00:00.000') AND (NOT (site_id IN (SELECT site_id
+FROM
+  view_destruction_site_ids
+))))
    GROUP BY 1, 2
 ) 
 SELECT DISTINCT

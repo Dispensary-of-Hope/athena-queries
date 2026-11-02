@@ -44,7 +44,10 @@ FROM
                  orders_historical_finale_timestamp o
                WHERE (ship_date IS NOT NULL)
             )  test_distribution
-            WHERE (((NOT (site_id IN ('194', '10277'))) AND (product_id <> '00000000000')) AND (product_id <> '99999999999'))
+            WHERE (((NOT (site_id IN (SELECT site_id
+FROM
+  view_destruction_site_ids
+))) AND (product_id <> '00000000000')) AND (product_id <> '99999999999'))
             GROUP BY product_id, ship_date, lot_id, expire_dt
          )  y
          LEFT JOIN date_table dt2 ON (y.ship_date = dt2.day))
@@ -74,7 +77,10 @@ FROM
                  orders_historical_finale_timestamp o
                WHERE (ship_date IS NOT NULL)
             )  test_distribution2
-            WHERE (((site_id IN ('194', '10277')) AND (product_id <> '00000000000')) AND (product_id <> '99999999999'))
+            WHERE (((site_id IN (SELECT site_id
+FROM
+  view_destruction_site_ids
+)) AND (product_id <> '00000000000')) AND (product_id <> '99999999999'))
             GROUP BY product_id, ship_date, lot_id, expire_dt
          )  z
          LEFT JOIN date_table dt3 ON (z.ship_date = dt3.day))

@@ -89,7 +89,10 @@ FROM
                  orders_historical_finale_timestamp o
                WHERE (ship_date IS NOT NULL)
             ) 
-            WHERE (((((NOT (site_id IN ('194', '10277'))) AND (product_id <> '00000000000')) AND (product_id <> '99999999999')) AND (product_id <> '00000000001')) AND (product_id <> '00000000002'))
+            WHERE (((((NOT (site_id IN (SELECT site_id
+FROM
+  view_destruction_site_ids
+))) AND (product_id <> '00000000000')) AND (product_id <> '99999999999')) AND (product_id <> '00000000001')) AND (product_id <> '00000000002'))
             GROUP BY product_id, ship_date, lot_id, site_id, donor_id
          )  y
          LEFT JOIN donor_id_finale df2 ON ((y.product_id = df2.product_id) AND (y.lot_id = df2.lot_id)))

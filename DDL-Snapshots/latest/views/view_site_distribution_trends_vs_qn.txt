@@ -28,6 +28,9 @@ LEFT JOIN (
    FROM
      view_quarterly_numbers
 )  qn ON (("date_trunc"('quarter', ship_date) = "date_trunc"('quarter', quarter_end_date)) AND (ocid.site_id = qn.site_id)))
-WHERE ((NOT (ocid.site_id IN ('194', '10277'))) AND (ship_date >= TIMESTAMP '2022-01-01 00:00:00.000'))
+WHERE ((NOT (ocid.site_id IN (SELECT site_id
+FROM
+  view_destruction_site_ids
+))) AND (ship_date >= TIMESTAMP '2022-01-01 00:00:00.000'))
 GROUP BY 1, 2, 3, 4, 5, 6, 7, 8
 ORDER BY 3 ASC, 2 ASC, 4 ASC

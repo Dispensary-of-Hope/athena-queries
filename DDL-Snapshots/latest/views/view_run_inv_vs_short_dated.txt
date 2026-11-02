@@ -36,7 +36,10 @@ LEFT JOIN (
    , "count"(DISTINCT drug_name) unique_short_dated_shipped
    FROM
      orders_with_companyid
-   WHERE (((NOT (site_id IN ('194', '10277'))) AND (ship_date >= TIMESTAMP '2021-10-01 00:00:00.000')) AND ("date_diff"('day', ship_date, TRY("date_parse"("split_part"(lot_id, ' ', 2), '%m/%d/%Y'))) <= 120))
+   WHERE (((NOT (site_id IN (SELECT site_id
+FROM
+  view_destruction_site_ids
+))) AND (ship_date >= TIMESTAMP '2021-10-01 00:00:00.000')) AND ("date_diff"('day', ship_date, TRY("date_parse"("split_part"(lot_id, ' ', 2), '%m/%d/%Y'))) <= 120))
    GROUP BY 1, 2
 )  ocid ON (("date_trunc"('quarter', vri.current_date_in_stock) = ocid.ship_quarter) AND (short_dated_inv.productnamelong = ocid.drug_name)))
 WHERE (vri.total_in_stock > 0)

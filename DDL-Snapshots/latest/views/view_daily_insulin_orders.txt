@@ -13,7 +13,10 @@
    FROM
      ("database-prod"."orders_with_companyid" oid
    LEFT JOIN sf_account sf ON (sf.company_id__c = oid.company_id__c))
-   WHERE ((((oid.insulin = 'True') AND (sf.name IS NOT NULL)) AND (account_record_type_text__c = 'Active Access Site')) AND (site_id <> '10277') AND (status <> 'Canceled'))
+   WHERE ((((oid.insulin = 'True') AND (sf.name IS NOT NULL)) AND (account_record_type_text__c = 'Active Access Site')) AND (NOT (site_id IN (SELECT site_id
+FROM
+  view_destruction_site_ids
+))) AND (status <> 'Canceled'))
    GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9
    ORDER BY oid.order_date DESC
 ) 

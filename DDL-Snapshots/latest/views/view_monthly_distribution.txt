@@ -42,7 +42,10 @@ FROM
             , total_units
             FROM
               orders_historical_finale_timestamp
-            WHERE ((((((NOT (site_id IN ('194', '10277'))) AND (product_id <> '00000000000')) AND (product_id <> '99999999999')) AND (product_id <> '00000000001')) AND (product_id <> '00000000002')) AND (ship_date >= TIMESTAMP '2019-01-01 00:00:00.000'))
+            WHERE ((((((NOT (site_id IN (SELECT site_id
+FROM
+  view_destruction_site_ids
+))) AND (product_id <> '00000000000')) AND (product_id <> '99999999999')) AND (product_id <> '00000000001')) AND (product_id <> '00000000002')) AND (ship_date >= TIMESTAMP '2019-01-01 00:00:00.000'))
          )  ot ON (si.site_id = ot.site_id))
       ) 
       WHERE ((site_name IS NOT NULL) AND (site_name <> ''))

@@ -19,5 +19,8 @@ LEFT JOIN (
    FROM
      view_inventory_master
 )  inv ON (ocid.product_id = inv.product_id))
-WHERE ((NOT (site_id IN ('194', '10277'))) AND (order_date >= TIMESTAMP '2021-01-01 00:00:00.000'))
+WHERE ((NOT (site_id IN (SELECT site_id
+FROM
+  view_destruction_site_ids
+))) AND (order_date >= TIMESTAMP '2021-01-01 00:00:00.000'))
 GROUP BY 1, 2, 3, 4, 5, 6, 8, 9

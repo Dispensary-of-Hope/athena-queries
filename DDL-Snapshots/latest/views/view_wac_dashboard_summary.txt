@@ -45,6 +45,7 @@ WITH
    , cold_vs_non_cold_chain
    FROM
      view_total_wac_distributed_ascension
+   WHERE (dispensing_type = 'Ascension')
    GROUP BY 1, 5
 ) 
 , wac_destroyed AS (

@@ -30,5 +30,8 @@ LEFT JOIN (
    LEFT JOIN regular_donors rd ON (ohft.donor_id = rd.donor_id__c))
    WHERE ((receive_date IS NOT NULL) AND (name IS NOT NULL))
 )  rd ON (ocid.product_id = rd.product_id))
-WHERE ((donor_name <> '') AND (site_id <> '10277'))
+WHERE ((donor_name <> '') AND (NOT (site_id IN (SELECT site_id
+FROM
+  view_destruction_site_ids
+))))
 GROUP BY 1, 2, 3, 4, 5, 6, 7, 8, 9
