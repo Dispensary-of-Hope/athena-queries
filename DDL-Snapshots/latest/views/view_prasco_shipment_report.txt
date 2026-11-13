@@ -1,23 +1,28 @@
-(
+SELECT
+  ps.ponumber po_number
+, ps.shipmentnumber shipment_id
+, date_parse(ps.orderdate, '%Y-%m-%dT%H:%i:%s') order_date
+, date_parse(ps.orderdate, '%Y-%m-%dT%H:%i:%s') ship_date
+, ps.shiptoname dispensary_name
+, ps.carrier
+, ps.trackingnumber tracking_number
+, replace(ps.productcode, '-', '') ndc
+, pn.productnamelong
+, TRY_CAST(ps.quantity AS BIGINT) qty
+, ps.lotnumber lot
+, date_parse(ps.lotexp, '%m/%d/%Y') expiration_date
+, ps.shiptoaddress1 shippingaddress
+, ps.shiptoaddress2 shippingaddress2
+, ps.shiptocity shippingcity
+, ps.shiptostate shippingstate
+, ps.shiptozip shippingpostalcode
+FROM
+  (prasco_shipment ps
+LEFT JOIN (
    SELECT
-     ponumber po_number
-   , shipmentnumber shipment_id
-   , date_parse(orderdate, '%Y-%m-%dT%H:%i:%s') order_date
-   , date_parse(orderdate, '%Y-%m-%dT%H:%i:%s') ship_date
-   , shiptoname dispensary_name
-   , carrier
-   , trackingnumber tracking_number
-   , replace(productcode, '-', '') ndc
-   , productnamelong
-   , TRY_CAST(quantity AS BIGINT) qty
-   , lotnumber lot
-   , date_parse(lotexp, '%m/%d/%Y') expiration_date
-   , shiptoaddress1 shippingaddress
-   , shiptoaddress2 shippingaddress2
-   , shiptocity shippingcity
-   , shiptostate shippingstate
-   , shiptozip shippingpostalcode
+     ndc
+   , arbitrary(productnamelong) productnamelong
    FROM
-     (prasco_shipment
-   LEFT JOIN view_prasco_inventory_report pir ON (ndc = replace(productcode, '-', '')))
-) 
+     view_prasco_inventory_report
+   GROUP BY ndc
+)  pn ON (replace(ps.productcode, '-', '') = pn.ndc))
